@@ -34,6 +34,8 @@ Tests que deben pasar: `tests/...` (nombres de los tests).
 
 Para Win32: llamadas, orden, banderas y qué hacer con cada valor de retorno.
 
+Para un ensayo, identifica el punto de entrada y los símbolos existentes que debe usar el ejecutor. Nombra cada sujeto de prueba, cómo se crea y cómo se comprueba su identidad. Especifica en una tabla cuándo se recoge cada medición, con qué API y unidades, contra qué referencia se compara y qué tolerancia se acepta. Indica el destino de la evidencia y al menos un ejemplo que deba fallar aunque el resultado parezca correcto a simple vista.
+
 ## Pasos sugeridos
 
 1.
