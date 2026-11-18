@@ -4,6 +4,7 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Dónde empezar
 
+- [Cómo se trabaja en el repositorio: roles, flujo y reglas](AGENTS.md)
 - [Diseño y glosario](docs/diseno-inicial.md)
 - [Mapa del proyecto](docs/plan-por-fases.md)
 - [Fase 1 · Plan de inspección de Canvas Window Composer](docs/desarrollo/01-inspeccion-cwc.md)
