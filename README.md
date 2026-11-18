@@ -9,7 +9,8 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 - [Fase 1 · Plan de inspección de Canvas Window Composer](docs/desarrollo/01-inspeccion-cwc.md)
 - [Informe de inspección del código y pruebas pendientes en Windows](docs/inspeccion/informe-cwc.md)
 - [Fase 2 · Ensayo de edición nativa con dos ventanas](docs/desarrollo/02-ensayo-panel-nativo.md)
+- [Resultados con VS Code y un editor de control](docs/inspeccion/ensayo-panel-nativo.md)
 - [Decisión sobre archivos y accesos](docs/adr/001-archivos-y-accesos.md)
 - [Decisión sobre reapertura selectiva](docs/adr/002-sesion-y-reapertura.md)
 
-La inspección identificó la cámara y el filtrado de miniaturas como candidatos para reutilización. El ensayo actual comprueba qué ocurre cuando el usuario pasa del mapa a editar con otra ventana visible. Cada fase posterior se planifica con los resultados de la anterior.
+En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. Las pruebas de restauración y de rendimiento con 15 ventanas siguen pendientes.

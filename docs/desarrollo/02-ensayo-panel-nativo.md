@@ -1,5 +1,7 @@
 # Fase 2 · Ensayo de un panel nativo con dos ventanas
 
+**Estado:** ensayo ejecutado en Windows. El [informe de resultados](../inspeccion/ensayo-panel-nativo.md) recoge la evidencia y los límites del prototipo.
+
 ## Decisión
 
 Determinar si merece la pena construir el canvas con una vista general y activar una ventana nativa en la posición del panel. El [informe estático](../inspeccion/informe-cwc.md) verificó que Canvas Window Composer centra la ventana y oculta su mapa. El ensayo evalúa la alternativa recomendada en ese informe mediante un programa de prueba propio. La comparación con CWC se apoya por ahora en su código.
