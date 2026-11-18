@@ -14,14 +14,14 @@ Evaluar el código MIT de Canvas Window Composer para la cámara y el mapa. Ante
 
 ## Fases y criterios de salida
 
-El primer encargo es la [inspección de Canvas Window Composer](desarrollo/01-inspeccion-cwc.md). Los hitos posteriores son provisionales. Al cerrar la inspección, el responsable de diseño contrasta las evidencias con el objetivo del producto y propone qué construir y estimar a continuación. El usuario decide los cambios de alcance, experiencia o arquitectura.
+La [inspección estática de Canvas Window Composer](inspeccion/informe-cwc.md) identificó una diferencia central entre el mapa de CWC y los paneles editables del producto. El [segundo encargo](desarrollo/02-ensayo-panel-nativo.md) prueba la activación de una ventana real dentro de su panel. Los hitos posteriores son provisionales. El usuario decide los cambios de alcance, experiencia o arquitectura.
 
 Prueba de navegación del prototipo: con dos ventanas de VS Code en Programación, activar la segunda y alejar la vista. Ir a Inicio con el atajo y pulsarlo de nuevo. Deben recuperarse el punto y el zoom anteriores. Volver a Inicio y pulsar el icono de VS Code debe activar la segunda ventana. Desde el menú se debe poder seleccionar la primera o pedir una nueva.
 
 | Fase | Resultado verificable | Jornadas equivalentes |
 | --- | --- | ---: |
-| 1. Inspección del candidato | Informe trazable de comportamiento, dependencias, límites y pruebas pendientes. Decisión de reutilización o ensayo necesario para tomarla. | Reestimar al conocer el entorno de prueba |
-| Prototipo de viabilidad | Hito candidato. Probar la interacción nativa que resulte incierta tras la inspección. | Referencia anterior de 3–5, sujeta al informe |
+| 1. Inspección del candidato | Informe estático entregado y ensayos priorizados. | Sin registro de jornadas reales |
+| 2. Ensayo de panel nativo | Activar y editar en dos tamaños con el vecino visible, abrir y cancelar un diálogo, recuperar el foco. | La referencia de 3–5 jornadas correspondía al prototipo de viabilidad más amplio |
 | Espacios y archivos | Cambiar entre Juegos y Programación, ver sus iconos y fondo, guardar desde otra aplicación por ruta y mover una carpeta entre espacios. | 5–9 |
 | Canvas | Desplazar la cámara, escribir dentro de un panel, ampliar, volver y conservar ambos acomodos. Verificar foco de Discord y retorno a un juego a pantalla completa. | 8–15 |
 | Reapertura | Tras reiniciar, recuperar las ventanas marcadas en sus posiciones. Verificar dos ventanas de VS Code, una de Codex y un juego que sigue cerrado. | 4–7 |
