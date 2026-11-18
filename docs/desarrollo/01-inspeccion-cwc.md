@@ -1,5 +1,7 @@
 # Fase 1 · Inspección de Canvas Window Composer
 
+**Estado:** revisión estática completada. El [informe](../inspeccion/informe-cwc.md) documenta diez requisitos y cuatro ensayos pendientes de ejecución en Windows.
+
 ## Decisión que debe permitir
 
 Elegir entre mantener una bifurcación del proyecto, integrar componentes concretos o usarlo como referencia para una implementación propia. El criterio principal es cuánto ayuda a trabajar dentro del canvas sin depender de detalles frágiles de Explorer. El resultado de esta fase es un informe trazable y una recomendación para el usuario.

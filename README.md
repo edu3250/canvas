@@ -7,6 +7,7 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 - [Diseño y glosario](docs/diseno-inicial.md)
 - [Mapa del proyecto](docs/plan-por-fases.md)
 - [Fase 1 · Plan de inspección de Canvas Window Composer](docs/desarrollo/01-inspeccion-cwc.md)
+- [Informe de inspección del código y pruebas pendientes en Windows](docs/inspeccion/informe-cwc.md)
 - [Decisión sobre archivos y accesos](docs/adr/001-archivos-y-accesos.md)
 - [Decisión sobre reapertura selectiva](docs/adr/002-sesion-y-reapertura.md)
 
