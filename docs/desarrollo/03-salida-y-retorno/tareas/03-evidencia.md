@@ -1,6 +1,6 @@
 # f03-t03 · Reproducir el recorrido en Windows
 
-**Rama** `f03-t03-evidencia`. Depende de t02 fusionada. Ensayo interactivo: sí. Leer [encargo](../encargo.md) y [AGENTS.md §7](../../../../AGENTS.md#7-pruebas-y-evidencia).
+**Rama:** f03-plan, PR #2. Depende de t02 verificada. Ensayo interactivo con el aviso y el «adelante» de AGENTS.md §7.
 
 **Archivos permitidos:** modificar `prototipos/panel-nativo/README.md` con el comando y crear `docs/inspeccion/f03-evidencia-recorrido.md` con los resultados. La síntesis y el cierre de fase corresponden a Revisión.
 

@@ -1,6 +1,6 @@
 # Fase 03 · Salida y retorno al canvas
 
-**Estado:** plan en revisión.
+**Estado:** plan disponible para ejecución.
 
 ## Decisión y alcance
 
@@ -21,11 +21,11 @@ El modo de ensayo usa el editor y el vecino que ya crea el modo control. El reco
 
 | Orden | Entrega | Dependencia | Interactiva |
 | --- | --- | --- | --- |
-| 1 | [Adaptador de colocación Win32](tareas/01-colocacion.md) | Plan fusionado | No |
-| 2 | [Recorrido de dos ventanas](tareas/02-recorrido.md) | t01 fusionada | No durante esta tarea |
-| 3 | [Reproducción y evidencia](tareas/03-evidencia.md) | t02 fusionada | Sí, con el «adelante» de esa sesión |
+| 1 | [Adaptador de colocación Win32](tareas/01-colocacion.md) | Plan publicado | No |
+| 2 | [Recorrido de dos ventanas](tareas/02-recorrido.md) | t01 verificada | No durante esta tarea |
+| 3 | [Reproducción y evidencia](tareas/03-evidencia.md) | t02 verificada | Sí, con el «adelante» de esa sesión |
 
-Toda la lógica ensayada depende del estado real de HWND. La prueba de integración constituye el oráculo. Se usan las dependencias existentes. La primera fusión autoriza las tareas. Solo el usuario fusiona; una sesión independiente de Revisión comprueba cada PR. Revisión cerrará con informe en `docs/inspeccion/`, esfuerzo acumulado y actualización del mapa y del README.
+Toda la lógica ensayada depende del estado real de HWND. La prueba de integración constituye el oráculo. Se usan las dependencias existentes. La ejecución continúa en el PR #2. Revisión independiente autoriza y fusiona la implementación final. Revisión cerrará con informe en `docs/inspeccion/`, esfuerzo acumulado y actualización del mapa y del README.
 
 ## Riesgos
 

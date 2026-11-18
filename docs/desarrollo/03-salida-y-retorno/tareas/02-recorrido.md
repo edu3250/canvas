@@ -1,6 +1,6 @@
 # f03-t02 · Ejecutar dos viajes entre escritorio y canvas
 
-**Rama** `f03-t02-recorrido`. Depende de t01 fusionada. Sin ejecución interactiva en esta tarea. Ver [encargo](../encargo.md).
+**Rama:** f03-plan, PR #2. Depende de t01 verificada. Sin ensayo interactivo en esta tarea.
 
 **Archivos permitidos:** modificar `prototipos/panel-nativo/Program.cs` y crear `prototipos/panel-nativo/LayoutTrial.cs`. Añadir el argumento exacto `layout`; reutilizar Run("control"), Start, Log, IsOurs y Dispose. Mantener los modos anteriores. Entrada de la clase: `internal static int Execute(Run run)`. Usar el adaptador de t01. Máximo aproximado de 300 líneas de diff.
 

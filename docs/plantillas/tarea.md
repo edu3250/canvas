@@ -2,7 +2,7 @@
 
 <!-- Copiar a docs/desarrollo/NN-slug/tareas/NN-slug.md. Lo redacta Planificación. Ejecución no lo modifica. -->
 
-- **Rama:** `fNN-tNN-slug-corto`
+- **Rama:** rama del PR del encargo
 - **Depende de:** tNN | ninguna
 - **Ensayo interactivo:** no | sí (AGENTS.md §7: avisar y esperar el «adelante» del usuario)
 

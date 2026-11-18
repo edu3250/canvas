@@ -1,6 +1,6 @@
 # f03-t01 · Leer y aplicar la colocación de una ventana
 
-**Rama** `f03-t01-colocacion`. Depende del [plan](../encargo.md) fusionado. Ensayo interactivo: no.
+**Rama:** f03-plan, PR #2. Plan publicado. Ensayo interactivo: no.
 
 **Único archivo permitido:** crear `prototipos/panel-nativo/WindowPlacementApi.cs`. Definir una clase estática interna WindowPlacementApi. Contrato: `Capture(nint hwnd)` devuelve la estructura Placement completa por valor; `Restore(nint hwnd, Placement saved)`, `Normalize(nint hwnd)` y `Place(nint hwnd, Rectangle screenBounds)` devuelven void. Exponer en Placement el comando de presentación y el rectángulo normal para su lectura por t02.
 

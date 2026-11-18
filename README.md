@@ -16,7 +16,7 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Cómo se trabaja
 
-Cada sesión de un modelo declara un rol (Planificación, Ejecución o Revisión) y el archivo en el que trabaja. Una fase empieza con un plan que el usuario aprueba al fusionarlo. Después se divide en tareas pequeñas, cada una en su propia rama y su propio PR, siguiendo GitHub flow. Las reglas están en [AGENTS.md](AGENTS.md) y las plantillas en [docs/plantillas](docs/plantillas/).
+El plan publicado habilita la ejecución. Un modelo independiente revisa la implementación y autoriza su fusión. [Flujo completo](AGENTS.md)
 
 ## Estado
 
