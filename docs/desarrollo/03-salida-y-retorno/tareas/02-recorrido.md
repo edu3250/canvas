@@ -1,0 +1,12 @@
+# f03-t02 · Ejecutar dos viajes entre escritorio y canvas
+
+**Rama** `f03-t02-recorrido`. Depende de t01 fusionada. Sin ejecución interactiva en esta tarea. Ver [encargo](../encargo.md).
+
+**Archivos permitidos:** modificar `prototipos/panel-nativo/Program.cs` y crear `prototipos/panel-nativo/LayoutTrial.cs`. Añadir el argumento exacto `layout`; reutilizar Run("control"), Start, Log, IsOurs y Dispose. Mantener los modos anteriores. Entrada de la clase: `internal static int Execute(Run run)`. Usar el adaptador de t01. Máximo aproximado de 300 líneas de diff.
+
+1. Antes de cada cambio comprobar identidad por PID y documento único. Tomar el área de trabajo primaria en píxeles y exigir al menos 1200 × 800. Todos los puntos siguientes son desplazamientos desde su origen. Fijar las ventanas normales en (20,40,540,400) y (580,70,540,440). Maximizar la segunda con ShowWindow(SW_MAXIMIZE). Esperar a que se estabilicen. Capturar Placement y GetWindowRect originales de ambas. Exigir estado normal y maximizado respectivamente.
+2. Normalizar y colocar los paneles en (30,80,480,500) y (550,120,500,450). Modificar el primero a (65,110,510,460). Verificar y conservar los dos rectángulos reales finales. Al salir, restaurar ambos Placement originales. Verificar showCmd, rcNormalPosition y GetWindowRect contra los originales.
+3. Reentrar normalizando y aplicando los rectángulos del canvas guardados. Verificar ambos y volver a salir con las mismas comprobaciones. En cada transición sondear cada 100 ms con tope de 3 s y exigir dos lecturas consecutivas coincidentes; tolerancia de 1 píxel por borde, estado exacto. Registrar esperado, obtenido, identidad, DPI y transición. Medir el rectángulo normal con GetWindowPlacement y el visible con GetWindowRect.
+4. En finally intentar la restauración de cada ventana propia que cuente con instantánea, incluso si falla la otra. Registrar fallo y devolver código 1 ante discrepancia, timeout o pérdida de identidad; 0 solo si todos los criterios pasan. Conservar el cierre de procesos y la limpieza propios de Run. Si cambia el monitor o el DPI durante el recorrido, invalidar el ensayo.
+
+**Aceptación:** `dotnet build prototipos/panel-nativo/PanelNativo.csproj` y revisión del recorrido, ramas de error y compatibilidad de argumentos. En el PR distinguir compilación verificada de ejecución pendiente. Ante ambigüedad, tres intentos fallidos o necesidad de otro archivo o dependencia, usar el [informe de bloqueo](../../../plantillas/informe-bloqueo.md).
