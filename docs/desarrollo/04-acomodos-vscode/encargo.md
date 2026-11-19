@@ -1,6 +1,6 @@
 # Fase 4 · Dos acomodos con VS Code
 
-**Estado:** plan autorizado por la elección del usuario «Validar los dos acomodos con VS Code»; ejecución pendiente.
+**Estado:** ejecución y revisión técnica completadas. [Cierre de fase](../../inspeccion/f04-cierre.md). El PR #3 registra la aprobación del SHA final y su integración.
 
 ## Decisión y entrada
 

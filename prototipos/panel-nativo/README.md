@@ -41,9 +41,9 @@ El modo `layout` mueve dos ventanas descartables del prototipo y alterna dos vec
 
 ## Dos acomodos con VS Code
 
-**Estado: ensayo verificado por Ejecuci?n; revisi?n independiente pendiente.** Requiere aviso y ?adelante? en la sesi?n de Ejecuci?n (AGENTS.md ?7). Abre dos ventanas descartables de VS Code con documentos, perfiles y extensiones separados; puede tomar el primer plano. No usar ventanas existentes.
+**Estado: ensayo verificado por Ejecución; revisión independiente completada; véase el cierre de fase.** Requiere aviso y «adelante» en la sesión de Ejecución (AGENTS.md §7). Abre dos ventanas descartables de VS Code con documentos, perfiles y extensiones separados; puede tomar el primer plano. No usar ventanas existentes.
 
-Desde la ra?z, despu?s del permiso:
+Desde la raíz, después del permiso:
 
 ```powershell
 dotnet build prototipos/panel-nativo/PanelNativo.csproj
@@ -52,6 +52,6 @@ Set-Location prototipos/panel-nativo
 $LASTEXITCODE
 ```
 
-Conserva la resoluci?n de Code.exe y PANEL_CODE_EXE descritas arriba. Requiere ?rea primaria m?nima de 1200 ? 800 px. Ejecuta el mismo or?culo de seis etapas de layout: A normal y B maximizada en D0; dos retornos y restauraciones finales. No a?adir --auto. Registro: evidencia-local/layout-code-<id>/sesion.txt, excluido de Git. C?digo 0: recorrido y limpieza verificados; 1: fallo; 2: argumentos inv?lidos.
+Conserva la resolución de Code.exe y PANEL_CODE_EXE descritas arriba. Requiere área primaria mínima de 1200 × 800 px. Ejecuta el mismo oráculo de seis etapas de layout: A normal y B maximizada en D0; dos retornos y restauraciones finales. No añadir --auto. Registro: evidencia-local/layout-code-<id>/sesion.txt, excluido de Git. Código 0: recorrido y limpieza verificados; 1: fallo; 2: argumentos inválidos.
 
-Contrastar las 12 lecturas, estado exacto y tolerancia de 1 px por borde, sin alterar tiempos ni dimensiones si VS Code los rechaza. Registrar versiones, DPI, ?rea, salida y limpieza. [Evidencia y pendientes](../../docs/inspeccion/f04-evidencia-recorrido.md).
+Contrastar las 12 lecturas, estado exacto y tolerancia de 1 px por borde, sin alterar tiempos ni dimensiones si VS Code los rechaza. Registrar versiones, DPI, área, salida y limpieza. [Evidencia y pendientes](../../docs/inspeccion/f04-evidencia-recorrido.md).
