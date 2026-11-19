@@ -1,8 +1,8 @@
 # Fase NN · Título
 
-<!-- Copiar a docs/desarrollo/NN-slug/plan.md. Lo redacta Planificación después de /grill-me, en la rama fNN-plan. El usuario lo aprueba. Ejecución no lo modifica. -->
+<!-- Copiar a docs/desarrollo/NN-slug/plan.md. Lo redacta Planificación después de /grill-me, en la rama fNN-plan. El usuario lo autoriza y Planificación lo fusiona. Ejecución no lo modifica. -->
 
-**Estado:** en aprobación | aprobado | en ejecución (tNN de NN fusionadas) | cerrado (enlace al cierre).
+**Estado:** activo mientras esté en `main` | cerrado (enlace al cierre, lo anota Revisión).
 
 ## Objetivo y decisión que debe permitir
 

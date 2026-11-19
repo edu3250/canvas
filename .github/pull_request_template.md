@@ -37,6 +37,8 @@ Ninguna | lista.
 
 ## Dictamen de Revisión
 
+<!-- Se publica como comentario con gh pr comment, no como aprobación formal. -->
+
 - SHA dictaminado:
 - Resultado: aprobado | cambios pedidos | devuelto a Planificación
 - Tareas siguientes: siguen siendo válidas | afectadas (cuáles)
