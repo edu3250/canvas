@@ -13,7 +13,7 @@ Para Planificación y Revisión.
 
 ## Extensión
 
-- Encargo: lo que haga falta para que no quede nada por interpretar.
+- Plan de fase: extenso. Lo que haga falta para que ninguna tarea deje nada por interpretar.
 - Cierre de fase: como mucho una pantalla, unas 40 líneas. Incluye el resultado, la tabla de criterios, los límites, las decisiones para el usuario y el esfuerzo.
 - Los registros, mediciones y tablas largas van en `docs/inspeccion/fNN-evidencia-*.md`, enlazados desde el cierre.
 

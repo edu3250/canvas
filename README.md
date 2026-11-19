@@ -16,7 +16,7 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Cómo se trabaja
 
-El usuario encarga un objetivo. Coordinación lanza Planificación, Ejecución y Revisión en contextos separados, y solo consulta al usuario las decisiones que le corresponden. Revisión fusiona cuando todo cumple. [Reglas](AGENTS.md) · [Guías por rol](docs/proceso/)
+El usuario abre una sesión por rol: Planificación entrevista al usuario y redacta un plan por fase, que el usuario aprueba. Ejecución implementa una tarea por sesión, cada una en su PR, y Revisión contrasta el trabajo con el plan. Revisión fusiona cuando todo cumple. [Reglas](AGENTS.md) · [Guías por rol](docs/proceso/)
 
 ## Estado
 
