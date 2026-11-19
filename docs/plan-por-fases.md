@@ -28,6 +28,7 @@ Prueba de navegación del prototipo: con dos ventanas de VS Code en Programació
 | Espacios y archivos | Cambiar entre Juegos y Programación, ver sus iconos y fondo, guardar desde otra aplicación por ruta y mover una carpeta entre espacios. | 5–9 |
 | 4. Dos acomodos con VS Code | Verificadas 12 lecturas y restauraciones finales con dos instancias aisladas. [Cierre](inspeccion/f04-cierre.md). | 24 min estimados registrados; revisión humana sin medición |
 | 5. Arquitectura y navegación | Arquitectura, contrato del primer incremento y matriz de aceptación documentados. [Cierre](inspeccion/f05-cierre.md). | 328 s de Ejecución registrados |
+| 6. Primer incremento de navegación | Consola y dominio en memoria. Los quince criterios de aceptación están verificados. [Cierre](inspeccion/f06-cierre.md). | Esfuerzo por rol en el cierre |
 | Canvas | Desplazar la cámara, escribir dentro de un panel, ampliar, volver y conservar ambos acomodos. Verificar foco de Discord y retorno a un juego a pantalla completa. | 8–15 |
 | Reapertura | Tras reiniciar, recuperar las ventanas marcadas en sus posiciones. Verificar dos ventanas de VS Code, una de Codex y un juego que sigue cerrado. | 4–7 |
 | Estabilidad y rendimiento | Ensayar con 15 ventanas y seis paneles. Medir tiempos de cuadro y de activación, CPU, GPU y memoria del gestor. Comparar con la misma sesión con el gestor cerrado. Probar recuperación tras cierre inesperado y repetir las pruebas críticas en otra compilación de Windows 11. | 5–9 |

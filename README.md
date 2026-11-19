@@ -20,6 +20,8 @@ El usuario abre una sesión por rol: Planificación entrevista al usuario y reda
 
 ## Estado
 
+La fase 6 entrega una consola en español para navegar entre Programación, Inicio y Juegos. La cámara y el retorno se conservan por espacio durante la sesión. [Ejecutar el recorrido](docs/desarrollo/05-arquitectura/recorrido-incremento.md) · [Cierre de la fase 6](docs/inspeccion/f06-cierre.md).
+
 La fase 5 cerró la arquitectura y el contrato de navegación en memoria. El contrato incluye quince casos de prueba para la futura implementación. [Cierre de la fase 5](docs/inspeccion/f05-cierre.md).
 
 La fase 4 verificó los dos acomodos con dos instancias aisladas de VS Code, incluidas las restauraciones finales y la limpieza. Una instancia necesitó cierre forzado. [Resultado, revisión y límites](docs/inspeccion/f04-cierre.md).
