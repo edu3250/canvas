@@ -16,7 +16,7 @@ Evaluar el código MIT de Canvas Window Composer para la cámara y el mapa. Ante
 
 La [inspección estática de Canvas Window Composer](inspeccion/informe-cwc.md) identificó una diferencia central entre el mapa de CWC y los paneles editables del producto. El [segundo encargo](desarrollo/02-ensayo-panel-nativo.md) prueba la activación de una ventana real dentro de su panel. Los hitos posteriores son provisionales. El usuario decide los cambios de alcance, experiencia o arquitectura.
 
-Desde la fase 3 se aplica el [flujo del repositorio](../AGENTS.md#ciclo-de-una-fase). Un PR por fase reúne contrato, implementación y revisión independiente. Revisión lo fusiona cuando todo cumple.
+Desde la fase 3 se aplica el [flujo del repositorio](../AGENTS.md#ciclo-de-una-fase). Cada fase tiene un plan extenso que aprueba el usuario y un PR por tarea, que Revisión fusiona cuando todo cumple.
 
 Prueba de navegación del prototipo: con dos ventanas de VS Code en Programación, activar la segunda y alejar la vista. Ir a Inicio con el atajo y pulsarlo de nuevo. Deben recuperarse el punto y el zoom anteriores. Volver a Inicio y pulsar el icono de VS Code debe activar la segunda ventana. Desde el menú se debe poder seleccionar la primera o pedir una nueva.
 

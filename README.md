@@ -16,7 +16,7 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Cómo se trabaja
 
-El usuario abre una sesión por rol: Planificación redacta el plan, Ejecución implementa una tarea por sesión y Revisión contrasta el trabajo con el contrato. Revisión fusiona cuando todo cumple. [Reglas](AGENTS.md) · [Guías por rol](docs/proceso/)
+El usuario abre una sesión por rol: Planificación entrevista al usuario y redacta un plan por fase, que el usuario aprueba. Ejecución implementa una tarea por sesión, cada una en su PR, y Revisión contrasta el trabajo con el plan. Revisión fusiona cuando todo cumple. [Reglas](AGENTS.md) · [Guías por rol](docs/proceso/)
 
 ## Estado
 

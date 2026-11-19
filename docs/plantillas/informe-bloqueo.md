@@ -1,8 +1,8 @@
 # [Bloqueo] fNN-tNN · Título
 
-<!-- Comentario en el PR de la fase. Lo redacta Ejecución y lo resuelve Planificación. -->
+<!-- Comentario en el PR de la tarea, que pasa a borrador. Lo redacta Ejecución y lo resuelve Planificación. -->
 
-- **Tarea:** enlace al archivo de tarea
+- **Tarea:** enlace a su sección en `plan.md`
 - **Rama y último commit:**
 - **Cambios sin commit:** ninguno | descripción
 
