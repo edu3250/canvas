@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas.Domain", "src\Canvas
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas.Console", "src\Canvas.Console\Canvas.Console.csproj", "{E63F91AB-AD5B-40C1-94CF-9FB0F19B8AA6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas.Desktop", "src\Canvas.Desktop\Canvas.Desktop.csproj", "{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,18 @@ Global
 		{E63F91AB-AD5B-40C1-94CF-9FB0F19B8AA6}.Release|x64.Build.0 = Release|Any CPU
 		{E63F91AB-AD5B-40C1-94CF-9FB0F19B8AA6}.Release|x86.ActiveCfg = Release|Any CPU
 		{E63F91AB-AD5B-40C1-94CF-9FB0F19B8AA6}.Release|x86.Build.0 = Release|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Debug|x64.Build.0 = Debug|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Debug|x86.Build.0 = Debug|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Release|x64.ActiveCfg = Release|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Release|x64.Build.0 = Release|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Release|x86.ActiveCfg = Release|Any CPU
+		{B6EDFBEA-2ABB-41D4-A9D2-C92F5CFE7B5D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
