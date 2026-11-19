@@ -1,6 +1,6 @@
 # Fase 5 · Arquitectura y contrato del primer incremento
 
-**Estado: en aprobación.** La fase entrega una arquitectura documentada y un contrato de navegación que otra fase podrá implementar tras su autorización. La revisión del PR anterior dejó tres transiciones por precisar. Este plan fija el resultado esperado de cada una y conserva la evidencia original.
+**Estado: cerrado.** [Cierre de la fase 5](../../inspeccion/f05-cierre.md). La fase entrega una arquitectura documentada y un contrato de navegación que otra fase podrá implementar tras su autorización. La revisión del PR anterior dejó tres transiciones por precisar. Este plan fija el resultado esperado de cada una y conserva la evidencia original.
 
 ## Decisiones acordadas
 
