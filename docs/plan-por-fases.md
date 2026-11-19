@@ -24,6 +24,7 @@ Prueba de navegación del prototipo: con dos ventanas de VS Code en Programació
 | --- | --- | ---: |
 | 1. Inspección del candidato | Informe estático entregado y ensayos priorizados. | Sin registro de jornadas reales |
 | 2. Ensayo de panel nativo | Activar y editar en dos tamaños con el vecino visible, abrir y cancelar un diálogo, recuperar el foco. | La referencia de 3–5 jornadas correspondía al prototipo de viabilidad más amplio |
+| 3. Salida y retorno | Verificados dos viajes programáticos con dos ventanas propias y limpieza. [Cierre y esfuerzo](inspeccion/f03-cierre.md). | 18 min estimados de trabajo registrado; planificación y revisión humana sin medición |
 | Espacios y archivos | Cambiar entre Juegos y Programación, ver sus iconos y fondo, guardar desde otra aplicación por ruta y mover una carpeta entre espacios. | 5–9 |
 | Canvas | Desplazar la cámara, escribir dentro de un panel, ampliar, volver y conservar ambos acomodos. Verificar foco de Discord y retorno a un juego a pantalla completa. | 8–15 |
 | Reapertura | Tras reiniciar, recuperar las ventanas marcadas en sus posiciones. Verificar dos ventanas de VS Code, una de Codex y un juego que sigue cerrado. | 4–7 |

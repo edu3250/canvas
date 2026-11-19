@@ -20,4 +20,4 @@ El plan publicado habilita la ejecución. Un modelo independiente revisa la impl
 
 ## Estado
 
-En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. Las pruebas de restauración y de rendimiento con 15 ventanas siguen pendientes.
+En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. La fase 3 verificó dos viajes entre escritorio y canvas con dos ventanas WinForms propias, conservando sus acomodos. [Cierre y límites de la fase 3](docs/inspeccion/f03-cierre.md). La restauración de aplicaciones reales, la recuperación tras reinicio y el rendimiento con 15 ventanas siguen pendientes.

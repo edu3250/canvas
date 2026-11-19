@@ -36,4 +36,4 @@ Registro local `evidencia-local/control-4f10e4318973/sesion.txt`. A corresponde 
 | Volver y repetir | **Verificado** | C3 recuperó los rectángulos de pantalla de C2. D2 volvió a igualar D0 en las dos ventanas. |
 | Terminar | **Verificado** | Las dos filas de limpieza verificaron la restauración. Los dos PID registraron `terminado=True`, sin cierre forzado, y el temporal registró `eliminado=True`. |
 
-La revisión independiente del SHA de entrega queda pendiente.
+La revisión independiente contrastó estas mediciones con el registro local y comprobó la implementación. [Cierre de fase y dictamen](f03-cierre.md).

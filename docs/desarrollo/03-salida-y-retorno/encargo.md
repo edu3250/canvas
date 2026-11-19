@@ -1,6 +1,6 @@
 # Fase 03 · Salida y retorno al canvas
 
-**Estado:** plan disponible para ejecución.
+**Estado:** ejecución y revisión técnica terminadas; cierre documental preparado. [Informe de fase](../../inspeccion/f03-cierre.md). La aprobación del SHA final se registra en el PR #2. Fusión pendiente por instrucción del usuario.
 
 ## Decisión y alcance
 
