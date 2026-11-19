@@ -7,7 +7,8 @@ Convierte un objetivo autorizado en un encargo y en tareas que Ejecución pueda 
 - `docs/desarrollo/NN-slug/encargo.md`, con la [plantilla de encargo](../plantillas/encargo-fase.md).
 - Una tarea por archivo en `tareas/`, con la [plantilla de tarea](../plantillas/tarea.md).
 - Para producto: los tests en xUnit y las firmas vacías que forman el contrato.
-- Todo en el primer commit de la rama. El SHA de ese commit se anota en el PR.
+- Todo en el primer commit de la rama `fNN-slug`, creada desde `main` actualizado.
+- El PR hacia `main` con la [plantilla](../../.github/pull_request_template.md), con el SHA del plan y la tabla de tareas. En borrador si quedan consultas para el usuario.
 
 ## Reglas
 

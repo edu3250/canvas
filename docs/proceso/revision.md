@@ -27,6 +27,6 @@ Revisión fusiona por su cuenta cuando se cumplen todas estas condiciones:
 3. Build, tests y CI, cuando exista, pasan en el SHA final.
 4. El SHA final es el dictaminado más el commit de cierre, y nada más.
 
-Usa `gh pr merge <n> --merge --match-head-commit <sha>`. Si GitHub exige una aprobación de otra cuenta, deja el dictamen en un comentario identificado e informa a Coordinación. No desactives protecciones.
+Usa `gh pr merge <n> --merge --match-head-commit <sha>`. Si GitHub exige una aprobación de otra cuenta, deja el dictamen en un comentario identificado e informa al usuario. No desactives protecciones.
 
 Si falla cualquier condición, no fusiones. Explica en el PR qué falta y quién debe resolverlo. Un cambio posterior al dictamen exige revisar de nuevo.

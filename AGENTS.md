@@ -25,12 +25,19 @@ Cada sesión declara al empezar su rol y su archivo de trabajo, por ejemplo `Rol
 
 | Rol | Hace | Guía |
 | --- | --- | --- |
-| Coordinación | Recibe el objetivo del usuario y lanza cada rol en un contexto nuevo. Transmite solo las decisiones que corresponden al usuario. No planifica, no implementa ni revisa. | [coordinacion.md](docs/proceso/coordinacion.md) |
 | Planificación | Redacta el encargo y tareas cerradas con contrato, de modo que Ejecución no tenga que tomar decisiones de diseño. | [planificacion.md](docs/proceso/planificacion.md) |
 | Ejecución | Implementa una tarea dentro de sus límites y aporta evidencia por criterio. | [ejecucion.md](docs/proceso/ejecucion.md) |
 | Revisión | Contrasta el trabajo con el contrato, cierra la fase y **fusiona sin pedir autorización** cuando todo cumple. | [revision.md](docs/proceso/revision.md) |
 
-Revisión siempre trabaja en un contexto distinto del de quien planificó o implementó lo que revisa. El usuario puede abrir directamente cualquier sesión de rol sin pasar por Coordinación.
+El usuario abre cada sesión y le asigna su rol. Revisión siempre trabaja en una sesión distinta de la que planificó o implementó lo que revisa.
+
+## Ciclo de una fase
+
+1. El usuario pide un objetivo a Planificación. Si abre una fase nueva, esa petición es la autorización.
+2. Planificación crea la rama `fNN-slug`, publica el plan en el primer commit y abre el PR con la [plantilla](.github/pull_request_template.md). Si deja consultas para el usuario, el PR queda en borrador hasta que se respondan.
+3. Ejecución realiza una tarea por sesión, en el orden de dependencias del encargo, y marca su estado en la descripción del PR. Un bloqueo vuelve a Planificación.
+4. Revisión contrasta todas las entregas con el contrato. Si algo falla, pide cambios a Ejecución o devuelve el caso a Planificación.
+5. Revisión cierra la fase y fusiona. El resultado, los límites y las decisiones pendientes quedan en el cierre.
 
 ## Decisiones reservadas al usuario
 
@@ -55,7 +62,7 @@ Esta regla no admite excepciones.
 - Nada se ejecuta como administrador.
 - Los cierres abruptos se ensayan solo con trabajo descartable.
 - Cada ejecución deja limpia la sesión: procesos cerrados, temporales borrados y ventanas devueltas a su acomodo.
-- Un **ensayo interactivo** toma el primer plano. Solo se lanza si la tarea lo pide y después de que el usuario responda «adelante». Coordinación agrupa los ensayos de una fase en una sola petición.
+- Un **ensayo interactivo** toma el primer plano. Solo se lanza si la tarea lo pide y después de que el usuario responda «adelante».
 
 ## Idioma y nombres
 

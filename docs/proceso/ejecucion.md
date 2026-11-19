@@ -16,6 +16,7 @@ Implementa una sola tarea dentro de sus límites. Su archivo de tarea es el cont
 1. Implementa y ejecuta los comandos de verificación de la tarea.
 2. Haz commits cuyo mensaje empiece con `tNN`.
 3. Añade al PR un comentario con la [plantilla de entrega](../plantillas/entrega-tarea.md): verificación, estado de cada criterio, desviaciones y esfuerzo. Deja constancia de cada desviación, por pequeña que sea.
+4. Marca la tarea como entregada en la tabla de la descripción del PR, con enlace a tu comentario.
 
 ## Parada
 

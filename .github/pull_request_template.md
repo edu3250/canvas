@@ -1,4 +1,4 @@
-<!-- Descripción del PR de una fase (rama fNN-slug). La mantiene Coordinación. Las entregas de tarea, los bloqueos y el dictamen van como comentarios. -->
+<!-- Descripción del PR de una fase (rama fNN-slug). La abre Planificación; Ejecución actualiza el estado de sus tareas y Revisión completa el dictamen. Las entregas de tarea, los bloqueos y el dictamen van como comentarios. -->
 
 **Encargo:** `docs/desarrollo/NN-slug/encargo.md`
 **SHA del plan:**
