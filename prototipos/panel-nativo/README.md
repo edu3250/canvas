@@ -38,3 +38,20 @@ El modo `layout` mueve dos ventanas descartables del prototipo y alterna dos vec
 2. Pulsar Ctrl+Fin, escribir `ANTES1` y guardar. Abrir el diálogo con Ctrl+O, cancelarlo, escribir `DESPUES1` y guardar. Observar el vecino verde en cada paso.
 3. Pulsar **Estrecho** y hacer clic otra vez en la vista previa. Comprobar cuántos renglones ocupa la primera línea y repetir con `ANTES2` y `DESPUES2`. Las marcas deben quedar en la segunda línea del editor.
 4. Pulsar **Salir**. El registro consigna el cierre de cada proceso iniciado y la eliminación del directorio temporal. En modo manual conviene leer el documento antes de salir. El registro y las mediciones manuales se pueden contrastar con el [informe del ensayo](../../docs/inspeccion/ensayo-panel-nativo.md).
+
+## Dos acomodos con VS Code
+
+**Estado: preparado; ensayo interactivo pendiente.** Requiere aviso y ?adelante? en la sesi?n de Ejecuci?n (AGENTS.md ?7). Abre dos ventanas descartables de VS Code con documentos, perfiles y extensiones separados; puede tomar el primer plano. No usar ventanas existentes.
+
+Desde la ra?z, despu?s del permiso:
+
+```powershell
+dotnet build prototipos/panel-nativo/PanelNativo.csproj
+Set-Location prototipos/panel-nativo
+.\bin\Debug\net10.0-windows\PanelNativo.exe layout-code
+$LASTEXITCODE
+```
+
+Conserva la resoluci?n de Code.exe y PANEL_CODE_EXE descritas arriba. Requiere ?rea primaria m?nima de 1200 ? 800 px. Ejecuta el mismo or?culo de seis etapas de layout: A normal y B maximizada en D0; dos retornos y restauraciones finales. No a?adir --auto. Registro: evidencia-local/layout-code-<id>/sesion.txt, excluido de Git. C?digo 0: recorrido y limpieza verificados; 1: fallo; 2: argumentos inv?lidos.
+
+Contrastar las 12 lecturas, estado exacto y tolerancia de 1 px por borde, sin alterar tiempos ni dimensiones si VS Code los rechaza. Registrar versiones, DPI, ?rea, salida y limpieza. [Evidencia y pendientes](../../docs/inspeccion/f04-evidencia-recorrido.md).
