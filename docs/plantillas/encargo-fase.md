@@ -2,7 +2,7 @@
 
 <!-- Copiar a docs/desarrollo/NN-slug/encargo.md. Lo redacta Planificación en la rama fNN-plan. -->
 
-**Estado:** plan en revisión | aprobado | en ejecución | cerrado (enlace al informe).
+**Estado:** plan publicado | en ejecución | cerrado (enlace al informe).
 
 ## Decisión que debe permitir
 

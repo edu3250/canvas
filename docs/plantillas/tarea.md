@@ -2,7 +2,7 @@
 
 <!-- Copiar a docs/desarrollo/NN-slug/tareas/NN-slug.md. Lo redacta Planificación. Ejecución no lo modifica. -->
 
-- **Rama:** `fNN-tNN-slug-corto`
+- **Rama:** rama del PR del encargo
 - **Depende de:** tNN | ninguna
 - **Ensayo interactivo:** no | sí (AGENTS.md §7: avisar y esperar el «adelante» del usuario)
 
@@ -33,6 +33,8 @@ Firmas o interfaces exactas, ya presentes en la rama del plan o copiadas aquí:
 Tests que deben pasar: `tests/...` (nombres de los tests).
 
 Para Win32: llamadas, orden, banderas y qué hacer con cada valor de retorno.
+
+Para un ensayo, identifica el punto de entrada y los símbolos existentes que debe usar el ejecutor. Nombra cada sujeto de prueba, cómo se crea y cómo se comprueba su identidad. Especifica en una tabla cuándo se recoge cada medición, con qué API y unidades, contra qué referencia se compara y qué tolerancia se acepta. Indica el destino de la evidencia y al menos un ejemplo que deba fallar aunque el resultado parezca correcto a simple vista.
 
 ## Pasos sugeridos
 

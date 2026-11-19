@@ -16,8 +16,8 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Cómo se trabaja
 
-Cada sesión de un modelo declara un rol (Planificación, Ejecución o Revisión) y el archivo en el que trabaja. Una fase empieza con un plan que el usuario aprueba al fusionarlo. Después se divide en tareas pequeñas, cada una en su propia rama y su propio PR, siguiendo GitHub flow. Las reglas están en [AGENTS.md](AGENTS.md) y las plantillas en [docs/plantillas](docs/plantillas/).
+El plan publicado habilita la ejecución. Un modelo independiente revisa la implementación y autoriza su fusión. [Flujo completo](AGENTS.md)
 
 ## Estado
 
-En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. Las pruebas de restauración y de rendimiento con 15 ventanas siguen pendientes.
+En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. La fase 3 verificó dos viajes entre escritorio y canvas con dos ventanas WinForms propias, conservando sus acomodos. [Cierre y límites de la fase 3](docs/inspeccion/f03-cierre.md). La restauración de aplicaciones reales, la recuperación tras reinicio y el rendimiento con 15 ventanas siguen pendientes.

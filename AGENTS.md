@@ -43,60 +43,21 @@ Estado: documentación, ADR y un prototipo desechable. Todavía no existe códig
 
 ## 4. Roles
 
-| Rol | Responsabilidad | Entrega |
-| --- | --- | --- |
-| Usuario | Decide alcance, experiencia y arquitectura. Aprueba planes de fase. Es el único que fusiona en `main`. | Aprobaciones y respuestas |
-| Planificación | Convierte una fase aprobada en un encargo y en tareas cerradas con su contrato. Resuelve bloqueos. | PR `fNN-plan` |
-| Ejecución | Implementa una sola tarea dentro de sus límites. | PR `fNN-tNN-…` con informe |
-| Revisión | Contrasta cada PR con su archivo de tarea o de plan. Cierra la fase con su informe. | Revisión del PR e informe de fase |
+Planificación publica el encargo con criterios verificables, archivos, contratos y pruebas. Registra el SHA del plan en el PR. Publicar el plan autoriza automáticamente su ejecución dentro del alcance solicitado por el usuario.
 
-En los documentos anteriores, «responsable de diseño» equivale a Planificación cuando redacta y a Revisión cuando cierra. «Inspector» y «ejecutor» equivalen a Ejecución. Los documentos históricos no se reescriben.
+Ejecución implementa el encargo y aporta evidencia por criterio. Si hay ambigüedad o tres intentos fallidos por la misma causa, devuelve el caso a Planificación. Un cambio de contrato se explica y se versiona. Las decisiones excepcionales de la sección 3 siguen correspondiendo al usuario.
 
-### Planificación
-
-- Parte de una fase que el usuario ha pedido abrir. Usa [encargo-fase](docs/plantillas/encargo-fase.md) y [tarea](docs/plantillas/tarea.md).
-- Toma las decisiones de diseño. Ejecución no debería tener que interpretar nada.
-- Divide la fase en tareas de una sola responsabilidad: entre 1 y 4 archivos y unas 300 líneas de diff como máximo.
-- Para la lógica que no depende de Windows, escribe los tests en xUnit y las firmas vacías. Para lo que toca Win32, indica las llamadas, el orden y un guion de verificación.
-- Lista los archivos permitidos, los comandos de verificación, los criterios de aceptación y las condiciones de parada.
-- Ante un informe de bloqueo, corrige la tarea, la divide o consulta al usuario. No implementa la solución en la rama de Ejecución.
-
-### Ejecución
-
-- Trabaja solo en la tarea declarada y en su rama.
-- No añade dependencias, no toca archivos fuera de la lista, no modifica tests ni firmas escritos por Planificación y no reinterpreta el diseño.
-- Ejecuta los comandos de verificación de la tarea antes de abrir el PR.
-- Tras **3 intentos fallidos** con el mismo problema, o ante cualquier ambigüedad, se detiene. Abre un PR en borrador titulado `[Bloqueo] fNN-tNN …` con el [informe de bloqueo](docs/plantillas/informe-bloqueo.md).
-- Abre el PR con la [plantilla de PR](.github/pull_request_template.md) y deja constancia de cada desviación, por pequeña que sea.
-- Si la tarea pide un ensayo interactivo, lee la sección 7 antes de lanzarlo.
-
-### Revisión
-
-- Trabaja en una sesión distinta de la que escribió el plan o la tarea.
-- Comprueba que el diff respeta los archivos permitidos, que build y tests pasan y que cada criterio de aceptación tiene evidencia.
-- Resultado: aprobar, pedir cambios concretos o devolver la tarea a Planificación cuando el problema esté en el contrato.
-- En un PR `fNN-plan`, revisa que cada tarea pueda ejecutarse sin decisiones de diseño.
-- Al terminar las tareas, redacta el informe de fase en `docs/inspeccion/` con la evidencia, los límites, el esfuerzo sumado y una recomendación. La decisión siguiente es del usuario.
+Revisión e integración corresponde a un modelo en una sesión independiente del implementador. Compara el código y la evidencia con el contrato registrado, pide correcciones o aprueba un SHA concreto. Ejecución atiende las correcciones. Cuando pasan las comprobaciones exigibles, Revisión autoriza y fusiona ese SHA. Un cambio posterior requiere revisar la nueva revisión.
 
 ## 5. Ciclo de una fase
 
-1. El usuario pide abrir una fase.
-2. Planificación entrega el PR `fNN-plan`: encargo, tareas, tests y firmas.
-3. Revisión lo revisa. El usuario lo fusiona, y con eso autoriza la fase. No se ejecuta ninguna tarea antes.
-4. Ejecución realiza cada tarea en su rama, en el orden de dependencias del encargo.
-5. Revisión revisa cada PR. El usuario fusiona.
-6. Revisión cierra la fase con el informe y actualiza el estado del encargo, el [mapa de fases](docs/plan-por-fases.md) y el [README](README.md).
+El usuario encarga el objetivo una vez. El modelo coordinador organiza Planificación, Ejecución y Revisión sin pedirle que despache cada tarea. El mismo PR recoge el plan y la implementación en commits separados. Las tareas se ejecutan en orden de dependencia. Revisión cierra con el informe de fase en docs/inspeccion/, el mapa y el README actualizados. El usuario recibe resultados y limitaciones.
 
-Los ensayos en `prototipos/` siguen el mismo ciclo.
+## 6. Git y controles
 
-## 6. Git: GitHub flow
+Usar una rama desde main actualizado y un PR por entrega. Los commits en español empiezan con verbo en infinitivo. Registrar la revisión del plan y comprobar el SHA antes de fusionar. Si los modelos comparten la cuenta del autor, Revisión puede documentar su dictamen en un comentario identificado. Una protección que exija aprobación formal de otra cuenta requiere una identidad revisora autorizada. Se respetan las protecciones existentes.
 
-- `main` siempre compila y pasa sus tests.
-- Una rama por plan o tarea, creada desde `main` actualizado: `fNN-plan` o `fNN-tNN-slug-corto`, por ejemplo `f03-t02-guardar-acomodo`. Si la herramienta crea otro nombre, renombra la rama antes de publicarla.
-- Un PR por rama hacia `main`, con el archivo de tarea enlazado. Solo el usuario fusiona.
-- Commits en español, empezando por un verbo en infinitivo y explicando el porqué: `Guardar el acomodo de Windows antes de mover el panel`.
-- Nunca subas a Git `bin/`, `obj/`, `evidencia-local/`, capturas con rutas del perfil de Windows ni secretos.
-- Cuando exista `src/`, ningún PR se fusiona sin pasar la CI de GitHub Actions (`windows-latest`: `dotnet build` y `dotnet test`). Crear esa CI forma parte de la primera tarea de producto.
+Excluir bin/, obj/, evidencia-local/, capturas con rutas de perfil y secretos. La primera tarea de producto en src/ incluye CI en windows-latest con dotnet build y dotnet test.
 
 ## 7. Pruebas y evidencia
 
