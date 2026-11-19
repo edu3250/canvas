@@ -21,3 +21,6 @@ jobs:
         run: dotnet build EscritorioCanvas.sln -c Release
       - name: Ejecutar pruebas en Release
         run: dotnet test EscritorioCanvas.sln -c Release --no-build
+      - name: Verificar el control de cobertura
+        shell: pwsh
+        run: pwsh -NoProfile -File eng/Test-CoverageGate.ps1
