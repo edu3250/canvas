@@ -24,7 +24,7 @@ La propuesta parte de un proceso local. Las flechas expresan dependencias de có
 | Panel | `PanelId` identifica la representación de una ventana en un espacio aun cuando la ventana esté cerrada. El descriptor de aplicación y ventana permite distinguir paneles de una misma aplicación. | Dominio, en el espacio propietario. |
 | Ventana nativa | `LiveWindowRef` identifica una ventana observada durante la sesión con token de sesión, HWND, PID y generación observada. Coordinación valida la asociación de una ventana a un único panel. | Adaptador Windows para la referencia nativa. Coordinación para la asociación con el panel. |
 | Geometría del escritorio | `DesktopPlacement` registra coordenadas nativas con su contexto y el estado normal o maximizado para restaurar el acomodo de Windows. | Coordinación a partir de observaciones del adaptador Windows. |
-| Geometría del lienzo | `CanvasBounds` sitúa y dimensiona el panel en el lienzo. `NativeSize` representa el tamaño de la ventana al editar. La presentación proyecta los límites con la cámara del espacio. | Dominio, en `Panel` para los límites y el tamaño, y en `Canvas` para la cámara. |
+| Geometría del lienzo | `CanvasBounds` sitúa y dimensiona el panel en el lienzo. `NativeSize` guarda el tamaño exterior de la ventana al editar, en unidades lógicas de 1/96 de pulgada. La presentación proyecta los límites con la cámara del espacio. | Dominio, en `Panel` para los límites y el tamaño, y en `Canvas` para la cámara. |
 | Permiso de reapertura | `ReopenPolicy` guarda la elección explícita del usuario por panel. Coordinación consulta ese permiso antes de lanzar una aplicación para recuperar un panel. | Dominio, en `Panel`. Almacenamiento conserva esa elección como dato independiente de los acomodos. |
 
 ## Recorridos de los ADR
@@ -78,6 +78,16 @@ En la tabla, C₀ y T₀ son la cámara y el tamaño previos de A. C₁ y T₁ s
 | Cambio de espacio | Volver a A | B | Vacío | A | Vacío | C₁ | T₁ | (C₀, T₀) | Vacío |
 | Cambio de espacio | Desampliar | A | Vacío | A | Vacío | C₀ | T₀ | Vacío | Vacío |
 
+## Geometría y DPI
+
+Los tamaños T₀ y T₁ de los recorridos de ampliación se expresan como `NativeSize`. Al desampliar, se restaura el tamaño exterior lógico previo T₀, en unidades de 1/96 de pulgada.
+
+Cuando el adaptador Windows observa el tamaño exterior de la ventana en píxeles, lo convierte por eje con el DPI de la observación. Para el ancho aplica `ancho lógico = ancho en píxeles × 96 / DPI horizontal` y para el alto aplica `alto lógico = alto en píxeles × 96 / DPI vertical`. Coordinación usa ese resultado para actualizar `NativeSize` y las dimensiones lógicas de `CanvasBounds` en el acomodo del lienzo al que corresponde la observación.
+
+En el mapa, la presentación multiplica el ancho y el alto de `CanvasBounds` por el zoom de la cámara para obtener las dimensiones visibles en unidades de vista. La proyección solo lee la geometría guardada, de modo que variar el zoom conserva `CanvasBounds` y `NativeSize`.
+
+**Ejemplo calculado.** Una observación de 1200 × 900 píxeles a 144 DPI en ambos ejes se convierte en 800 × 600 unidades lógicas al multiplicar cada dimensión por 96/144. El acomodo correspondiente guarda ese tamaño en `NativeSize` y en las dimensiones de `CanvasBounds`. A zoom 0,5, el mapa muestra 400 × 300 unidades de vista. Al volver a zoom 1, el mapa muestra 800 × 600 y el tamaño lógico guardado sigue siendo 800 × 600.
+
 ## Alternativas para fases futuras
 
 Los costes son comparaciones cualitativas de la propuesta histórica.
@@ -92,4 +102,4 @@ Los costes son comparaciones cualitativas de la propuesta histórica.
 
 El ensayo de fase 2 registró edición a dos anchos y cancelación de un diálogo. Los ensayos controlados de las fases 3 y 4 documentaron recorridos entre dos acomodos. La fase 4 probó dos instancias aisladas de VS Code a 96 DPI en Windows 11. Los resultados pertenecen a esos ensayos y las pruebas de producto siguen pendientes. [Fase 2](../inspeccion/ensayo-panel-nativo.md), [fase 3](../inspeccion/f03-cierre.md), [fase 4](../inspeccion/f04-cierre.md).
 
-Los límites, el modelo y las alternativas proceden de la propuesta histórica. Las transiciones del diálogo y de la ampliación precisan H1 y H2. La geometría y DPI de H3 corresponden a T04. [Propuesta examinada](https://github.com/edu3250/escritorio-canvas/blob/bb687ea90d988b038937e0c86fb9da39424cb00c/docs/arquitectura/propuesta-producto.md), [dictamen histórico](https://github.com/edu3250/escritorio-canvas/blob/b6d1963d8a0b51dcedd221e6c82730856272d319/docs/inspeccion/f05-revision.md).
+Los límites, el modelo y las alternativas proceden de la propuesta histórica. Las transiciones del diálogo y de la ampliación precisan H1 y H2. La sección de geometría y DPI precisa H3. [Propuesta examinada](https://github.com/edu3250/escritorio-canvas/blob/bb687ea90d988b038937e0c86fb9da39424cb00c/docs/arquitectura/propuesta-producto.md), [dictamen histórico](https://github.com/edu3250/escritorio-canvas/blob/b6d1963d8a0b51dcedd221e6c82730856272d319/docs/inspeccion/f05-revision.md).
