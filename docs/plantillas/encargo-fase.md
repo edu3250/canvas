@@ -1,6 +1,6 @@
 # Fase NN · Título
 
-<!-- Copiar a docs/desarrollo/NN-slug/encargo.md. Lo redacta Planificación en la rama fNN-plan. -->
+<!-- Copiar a docs/desarrollo/NN-slug/encargo.md. Lo redacta Planificación en el primer commit de la rama fNN-slug. -->
 
 **Estado:** plan publicado | en ejecución | cerrado (enlace al informe).
 
@@ -20,7 +20,7 @@ Documentos, ADR, informes y revisiones de código de partida. Fijar por SHA todo
 
 ## Diseño
 
-Las decisiones que Planificación toma para que Ejecución no tenga que interpretar: modelo de datos, interfaces, secuencia de llamadas Win32 y casos límite. Marcar como **consulta al usuario** lo que no puede decidir Planificación (ver AGENTS.md §3).
+Las decisiones que Planificación toma para que Ejecución no tenga que interpretar: modelo de datos, interfaces, secuencia de llamadas Win32 y casos límite. Marcar como **consulta al usuario** lo que no puede decidir Planificación (ver «Decisiones reservadas al usuario» en AGENTS.md) y dejar el PR en borrador.
 
 ## Tareas
 
@@ -43,4 +43,4 @@ Cada tarea tiene su archivo en `tareas/NN-slug.md`.
 
 ## Cierre
 
-Lo completa Revisión: enlace al informe en `docs/inspeccion/`, esfuerzo sumado por categoría y recomendación para el usuario.
+Lo completa Revisión: estado «cerrado» y enlace a `docs/inspeccion/fNN-cierre.md`, redactado con la [plantilla de cierre](cierre-fase.md).

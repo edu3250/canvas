@@ -41,7 +41,7 @@ El modo `layout` mueve dos ventanas descartables del prototipo y alterna dos vec
 
 ## Dos acomodos con VS Code
 
-**Estado: ensayo verificado por Ejecución; revisión independiente completada; véase el cierre de fase.** Requiere aviso y «adelante» en la sesión de Ejecución (AGENTS.md §7). Abre dos ventanas descartables de VS Code con documentos, perfiles y extensiones separados; puede tomar el primer plano. No usar ventanas existentes.
+**Estado: ensayo verificado por Ejecución; revisión independiente completada; véase el cierre de fase.** Requiere aviso y «adelante» del usuario (ver «Seguridad en Windows» en AGENTS.md). Abre dos ventanas descartables de VS Code con documentos, perfiles y extensiones separados; puede tomar el primer plano. No usar ventanas existentes.
 
 Desde la raíz, después del permiso:
 
