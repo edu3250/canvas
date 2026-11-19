@@ -20,6 +20,8 @@ El plan publicado habilita la ejecución. Un modelo independiente revisa la impl
 
 ## Estado
 
+La fase 5 aporta una [propuesta de arquitectura](docs/arquitectura/propuesta-producto.md) y un [primer incremento propuesto](docs/desarrollo/05-arquitectura/primer-incremento.md). La [revisión documental](docs/inspeccion/f05-revision.md) devuelve ambigüedades de contrato a Planificación. La adopción y el inicio de producto siguen pendientes del usuario; el PR permanece en borrador.
+
 La fase 4 verificó los dos acomodos con dos instancias aisladas de VS Code, incluidas las restauraciones finales y la limpieza. Una instancia necesitó cierre forzado. [Resultado, revisión y límites](docs/inspeccion/f04-cierre.md).
 
-En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. La fase 3 verificó dos viajes entre escritorio y canvas con dos ventanas WinForms propias, conservando sus acomodos. [Cierre y límites de la fase 3](docs/inspeccion/f03-cierre.md). La restauración de aplicaciones reales, la recuperación tras reinicio y el rendimiento con 15 ventanas siguen pendientes.
+En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. La fase 3 verificó dos viajes entre escritorio y canvas con dos ventanas WinForms propias, conservando sus acomodos. [Cierre y límites de la fase 3](docs/inspeccion/f03-cierre.md). Fuera del ensayo de fase 4 con dos instancias aisladas de VS Code a 96 DPI, siguen pendientes la restauración de otras aplicaciones y ventanas preexistentes, otras escalas, la recuperación tras reinicio y el rendimiento con 15 ventanas.
