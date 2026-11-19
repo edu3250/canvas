@@ -19,6 +19,9 @@ jobs:
           global-json-file: global.json
       - name: Compilar en Release
         run: dotnet build EscritorioCanvas.sln -c Release
+      - name: Verificar la consola de navegación
+        shell: pwsh
+        run: pwsh -NoProfile -File eng/Test-NavigationConsole.ps1
       - name: Ejecutar pruebas en Release con cobertura
         shell: pwsh
         run: |
