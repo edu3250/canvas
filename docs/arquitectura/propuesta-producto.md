@@ -39,6 +39,27 @@ La propuesta parte de un proceso local. Las flechas expresan dependencias de có
 | ADR 002 · Reiniciar el gestor con el juego cerrado | Coordinación carga los metadatos y reconcilia primero las ventanas existentes. Al faltar una ventana del juego y estar desactivada su reapertura, el panel conserva su posición y queda sin asociación. El juego permanece cerrado. | Dominio posee la posición y el permiso. Coordinación posee el estado de la asociación. El adaptador Windows informa las ventanas observadas. |
 | ADR 002 · El usuario inicia el juego | Si se verifica una coincidencia única, coordinación asocia la nueva ventana al panel recordado. Si hay varias coincidencias, se requiere una elección. La aplicación recupera sus propios datos. | Adaptador Windows posee la nueva referencia viva. Coordinación posee la asociación. Dominio conserva la identidad del panel y sus límites. |
 
+## Activación durante un diálogo
+
+El diálogo modal pertenece al panel de la ventana que lo abrió. El adaptador Windows comunica la activación efectiva que observa. Coordinación valida la `LiveWindowRef`, resuelve su asociación con el `PanelId` y obtiene el `SpaceId` propietario. El dominio conserva el espacio activo y las cámaras. Coordinación conserva el destino aplazado como un `SpaceId` opcional mientras el diálogo está abierto.
+
+Al observar una activación externa validada en otro espacio, coordinación consume el destino aplazado y aplica el cambio al espacio de la ventana activada. Una notificación que nadie ha abierto deja intactos el espacio activo y el destino pendiente. El cambio sigue el foco que Windows ya otorgó. Si el diálogo se cierra primero, coordinación consume el destino al procesarlo para que el cambio se aplique una sola vez.
+
+Ambos recorridos parten del espacio A activo y la petición vacía. Los eventos se procesan en el orden de la tabla. El diálogo pertenece a un panel de A y la activación externa corresponde a una ventana ya asociada a un panel de C.
+
+| Orden | Evento | Espacio activo antes | Destino pendiente antes | Espacio activo después | Destino pendiente después |
+| --- | --- | --- | --- | --- | --- |
+| Activación antes del cierre | Se abre el diálogo en A. | A | Vacío | A | Vacío |
+| Activación antes del cierre | Se solicita B durante el diálogo. | A | Vacío | A | B |
+| Activación antes del cierre | Se observa la activación externa efectiva en C. | A | B | C | Vacío |
+| Activación antes del cierre | Se cierra el diálogo de A. | C | Vacío | C | Vacío |
+| Cierre antes de la activación | Se abre el diálogo en A. | A | Vacío | A | Vacío |
+| Cierre antes de la activación | Se solicita B durante el diálogo. | A | Vacío | A | B |
+| Cierre antes de la activación | Se cierra el diálogo de A y se procesa la petición de B. | A | B | B | Vacío |
+| Cierre antes de la activación | Se observa la activación externa efectiva en C. | B | Vacío | C | Vacío |
+
+La tabla especifica la respuesta del gestor a los eventos observados. La integración con activaciones reales de Windows queda pendiente de ensayo de producto.
+
 ## Alternativas para fases futuras
 
 Los costes son comparaciones cualitativas de la propuesta histórica.
@@ -53,4 +74,4 @@ Los costes son comparaciones cualitativas de la propuesta histórica.
 
 El ensayo de fase 2 registró edición a dos anchos y cancelación de un diálogo. Los ensayos controlados de las fases 3 y 4 documentaron recorridos entre dos acomodos. La fase 4 probó dos instancias aisladas de VS Code a 96 DPI en Windows 11. Los resultados pertenecen a esos ensayos y las pruebas de producto siguen pendientes. [Fase 2](../inspeccion/ensayo-panel-nativo.md), [fase 3](../inspeccion/f03-cierre.md), [fase 4](../inspeccion/f04-cierre.md).
 
-Los límites, el modelo y las alternativas proceden de la propuesta histórica. Las transiciones H1–H3 se desarrollan en las tareas T02–T04 del plan. [Propuesta examinada](https://github.com/edu3250/escritorio-canvas/blob/bb687ea90d988b038937e0c86fb9da39424cb00c/docs/arquitectura/propuesta-producto.md), [dictamen histórico](https://github.com/edu3250/escritorio-canvas/blob/b6d1963d8a0b51dcedd221e6c82730856272d319/docs/inspeccion/f05-revision.md).
+Los límites, el modelo y las alternativas proceden de la propuesta histórica. El recorrido del diálogo precisa H1. Las transiciones H2 y H3 corresponden a T03 y T04. [Propuesta examinada](https://github.com/edu3250/escritorio-canvas/blob/bb687ea90d988b038937e0c86fb9da39424cb00c/docs/arquitectura/propuesta-producto.md), [dictamen histórico](https://github.com/edu3250/escritorio-canvas/blob/b6d1963d8a0b51dcedd221e6c82730856272d319/docs/inspeccion/f05-revision.md).
