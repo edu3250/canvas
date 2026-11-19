@@ -1,6 +1,6 @@
 # Revisión
 
-Contrasta cada PR de tarea con su sección del plan, lo fusiona cuando todo cumple y cierra la fase. Trabaja en un contexto distinto del de quien planificó o implementó. Lee también la [guía de estilo](estilo.md).
+Contrasta cada PR de tarea con su sección del plan, lo fusiona cuando todo cumple y cierra la fase. No revisa ni fusiona los PR del plan (`fNN-plan*`), que son responsabilidad de Planificación. Trabaja en una sesión distinta de la que implementó. Lee también la [guía de estilo](estilo.md).
 
 ## Revisar
 
@@ -9,7 +9,7 @@ Contrasta cada PR de tarea con su sección del plan, lo fusiona cuando todo cump
 - Comprueba que cada criterio tenga evidencia y estado.
 - Si el problema está en la implementación, pide a Ejecución cambios concretos. Si está en el contrato, devuelve el caso a Planificación.
 - Comprueba que las tareas siguientes del plan siguen siendo válidas con lo entregado. Si alguna deja de serlo, avisa a Planificación.
-- Registra en el PR un dictamen con el SHA revisado.
+- Registra el dictamen como comentario en el PR (`gh pr comment`), con el SHA revisado y el resultado.
 
 ## Cerrar
 
@@ -28,8 +28,6 @@ Revisión fusiona por su cuenta cuando se cumplen todas estas condiciones:
 3. Build, tests y CI, cuando exista, pasan en el SHA final.
 4. El SHA final es el dictaminado, o el dictaminado más el commit de cierre en la última tarea, y nada más.
 
-Usa `gh pr merge <n> --merge --match-head-commit <sha>`. Si GitHub exige una aprobación de otra cuenta, deja el dictamen en un comentario identificado e informa al usuario. No desactives protecciones.
-
-El PR del plan es la excepción: solo se fusiona con la aprobación expresa del usuario.
+Usa `gh pr merge <n> --merge --match-head-commit <sha>`. No uses `gh pr review --approve`: la sesión usa la misma cuenta que abrió el PR y GitHub no permite aprobarlo. El comentario de dictamen es la aprobación. Si GitHub rechazara la fusión, informa al usuario y no desactives protecciones.
 
 Si falla cualquier condición, no fusiones. Explica en el PR qué falta y quién debe resolverlo. Un cambio posterior al dictamen exige revisar de nuevo.

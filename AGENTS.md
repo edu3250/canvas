@@ -24,17 +24,17 @@ Cada sesión declara al empezar su rol y su archivo de trabajo, por ejemplo `Rol
 
 | Rol | Hace | Guía |
 | --- | --- | --- |
-| Planificación | Entrevista al usuario con `/grill-me` y redacta un plan de fase extenso, con todas sus tareas cerradas y su contrato, de modo que Ejecución no tenga que tomar decisiones de diseño. | [planificacion.md](docs/proceso/planificacion.md) |
+| Planificación | Entrevista al usuario con `/grill-me` y redacta un plan de fase extenso, con todas sus tareas cerradas y su contrato, de modo que Ejecución no tenga que tomar decisiones de diseño. Con la autorización del usuario, **fusiona el plan y libera las tareas**. | [planificacion.md](docs/proceso/planificacion.md) |
 | Ejecución | Implementa una tarea dentro de sus límites y aporta evidencia por criterio. | [ejecucion.md](docs/proceso/ejecucion.md) |
-| Revisión | Contrasta cada PR de tarea con el plan, cierra la fase y **fusiona sin pedir autorización** cuando todo cumple. | [revision.md](docs/proceso/revision.md) |
+| Revisión | Contrasta cada PR de tarea con el plan, cierra la fase y **fusiona sin pedir autorización** cuando todo cumple. No revisa ni fusiona los PR del plan. | [revision.md](docs/proceso/revision.md) |
 
-El usuario abre cada sesión y le asigna su rol. Revisión siempre trabaja en una sesión distinta de la que planificó o implementó lo que revisa.
+El usuario abre cada sesión y le asigna su rol. Revisión siempre trabaja en una sesión distinta de la que implementó lo que revisa.
 
 ## Ciclo de una fase
 
 1. **Entrevista.** El usuario abre una sesión de Planificación con un objetivo. Planificación empieza con `/grill-me` y no escribe nada hasta que el usuario confirma que no quedan decisiones abiertas.
 2. **Plan.** Planificación escribe un único archivo para toda la fase, `docs/desarrollo/NN-slug/plan.md`, con todas las tareas secuenciales que se puedan definir sin conocer resultados futuros. Lo entrega en un PR desde la rama `fNN-plan`.
-3. **Aprobación.** El usuario lee el plan y lo aprueba. El PR del plan solo se fusiona con esa aprobación expresa, y su fusión autoriza la fase.
+3. **Aprobación.** El usuario lee el plan y lo autoriza en el chat de la misma sesión de Planificación. Planificación cita esa autorización en el PR y lo fusiona. La fusión libera las tareas. No hace falta otra sesión.
 4. **Tareas.** Ejecución realiza una tarea por sesión, en el orden del plan. Cada tarea tiene su propia rama `fNN-tNN-slug`, creada desde `main` actualizado, y su propio PR. Un bloqueo vuelve a Planificación.
 5. **Revisión.** Revisión contrasta cada PR de tarea con el plan y lo fusiona cuando todo cumple. En el PR de la última tarea añade el cierre de la fase.
 
@@ -72,6 +72,7 @@ Código, identificadores, nombres de archivo de código y comentarios en inglés
 - `main` siempre compila y pasa sus tests.
 - El plan va en la rama `fNN-plan` y cada tarea en su rama `fNN-tNN-slug`, siempre creadas desde `main` actualizado. Un PR por rama.
 - Una tarea empieza cuando las tareas de las que depende ya están fusionadas.
+- **Aprobación en GitHub.** Todas las sesiones usan la cuenta del usuario, y GitHub no permite que una cuenta apruebe su propio PR. Por eso no se usa `gh pr review --approve`. La aprobación es un comentario identificado en el PR (`gh pr comment`), seguido de `gh pr merge <n> --merge --match-head-commit <sha>`. El repositorio no tiene protecciones que exijan una aprobación formal; si GitHub rechazara la fusión, informa al usuario y no desactives protecciones.
 - Commits en español, empezando por un verbo en infinitivo y explicando el porqué.
 - Nunca subas `bin/`, `obj/`, `evidencia-local/`, capturas con rutas del perfil de Windows ni secretos.
 - Cuando exista `src/`, ningún PR se fusiona sin pasar la CI (`windows-latest`: `dotnet build` y `dotnet test`). Crear esa CI forma parte de la primera tarea de producto.

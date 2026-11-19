@@ -35,11 +35,22 @@ Un plan por fase, no por tarea. Incluye todas las tareas secuenciales que se pue
 
 - `docs/desarrollo/NN-slug/plan.md`, con la [plantilla de plan](../plantillas/plan-fase.md).
 - La rama `fNN-plan`, creada desde `main` actualizado, y un PR con un resumen, la lista de tareas y las decisiones acordadas.
-- El PR del plan lo aprueba el usuario. Revisión no lo fusiona sin esa aprobación expresa.
+- Presenta el plan al usuario en el chat y espera su autorización expresa.
 
-## 5. Bloqueos y cambios de plan
+## 5. Aprobación y liberación
+
+Cuando el usuario autoriza el plan en esta sesión:
+
+1. Publica en el PR un comentario: `Aprobación del usuario: «cita textual» · SHA <sha>`.
+2. Comprueba que el SHA del PR sigue siendo el que el usuario leyó.
+3. Fusiona con `gh pr merge <n> --merge --match-head-commit <sha>`. No uses `gh pr review --approve`: GitHub no deja aprobar un PR propio.
+4. Informa al usuario de que las tareas están liberadas, cuál es la primera y el texto para abrir su sesión: `Rol: Ejecución · Tarea: docs/desarrollo/NN-slug/plan.md#t01`.
+
+No modifiques el plan entre la autorización y la fusión. Que el plan esté en `main` ya significa que está aprobado. Sin autorización expresa del usuario, el plan no se fusiona.
+
+## 6. Bloqueos y cambios de plan
 
 Ante un informe de bloqueo o un supuesto que falla, corrige solo las tareas afectadas en un PR `fNN-plan-rN` con el motivo. No implementas la solución.
 
-- Si el cambio solo precisa una tarea sin alterar el alcance ni las decisiones acordadas, Revisión puede fusionarlo.
-- Si cambia el alcance o una decisión, vuelve a entrevistar al usuario con `/grill-me` y el PR necesita su aprobación.
+- Si el cambio solo precisa una tarea sin alterar el alcance ni las decisiones acordadas, Planificación lo fusiona y lo anota en el PR.
+- Si cambia el alcance o una decisión, vuelve a entrevistar al usuario con `/grill-me` y fusiona solo con su autorización, siguiendo la sección 5.
