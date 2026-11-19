@@ -20,6 +20,8 @@ El usuario abre una sesión por rol: Planificación entrevista al usuario y reda
 
 ## Estado
 
+La fase 5 cerró la arquitectura y el contrato de navegación en memoria. El contrato incluye quince casos de prueba para la futura implementación. [Cierre de la fase 5](docs/inspeccion/f05-cierre.md).
+
 La fase 4 verificó los dos acomodos con dos instancias aisladas de VS Code, incluidas las restauraciones finales y la limpieza. Una instancia necesitó cierre forzado. [Resultado, revisión y límites](docs/inspeccion/f04-cierre.md).
 
 En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. La fase 3 verificó dos viajes entre escritorio y canvas con dos ventanas WinForms propias, conservando sus acomodos. [Cierre y límites de la fase 3](docs/inspeccion/f03-cierre.md). La restauración de aplicaciones reales, la recuperación tras reinicio y el rendimiento con 15 ventanas siguen pendientes.
