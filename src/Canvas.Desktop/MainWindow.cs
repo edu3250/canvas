@@ -1,4 +1,6 @@
+using Canvas.Domain;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -11,6 +13,11 @@ public sealed class MainWindow : Window
 {
     private const double InitialWidth = 1100;
     private const double InitialHeight = 720;
+    private static readonly SpaceId Programming = new("Programación");
+    private static readonly SpaceId Games = new("Juegos");
+    private readonly SpaceView spaceView;
+    private readonly Button homeButton;
+    private SessionState session;
 
     public MainWindow()
     {
@@ -21,6 +28,16 @@ public sealed class MainWindow : Window
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
+        var home = new Camera(new Canvas.Domain.Point(0, 0), 1);
+        session = new SessionState(Programming, new Dictionary<SpaceId, SpaceNavigation>
+        {
+            [Programming] = new(home, home, null),
+            [Games] = new(home, home, null)
+        });
+        spaceView = new SpaceView(Programming, Games);
+        homeButton = new Button { MinWidth = 130, Padding = new Thickness(12, 4, 12, 4) };
+        homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
+
         var viewport = new Grid { ClipToBounds = true };
         viewport.Children.Add(new Viewbox
         {
@@ -28,9 +45,66 @@ public sealed class MainWindow : Window
             IsHitTestVisible = false,
             Child = CreateLandscape()
         });
-        viewport.Children.Add(new SurfaceCanvas { Background = Brushes.Transparent, ClipToBounds = true });
-        viewport.Children.Add(new Grid { VerticalAlignment = VerticalAlignment.Top });
+        viewport.Children.Add(spaceView);
+        viewport.Children.Add(CreateToolbar());
         Content = viewport;
+        RefreshSpace();
+    }
+
+    private Border CreateToolbar()
+    {
+        var selector = new ComboBox
+        {
+            ItemsSource = new[] { Programming, Games },
+            DisplayMemberPath = nameof(SpaceId.Value),
+            SelectedItem = session.ActiveSpaceId,
+            MinWidth = 142,
+            Margin = new Thickness(0, 0, 8, 0),
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        AutomationProperties.SetName(selector, "Espacio");
+        selector.SelectionChanged += (_, _) =>
+        {
+            if (selector.SelectedItem is SpaceId space)
+            {
+                ApplyNavigation(new SwitchSpace(space));
+            }
+        };
+
+        var controls = new StackPanel { Orientation = Orientation.Horizontal };
+        controls.Children.Add(selector);
+        controls.Children.Add(homeButton);
+        return new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(12),
+            Padding = new Thickness(6),
+            CornerRadius = new CornerRadius(8),
+            Background = BrushFromRgb(24, 51, 65),
+            Child = controls
+        };
+    }
+
+    private void ApplyNavigation(NavigationCommand command)
+    {
+        var result = Navigation.Apply(session, command);
+        if (ReferenceEquals(result.State, session))
+        {
+            return;
+        }
+
+        session = result.State;
+        RefreshSpace();
+    }
+
+    private void RefreshSpace()
+    {
+        var navigation = session.Spaces[session.ActiveSpaceId];
+        spaceView.ShowSpace(session.ActiveSpaceId, navigation.Camera);
+        var homeLabel = navigation.ReturnView.HasValue ? "Volver a mi vista" : "Inicio";
+        homeButton.Content = homeLabel;
+        AutomationProperties.SetName(homeButton, homeLabel);
     }
 
     private static SurfaceCanvas CreateLandscape()
@@ -76,6 +150,6 @@ public sealed class MainWindow : Window
 
     private static void AddLayer(SurfaceCanvas landscape, string outline, Brush fill)
     {
-        landscape.Children.Add(new ShapePath { Data = Geometry.Parse(outline), Fill = fill });
+        landscape.Children.Add(new ShapePath { Data = System.Windows.Media.Geometry.Parse(outline), Fill = fill });
     }
 }
