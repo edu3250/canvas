@@ -2,9 +2,9 @@
 
 <!-- Copiar a docs/desarrollo/NN-slug/tareas/NN-slug.md. Lo redacta Planificación. Ejecución no lo modifica. -->
 
-- **Rama:** rama del PR del encargo
+- **Rama:** `fNN-slug` (la de la fase). Commits con prefijo `tNN`.
 - **Depende de:** tNN | ninguna
-- **Ensayo interactivo:** no | sí (AGENTS.md §7: avisar y esperar el «adelante» del usuario)
+- **Ensayo interactivo:** no | sí (solo tras el «adelante» del usuario; ver «Seguridad en Windows» en AGENTS.md)
 
 ## Objetivo
 
@@ -51,13 +51,13 @@ Guion manual o ensayo, si aplica, con el resultado esperado en cada paso.
 
 ## Criterios de aceptación
 
-| Criterio | Evidencia en el PR |
+| Criterio | Evidencia esperada |
 | --- | --- |
 | | |
 
 ## Condiciones de parada
 
-Detente y abre un PR en borrador con el informe de `docs/plantillas/informe-bloqueo.md` si:
+Detente y publica en el PR el informe de `docs/plantillas/informe-bloqueo.md` si:
 
 - tras 3 intentos el mismo problema persiste;
 - un test o una firma del contrato parece incorrecto;

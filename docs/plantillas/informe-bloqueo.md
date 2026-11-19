@@ -1,6 +1,6 @@
 # [Bloqueo] fNN-tNN · Título
 
-<!-- Descripción de un PR en borrador. Lo redacta Ejecución y lo resuelve Planificación. -->
+<!-- Comentario en el PR de la fase. Lo redacta Ejecución y lo resuelve Planificación. -->
 
 - **Tarea:** enlace al archivo de tarea
 - **Rama y último commit:**
@@ -34,6 +34,6 @@ Qué crees que ocurre y qué evidencia la apoya.
 - [ ] Aclaración o corrección de la tarea por Planificación
 - [ ] Cambio de contrato (test o firma)
 - [ ] Archivo o dependencia fuera de alcance
-- [ ] Decisión del usuario (AGENTS.md §3)
+- [ ] Decisión del usuario (ver «Decisiones reservadas al usuario» en AGENTS.md)
 
 Detalle:

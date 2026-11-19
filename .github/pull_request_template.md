@@ -1,45 +1,20 @@
-<!-- Para un bloqueo, usar docs/plantillas/informe-bloqueo.md en un PR en borrador. -->
+<!-- Descripción del PR de una fase (rama fNN-slug). La mantiene Coordinación. Las entregas de tarea, los bloqueos y el dictamen van como comentarios. -->
 
-**Tarea:** enlace a `docs/desarrollo/NN-slug/tareas/NN-slug.md` o al encargo si es `fNN-plan`
-**Rol:** Ejecución | Planificación
+**Encargo:** `docs/desarrollo/NN-slug/encargo.md`
+**SHA del plan:**
 
-## Resumen
+## Tareas
 
-Qué cambia y por qué, en dos o tres frases.
-
-## Verificación
-
-| Comando o ensayo | Resultado |
-| --- | --- |
-| `dotnet build` | |
-| `dotnet test` | |
-
-Entorno: versión de Windows, DPI, SDK y aplicaciones probadas.
-
-## Criterios de aceptación
-
-| Criterio | Estado (verificado, fallido o pendiente) | Evidencia |
+| Tarea | Estado (pendiente, entregada, bloqueada o verificada) | Entrega |
 | --- | --- | --- |
-| | | |
+| t01 | | enlace al comentario |
 
-## Desviaciones respecto a la tarea
+## Decisiones del usuario abiertas
 
-Ninguna | lista.
+Ninguna | lista. Mientras haya alguna, el PR sigue en borrador.
 
-## Pendientes
+## Dictamen de Revisión
 
--
-
-## Esfuerzo
-
-- Herramienta y modelo:
-- Intentos:
-- Implementación / integración / pruebas en Windows / revisión humana (h aprox.):
-
-## Límites
-
-- [ ] Solo se tocaron archivos permitidos por la tarea
-- [ ] No se modificaron tests ni firmas del contrato
-- [ ] No se añadieron dependencias
-- [ ] Sin `bin/`, `obj/`, `evidencia-local/`, rutas del perfil ni secretos
-- [ ] Ensayos interactivos solo con el «adelante» del usuario
+- SHA dictaminado:
+- Resultado: aprobado | cambios pedidos | devuelto a Planificación
+- Cierre: `docs/inspeccion/fNN-cierre.md`
