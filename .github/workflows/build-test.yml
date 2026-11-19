@@ -19,8 +19,21 @@ jobs:
           global-json-file: global.json
       - name: Compilar en Release
         run: dotnet build EscritorioCanvas.sln -c Release
-      - name: Ejecutar pruebas en Release
-        run: dotnet test EscritorioCanvas.sln -c Release --no-build
+      - name: Ejecutar pruebas en Release con cobertura
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath TestResults) {
+            throw 'TestResults debe estar limpio antes de ejecutar las pruebas.'
+          }
+          dotnet test EscritorioCanvas.sln -c Release --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
+      - name: Comprobar la cobertura del dominio
+        shell: pwsh
+        run: |
+          $reports = @(Get-ChildItem -LiteralPath TestResults -Recurse -File -Filter coverage.cobertura.xml)
+          if ($reports.Count -ne 1) {
+            throw "Se esperaba un informe coverage.cobertura.xml y se encontraron $($reports.Count)."
+          }
+          pwsh -NoProfile -File eng/Check-Coverage.ps1 -Path $reports[0].FullName
       - name: Verificar el control de cobertura
         shell: pwsh
         run: pwsh -NoProfile -File eng/Test-CoverageGate.ps1
