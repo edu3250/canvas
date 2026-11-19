@@ -19,6 +19,19 @@ La automatización recorre los dos tamaños, pulsa la miniatura y escribe al fin
 
 La carpeta local `evidencia-local/<caso>-<id>/` contiene el registro, la copia final del documento automático y las dos imágenes del editor cuando el recorrido llega a capturarlas. Las imágenes muestran la superficie del HWND del editor. La visibilidad en el escritorio se comprueba aparte tomando el color de un punto del vecino. Las capturas pueden contener la ruta del perfil de Windows. La carpeta de evidencia y los resultados de compilación se excluyen de Git.
 
+## Ensayo de salida y retorno
+
+Usar Windows con escritorio interactivo y un área de trabajo primaria de al menos 1200 × 800 px. El ensayo puede tomar el primer plano. Ejecutar desde la raíz del repositorio.
+
+```powershell
+dotnet build prototipos/panel-nativo/PanelNativo.csproj
+Set-Location prototipos/panel-nativo
+.\bin\Debug\net10.0-windows\PanelNativo.exe layout
+$LASTEXITCODE
+```
+
+El modo `layout` mueve dos ventanas descartables del prototipo y alterna dos veces entre sus acomodos de escritorio y canvas. El registro local `evidencia-local/control-<id>/sesion.txt` contiene 12 lecturas en seis etapas y las comprobaciones de limpieza. El código 0 indica que el recorrido y la limpieza se verificaron. El código 1 indica un fallo y el 2 indica argumentos inválidos. [Mediciones del ensayo](../../docs/inspeccion/f03-evidencia-recorrido.md)
+
 ## Recorrido manual
 
 1. Ejecutar uno de los casos sin `--auto`. Hacer clic en la vista previa del editor. La franja superior queda disponible para volver al host.
