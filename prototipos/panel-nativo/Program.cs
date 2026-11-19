@@ -14,14 +14,14 @@ internal static class Program
             Application.Run(new Fixture(kind, path));
             return 0;
         }
-        bool layout = args is ["layout"];
+        bool layout = args is ["layout"] or ["layout-code"];
         if (!layout && (args.Length == 0 || args[0] is not ("control" or "code") ||
             args.Skip(1).Any(option => option != "--auto")))
         {
-            Console.Error.WriteLine("PanelNativo.exe layout | control|code [--auto]");
+            Console.Error.WriteLine("PanelNativo.exe layout | layout-code | control|code [--auto]");
             return 2;
         }
-        var run = new Run(layout ? "control" : args[0]);
+        var run = new Run(args is ["layout"] ? "control" : args[0]);
         int result = 1;
         try
         {
@@ -48,6 +48,7 @@ internal sealed class Run : IDisposable
 {
     readonly string id = Guid.NewGuid().ToString("N")[..12];
     readonly List<Process> children = [];
+    readonly Dictionary<int, string> documents = [];
     readonly string temp;
     readonly string output;
     readonly string mode;
@@ -71,12 +72,13 @@ internal sealed class Run : IDisposable
         File.AppendAllText(Evidence("sesion.txt"), message + Environment.NewLine);
     }
 
-    Process Launch(string exe, params string[] args)
+    Process Launch(string document, string exe, params string[] args)
     {
         var info = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = temp };
         foreach (var arg in args) info.ArgumentList.Add(arg);
         var process = Process.Start(info) ?? throw new InvalidOperationException("No arrancó " + exe);
         children.Add(process);
+        documents.Add(process.Id, Path.GetFileName(document));
         return process;
     }
 
@@ -85,33 +87,41 @@ internal sealed class Run : IDisposable
         Log($"caso={mode} id={id} Windows={Environment.OSVersion.Version} runtime={Environment.Version} sesión={Process.GetCurrentProcess().SessionId} interactiva={Environment.UserInteractive} salida={output}");
         File.WriteAllText(Document, string.Concat(Enumerable.Repeat("muestra de texto para observar el ajuste de línea ", 7)) + "\r\n");
         string self = Environment.ProcessPath!;
-        var neighbor = Launch(self, "--fixture", "vecino", Document);
+        string neighborDocument = mode == "layout-code"
+            ? Path.Combine(temp, "neighbor-" + id + ".txt") : Document;
+        if (mode == "layout-code") File.Copy(Document, neighborDocument);
+        var neighbor = mode == "layout-code"
+            ? LaunchCode(neighborDocument, "B")
+            : Launch(Document, self, "--fixture", "vecino", Document);
         NeighborPid = neighbor.Id;
         Neighbor = WaitWindow(neighbor);
-        Process candidate;
-        if (mode == "control") candidate = Launch(self, "--fixture", "editor", Document);
-        else
-        {
-            var exe = Environment.GetEnvironmentVariable("PANEL_CODE_EXE");
-            exe ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Microsoft VS Code", "Code.exe");
-            Log("VS Code " + FileVersionInfo.GetVersionInfo(exe).ProductVersion);
-            var profile = Path.Combine(temp, "perfil");
-            var user = Directory.CreateDirectory(Path.Combine(profile, "User")).FullName;
-            var settings = new Dictionary<string, object>
-            {
-                ["window.title"] = "${activeEditorShort}", ["window.restoreWindows"] = "none",
-                ["workbench.startupEditor"] = "none", ["editor.wordWrap"] = "on",
-                ["editor.fontSize"] = 16, ["editor.lineHeight"] = 24, ["editor.minimap.enabled"] = false,
-                ["chat.disableAIFeatures"] = true, ["workbench.secondarySideBar.defaultVisibility"] = "hidden",
-                ["files.simpleDialog.enable"] = false, ["update.mode"] = "none", ["telemetry.telemetryLevel"] = "off"
-            };
-            File.WriteAllText(Path.Combine(user, "settings.json"), JsonSerializer.Serialize(settings));
-            candidate = Launch(exe, "--user-data-dir", profile, "--extensions-dir", Path.Combine(temp, "ext"),
-                "--disable-extensions", "--new-window", "--skip-welcome", "--skip-release-notes", Document);
-        }
+        var candidate = mode == "control"
+            ? Launch(Document, self, "--fixture", "editor", Document)
+            : LaunchCode(Document, "A");
         CandidatePid = candidate.Id;
         Candidate = WaitWindow(candidate);
-        Log($"editor=0x{Candidate:X} PID={CandidatePid} vecino=0x{Neighbor:X} PID={NeighborPid}");
+        Log($"A HWND=0x{Candidate:X} PID={CandidatePid} documento={Path.GetFileName(Document)}");
+        Log($"B HWND=0x{Neighbor:X} PID={NeighborPid} documento={Path.GetFileName(neighborDocument)}");
+    }
+
+    Process LaunchCode(string document, string subject)
+    {
+        var exe = Environment.GetEnvironmentVariable("PANEL_CODE_EXE");
+        exe ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Microsoft VS Code", "Code.exe");
+        Log("VS Code " + FileVersionInfo.GetVersionInfo(exe).ProductVersion);
+        var profile = Path.Combine(temp, "perfil-" + subject);
+        var user = Directory.CreateDirectory(Path.Combine(profile, "User")).FullName;
+        var settings = new Dictionary<string, object>
+        {
+            ["window.title"] = "${activeEditorShort}", ["window.restoreWindows"] = "none",
+            ["workbench.startupEditor"] = "none", ["editor.wordWrap"] = "on",
+            ["editor.fontSize"] = 16, ["editor.lineHeight"] = 24, ["editor.minimap.enabled"] = false,
+            ["chat.disableAIFeatures"] = true, ["workbench.secondarySideBar.defaultVisibility"] = "hidden",
+            ["files.simpleDialog.enable"] = false, ["update.mode"] = "none", ["telemetry.telemetryLevel"] = "off"
+        };
+        File.WriteAllText(Path.Combine(user, "settings.json"), JsonSerializer.Serialize(settings));
+        return Launch(document, exe, "--user-data-dir", profile, "--extensions-dir", Path.Combine(temp, "ext-" + subject),
+            "--disable-extensions", "--new-window", "--skip-welcome", "--skip-release-notes", document);
     }
 
     nint WaitWindow(Process process)
@@ -121,14 +131,15 @@ internal sealed class Run : IDisposable
         {
             process.Refresh();
             var hwnd = process.MainWindowHandle;
-            if (hwnd != 0 && Native.Pid(hwnd) == process.Id && Native.Title(hwnd).Contains(Path.GetFileName(Document))) return hwnd;
+            if (IsOurs(hwnd, process.Id)) return hwnd;
             Thread.Sleep(150);
         }
-        throw new TimeoutException($"Falta ventana con PID {process.Id} y documento {Path.GetFileName(Document)}.");
+        throw new TimeoutException($"Falta ventana con PID {process.Id} y documento {documents[process.Id]}.");
     }
 
-    internal bool IsOurs(nint hwnd, int pid) => hwnd != 0 && Native.Pid(hwnd) == pid
-        && Native.Title(hwnd).Contains(Path.GetFileName(Document));
+    internal bool IsOurs(nint hwnd, int pid) => documents.TryGetValue(pid, out var document)
+        && children.Any(child => child.Id == pid && !child.HasExited)
+        && hwnd != 0 && Native.Pid(hwnd) == pid && Native.Title(hwnd).Contains(document, StringComparison.Ordinal);
 
     public void Dispose()
     {
@@ -138,7 +149,9 @@ internal sealed class Run : IDisposable
             {
                 if (!child.HasExited)
                 {
-                    child.CloseMainWindow();
+                    child.Refresh();
+                    if (IsOurs(child.MainWindowHandle, child.Id)) child.CloseMainWindow();
+                    else Log($"cierre de ventana omitido: identidad no verificada PID={child.Id}");
                     if (!child.WaitForExit(2500))
                     {
                         Log($"cierre forzado del proceso propio PID={child.Id}");

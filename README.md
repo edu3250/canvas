@@ -20,4 +20,6 @@ El plan publicado habilita la ejecución. Un modelo independiente revisa la impl
 
 ## Estado
 
+La fase 4 verificó los dos acomodos con dos instancias aisladas de VS Code, incluidas las restauraciones finales y la limpieza. Una instancia necesitó cierre forzado. [Resultado, revisión y límites](docs/inspeccion/f04-cierre.md).
+
 En una sesión de Windows 11, el ensayo de dos ventanas permitió editar en VS Code a dos anchos y recuperar el foco al cancelar un diálogo, con una miniatura vecina visible. La fase 3 verificó dos viajes entre escritorio y canvas con dos ventanas WinForms propias, conservando sus acomodos. [Cierre y límites de la fase 3](docs/inspeccion/f03-cierre.md). La restauración de aplicaciones reales, la recuperación tras reinicio y el rendimiento con 15 ventanas siguen pendientes.
