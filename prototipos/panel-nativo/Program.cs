@@ -14,20 +14,26 @@ internal static class Program
             Application.Run(new Fixture(kind, path));
             return 0;
         }
-        if (args.Length == 0 || args[0] is not ("control" or "code") ||
-            args.Skip(1).Any(option => option != "--auto"))
+        bool layout = args is ["layout"];
+        if (!layout && (args.Length == 0 || args[0] is not ("control" or "code") ||
+            args.Skip(1).Any(option => option != "--auto")))
         {
-            Console.Error.WriteLine("PanelNativo.exe control|code [--auto]");
+            Console.Error.WriteLine("PanelNativo.exe layout | control|code [--auto]");
             return 2;
         }
-        var run = new Run(args[0]);
+        var run = new Run(layout ? "control" : args[0]);
         int result = 1;
         try
         {
             run.Start();
-            using var host = new Host(run, args.Contains("--auto"));
-            Application.Run(host);
-            result = host.Failed ? 1 : 0;
+            if (layout)
+                result = LayoutTrial.Execute(run);
+            else
+            {
+                using var host = new Host(run, args.Contains("--auto"));
+                Application.Run(host);
+                result = host.Failed ? 1 : 0;
+            }
         }
         catch (Exception ex)
         {
