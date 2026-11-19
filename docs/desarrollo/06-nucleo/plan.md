@@ -1,6 +1,6 @@
 # Fase 6 · Primer incremento de navegación
 
-**Estado: pendiente de aprobación.** Al terminar, una consola en español ejecutará un recorrido entre Programación, Inicio y Juegos. La biblioteca mantendrá una cámara y una vista de retorno por espacio. La CI de Windows comprobará el contrato de navegación y medirá la cobertura de la biblioteca.
+**Estado: cerrado.** [Cierre de la fase 6](../../inspeccion/f06-cierre.md). Al terminar, una consola en español ejecutará un recorrido entre Programación, Inicio y Juegos. La biblioteca mantendrá una cámara y una vista de retorno por espacio. La CI de Windows comprobará el contrato de navegación y medirá la cobertura de la biblioteca.
 
 ## Decisiones acordadas
 
