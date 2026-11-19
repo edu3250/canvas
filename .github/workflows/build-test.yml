@@ -1,0 +1,23 @@
+name: Compilar y probar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          global-json-file: global.json
+      - name: Compilar en Release
+        run: dotnet build EscritorioCanvas.sln -c Release
+      - name: Ejecutar pruebas en Release
+        run: dotnet test EscritorioCanvas.sln -c Release --no-build
