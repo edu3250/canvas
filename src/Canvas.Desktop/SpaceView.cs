@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using DomainPoint = Canvas.Domain.Point;
 using DomainGeometry = Canvas.Domain.Geometry;
@@ -33,6 +34,14 @@ internal sealed class SpaceView : SurfaceCanvas
                 ["discord"] = CreatePlacement("Discord", "◇", Color.FromRgb(94, 73, 133), 176)
             }
         };
+    }
+
+    public bool IsBackground(object source) => ReferenceEquals(source, this);
+
+    public DomainPoint GetPointer(MouseEventArgs input)
+    {
+        var point = input.GetPosition(this);
+        return new DomainPoint(point.X, point.Y);
     }
 
     public void ShowSpace(SpaceId space, Camera camera)

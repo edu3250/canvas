@@ -2,10 +2,12 @@ using Canvas.Domain;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using SurfaceCanvas = System.Windows.Controls.Canvas;
 using ShapePath = System.Windows.Shapes.Path;
+using DomainPoint = Canvas.Domain.Point;
 
 namespace Canvas.Desktop;
 
@@ -18,6 +20,7 @@ public sealed class MainWindow : Window
     private readonly SpaceView spaceView;
     private readonly Button homeButton;
     private SessionState session;
+    private (DomainPoint Pointer, Camera Camera)? panStart;
 
     public MainWindow()
     {
@@ -35,6 +38,18 @@ public sealed class MainWindow : Window
             [Games] = new(home, home, null)
         });
         spaceView = new SpaceView(Programming, Games);
+        spaceView.MouseLeftButtonDown += BeginPan;
+        spaceView.MouseMove += ContinuePan;
+        spaceView.MouseLeftButtonUp += EndPan;
+        spaceView.LostMouseCapture += (_, _) =>
+        {
+            if (!spaceView.IsMouseCaptured)
+            {
+                panStart = null;
+            }
+        };
+        spaceView.PreviewMouseWheel += ZoomSurface;
+        Deactivated += (_, _) => CancelPan();
         homeButton = new Button { MinWidth = 130, Padding = new Thickness(12, 4, 12, 4) };
         homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
 
@@ -49,6 +64,62 @@ public sealed class MainWindow : Window
         viewport.Children.Add(CreateToolbar());
         Content = viewport;
         RefreshSpace();
+    }
+
+    private Camera ActiveCamera => session.Spaces[session.ActiveSpaceId].Camera;
+
+    private void BeginPan(object sender, MouseButtonEventArgs e)
+    {
+        if (spaceView.IsBackground(e.OriginalSource) && spaceView.CaptureMouse())
+        {
+            panStart = (spaceView.GetPointer(e), ActiveCamera);
+            e.Handled = true;
+        }
+    }
+
+    private void ContinuePan(object sender, MouseEventArgs e)
+    {
+        if (panStart is not { } start)
+        {
+            return;
+        }
+
+        if (e.LeftButton != MouseButtonState.Pressed || !spaceView.IsMouseCaptured)
+        {
+            CancelPan();
+            return;
+        }
+
+        var pointer = spaceView.GetPointer(e);
+        var delta = new DomainPoint(pointer.X - start.Pointer.X, pointer.Y - start.Pointer.Y);
+        ApplyNavigation(new SetCamera(CameraGestures.Pan(start.Camera, delta)));
+        e.Handled = true;
+    }
+
+    private void EndPan(object sender, MouseButtonEventArgs e)
+    {
+        if (panStart.HasValue)
+        {
+            CancelPan();
+            e.Handled = true;
+        }
+    }
+
+    private void CancelPan()
+    {
+        panStart = null;
+        if (spaceView.IsMouseCaptured)
+        {
+            spaceView.ReleaseMouseCapture();
+        }
+    }
+
+    private void ZoomSurface(object sender, MouseWheelEventArgs e)
+    {
+        CancelPan();
+        var cursor = spaceView.GetPointer(e);
+        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, e.Delta / 120.0)));
+        e.Handled = true;
     }
 
     private Border CreateToolbar()
@@ -92,6 +163,11 @@ public sealed class MainWindow : Window
         if (ReferenceEquals(result.State, session))
         {
             return;
+        }
+
+        if (result.State.ActiveSpaceId != session.ActiveSpaceId || command is ToggleHome)
+        {
+            CancelPan();
         }
 
         session = result.State;
