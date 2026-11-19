@@ -40,7 +40,9 @@ function Test-ConsoleCase {
     Write-Output $output
     Write-Output 'stderr:'
     Write-Output $errorOutput
-    if ($code -ne $ExpectedCode -or $output -cne $expectedStdout -or $errorOutput -cne $expectedStderr) {
+    if ($code -ne $ExpectedCode -or
+        -not [string]::Equals($output, $expectedStdout, [StringComparison]::Ordinal) -or
+        -not [string]::Equals($errorOutput, $expectedStderr, [StringComparison]::Ordinal)) {
         throw "El caso '$Name' difiere del contrato. Código esperado: $ExpectedCode."
     }
 }
