@@ -100,6 +100,11 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
             Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
         }
 
+        Reposition(identity, instance, x, y);
+    }
+
+    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y)
+    {
         EnsureCurrent(instance);
         const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
         if (!SetWindowPos((nint)identity.Handle, 0, x, y, 0, 0, NoSize | NoZOrder | NoActivate))

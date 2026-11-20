@@ -97,10 +97,13 @@ public sealed class MainWindow : Window
         edgeTimer.Tick += (_, _) => UpdateMinimapVisibility();
         PreviewMouseDown += (_, e) =>
         {
-            if (windowPanels.ActivePanel is not null)
+            if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left)
             {
                 e.Handled = true;
-                ReturnToMap();
+                if (gesture is null)
+                {
+                    ReturnToMap();
+                }
             }
         };
         spaceView.MapChanged += RefreshMap;
@@ -311,7 +314,7 @@ public sealed class MainWindow : Window
             windowPanels.ActivePanel = panel;
 
             ApplyNavigation(new SetCamera(CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, 1)));
-            var origin = windowPanels.GetWindowOrigin(panel);
+            var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
             placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
@@ -350,6 +353,7 @@ public sealed class MainWindow : Window
             return true;
         }
 
+        FinishGesture();
         windowPanels.ActivePanel = null;
         edgeTimer.Stop();
         var restored = !restoreMinimized && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
@@ -548,6 +552,12 @@ public sealed class MainWindow : Window
         }
 
         spaceView.Focus();
+        if (kind == GestureKind.Pan && windowPanels.ActivePanel is { } panel &&
+            WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
+        {
+            NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle);
+        }
+
         var openOnRelease = kind == GestureKind.Icons && e.ClickCount == 2 && previousClick == icon;
         previousClick = null;
         gesture = new Gesture(e.ChangedButton, spaceView.GetPointer(e), ActiveCamera,
@@ -588,7 +598,7 @@ public sealed class MainWindow : Window
         switch (active.Kind)
         {
             case GestureKind.Pan:
-                ApplyNavigation(new SetCamera(CameraGestures.Pan(active.Camera, delta)));
+                PanTo(CameraGestures.Pan(active.Camera, delta));
                 break;
             case GestureKind.Marquee:
                 if (delta.X != 0 || delta.Y != 0 || active.HasMoved)
@@ -623,6 +633,12 @@ public sealed class MainWindow : Window
         }
 
         FinishGesture();
+        if (active.Kind == GestureKind.Pan && windowPanels.ActivePanel is { } panel &&
+            WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) && !WindowCatalog.IsMinimized(panel.Window.Handle))
+        {
+            NativePanelInput.SetForegroundWindow((nint)panel.Window.Handle);
+        }
+
         if (active.Kind == GestureKind.Icons && !active.HasMoved && spaceView.FindIcon(spaceView.InputHitTest(e.GetPosition(spaceView))!) == active.Icon)
         {
             if (active.OpenOnRelease)
@@ -649,8 +665,34 @@ public sealed class MainWindow : Window
         spaceView.SetSelection(active.Selection);
         if (active.Kind == GestureKind.Pan)
         {
-            ApplyNavigation(new SetCamera(active.Camera));
+            PanTo(active.Camera);
         }
+    }
+
+    private void PanTo(Camera camera)
+    {
+        if (camera == ActiveCamera)
+        {
+            return;
+        }
+
+        if (windowPanels.ActivePanel is { } panel)
+        {
+            try
+            {
+                var position = windowPanels.GetWindowOrigin(panel, camera);
+                placement.Reposition(panel.Window.Identity, panel.Instance,
+                    (int)Math.Round(position.X), (int)Math.Round(position.Y));
+            }
+            catch (Exception error) when (IsPanelError(error))
+            {
+                Trace.TraceWarning(error.ToString());
+                ReturnToMap(restoreMinimized: false);
+                return;
+            }
+        }
+
+        ApplyNavigation(new SetCamera(camera));
     }
 
     private void FinishGesture()

@@ -29,9 +29,9 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         panel.Space == space && point.X >= panel.Bounds.X && point.X <= panel.Bounds.X + panel.Bounds.Width &&
         point.Y >= panel.Bounds.Y && point.Y <= panel.Bounds.Y + panel.Bounds.Height);
 
-    public WpfPoint GetWindowOrigin(Panel panel)
+    public WpfPoint GetWindowOrigin(Panel panel, Camera targetCamera)
     {
-        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X, panel.Bounds.Y + TitleHeight), camera);
+        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X, panel.Bounds.Y + TitleHeight), targetCamera);
         return PointToScreen(new WpfPoint(point.X, point.Y));
     }
 
