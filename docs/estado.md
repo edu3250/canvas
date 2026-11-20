@@ -2,12 +2,12 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 19-11-2026.
+**Actualizado:** 20-11-2026.
 
 ## Ahora
 
 - **En curso:** [hito 08 · Iconos reales en Inicio](hitos/08-iconos-reales.md). Cada icono de Inicio es un elemento real de la carpeta de su espacio y se ve igual que en el Explorador.
-- **Siguiente paso:** probar los pasos 1–4 del [PR #35](https://github.com/edu3250/escritorio-canvas/pull/35) y autorizar su fusión con la CI en verde. El paso 5 (guardar posiciones) es zona sensible y va en un PR aparte.
+- **Siguiente paso:** construir el paso 5 del hito 08. Guardar posiciones es zona sensible y va en un PR aparte.
 - **Candidato para después:** *ventanas reales en el lienzo*, con ventanas del usuario como miniaturas DWM y clic para trabajar en su panel.
 
 ## Qué funciona hoy
@@ -16,11 +16,11 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 | --- | --- | --- |
 | Dominio: cámara, navegación, espacios, cuadrícula de Inicio | `src/Canvas.Domain`, con pruebas en `tests/` | Producto, con CI |
 | Consola de navegación entre Programación, Inicio y Juegos | `src/Canvas.Console` | Producto ([fase 6](inspeccion/f06-cierre.md)) |
-| Ventana WPF: recorrer el lienzo con paneo y zoom, iconos de muestra por espacio (seleccionar y mover en grupo), retorno a la vista anterior | `src/Canvas.Desktop` | Producto ([fase 7](desarrollo/07-lienzo/plan.md)) |
+| Ventana WPF: recorrer el lienzo con paneo y zoom, iconos de las carpetas reales de cada espacio (seleccionar y mover en grupo), retorno a la vista anterior | `src/Canvas.Desktop` | Producto ([PR #35](https://github.com/edu3250/escritorio-canvas/pull/35)) |
 | Activar una ventana real en el rectángulo de su panel con el vecino visible | `prototipos/panel-nativo` | Prototipo verificado con VS Code ([ensayo](inspeccion/ensayo-panel-nativo.md)) |
 | Salir al escritorio y volver al lienzo conservando ambos acomodos | prototipos | Verificado con ventanas propias y con VS Code ([fase 3](inspeccion/f03-cierre.md), [fase 4](inspeccion/f04-cierre.md)) |
 
-El producto todavía no muestra ni mueve ventanas reales. La rama del hito sustituye los dibujos de muestra por elementos de las carpetas reales de cada espacio.
+El producto todavía no muestra ni mueve ventanas reales.
 
 ## Riesgos abiertos
 
