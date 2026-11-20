@@ -1,5 +1,7 @@
 # Propuesta de arquitectura y esfuerzo
 
+> **Histórico.** Este mapa recoge las fases 1–7, que siguieron el proceso de Planificación, Ejecución y Revisión. Desde la fase 8 el trabajo se organiza por hitos (ver [AGENTS.md](../AGENTS.md)) y el estado vivo está en [estado.md](estado.md). Las guías del proceso anterior siguen en el historial de Git.
+
 Borrador para una primera versión de uso personal en Windows 11, con un monitor. La estimación contempla redimensionamiento nativo para editar y zoom para recorrer el mapa. Se respetan los tamaños que admite cada aplicación.
 
 ## Estructura

@@ -6,7 +6,7 @@ El canvas es el entorno de trabajo principal desde que se abre la aplicación. C
 
 Dos sesiones servirán de referencia para las pruebas. En Juegos se usan Discord, Steam, un juego, Spotify y varias ventanas de navegador. En Programación se usan varias ventanas de navegador junto con herramientas como VS Code, Obsidian, Claude, Codex, Unity y Blender. La primera prueba se hará en un monitor con 15 ventanas abiertas y seis paneles visibles, incluida una escena de Unity en movimiento.
 
-El desarrollo se reparte entre varios modelos de IA con los roles que describe [AGENTS.md](../AGENTS.md). Las decisiones importantes corresponden al usuario. Cada cierre de fase registra el modelo, los intentos y la duración real de cada rol.
+El desarrollo se reparte entre varios modelos de IA por hitos, con los modos que describe [AGENTS.md](../AGENTS.md). Las decisiones importantes corresponden al usuario. El registro de cada hito anota la herramienta y el modelo de cada sesión.
 
 ## Glosario de trabajo
 
