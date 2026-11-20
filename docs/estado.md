@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** probar la activación de ventanas en sus paneles y el regreso al mapa del paso 4. Revisar el PR del paso 4 antes de construir la barra del panel del paso 5.
+- **Siguiente paso:** probar la activación de ventanas en sus paneles y el regreso al mapa del paso 4. Revisar el [PR #43](https://github.com/edu3250/escritorio-canvas/pull/43) antes de construir la barra del panel del paso 5.
 
 ## Qué funciona hoy
 
