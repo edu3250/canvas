@@ -2,12 +2,12 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 20-11-2026 (hito 08 cerrado).
+**Actualizado:** 20-11-2026 (hito 09 definido).
 
 ## Ahora
 
-- El usuario verificó la persistencia de las posiciones en Programación y Juegos tras reiniciar la aplicación. El siguiente hito queda por definir.
-- **Candidato para después:** *ventanas reales en el lienzo*, con ventanas del usuario como miniaturas DWM y clic para trabajar en su panel.
+- **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
+- **Siguiente paso:** abrir una sesión `Modo: Construir · Hito: docs/hitos/09-ventanas-reales.md` para el paso 1 (lienzo maximizado, control de zoom y minimapa, fuera de la zona sensible). El paso 2, la red de seguridad, se fusiona antes de mover cualquier ventana.
 
 ## Qué funciona hoy
 
