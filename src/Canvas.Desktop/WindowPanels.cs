@@ -26,12 +26,12 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     public Panel? ActivePanel { get; set; }
 
     public Panel? FindPanel(DomainPoint point) => panels.LastOrDefault(panel =>
-        panel.Space == space && point.X >= panel.Bounds.X && point.X <= panel.Bounds.X + panel.Bounds.Width &&
-        point.Y >= panel.Bounds.Y && point.Y <= panel.Bounds.Y + panel.Bounds.Height);
+        panel.Space == space && point.X >= panel.DisplayBounds.X && point.X <= panel.DisplayBounds.X + panel.DisplayBounds.Width &&
+        point.Y >= panel.DisplayBounds.Y && point.Y <= panel.DisplayBounds.Y + panel.DisplayBounds.Height);
 
     public WpfPoint GetWindowOrigin(Panel panel, Camera targetCamera)
     {
-        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X, panel.Bounds.Y + TitleHeight), targetCamera);
+        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X + 1, panel.Bounds.Y + TitleHeight + 1), targetCamera);
         return PointToScreen(new WpfPoint(point.X, point.Y));
     }
 
@@ -42,7 +42,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X, topLeft.Y), camera);
         var width = (bottomRight.X - topLeft.X) / camera.Zoom;
         var height = (bottomRight.Y - topLeft.Y) / camera.Zoom;
-        var bounds = new CanvasBounds(origin.X, origin.Y - TitleHeight, width, height + TitleHeight);
+        var bounds = new CanvasBounds(origin.X - 1, origin.Y - TitleHeight - 1, width + 2, height + TitleHeight + 2);
         if (width > 0 && height > 0 && bounds != panel.Bounds)
         {
             panel.Bounds = bounds;
@@ -54,7 +54,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
 
     public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space)
-        .Select(panel => new MinimapItem(panel.Bounds, null, IsPanel: true)).ToArray();
+        .Select(panel => new MinimapItem(panel.DisplayBounds, null, IsPanel: true)).ToArray();
 
     public void ShowPicker(Button button)
     {
@@ -167,6 +167,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             return new CanvasBounds(pixels.X, pixels.Y, pixels.Width, pixels.Height);
         }).ToArray();
 
+        var mapChanged = false;
         foreach (var panel in panels)
         {
             var shown = panel.Space == space && owner.WindowState != WindowState.Minimized;
@@ -178,6 +179,22 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             }
 
             var bounds = panel.Bounds;
+            var minimized = WindowCatalog.IsMinimized(panel.Window.Handle);
+            DomainPoint? size = null;
+            if (panel != ActivePanel && !minimized)
+            {
+                panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
+                size = panel.Thumbnail?.ReadSourceSize();
+                if (size is { } resolution && bounds.Width > 2 && bounds.Height > TitleHeight + 2)
+                {
+                    var body = PreviewClipping.Fit(
+                        new CanvasBounds(0, 0, bounds.Width - 2, bounds.Height - TitleHeight - 2), resolution);
+                    bounds = bounds with { Width = body.Width + 2, Height = body.Height + TitleHeight + 2 };
+                }
+            }
+
+            mapChanged |= bounds != panel.DisplayBounds;
+            panel.DisplayBounds = bounds;
             var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(bounds.X, bounds.Y), camera);
             SetLeft(panel.Card, point.X);
             SetTop(panel.Card, point.Y);
@@ -192,17 +209,26 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
                 continue;
             }
 
-            if (WindowCatalog.IsMinimized(panel.Window.Handle))
+            if (minimized)
             {
                 panel.Thumbnail?.Hide();
                 panel.Card.Text.Text = "Ventana minimizada";
                 continue;
             }
 
-            panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
             var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
                 ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
-            panel.Card.Text.Text = panel.Thumbnail?.Display(area, clip, controls) == true ? "" : "Vista previa no disponible";
+            panel.Card.Text.Text = size is { } dimensions &&
+                panel.Thumbnail?.Display(area, clip, controls, dimensions) == true ? "" : "Vista previa no disponible";
+            if (size is null)
+            {
+                panel.Thumbnail?.Hide();
+            }
+        }
+
+        if (mapChanged)
+        {
+            MapChanged?.Invoke();
         }
     }
 
@@ -340,6 +366,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         public WindowCandidate Window { get; } = window;
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
+        public CanvasBounds DisplayBounds { get; set; } = bounds;
         public PanelCard Card { get; } = card;
         public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;

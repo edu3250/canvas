@@ -2,6 +2,12 @@ namespace Canvas.Domain;
 
 public static class PreviewClipping
 {
+    public static CanvasBounds Fit(CanvasBounds area, Point source)
+    {
+        var scale = Math.Min(area.Width / source.X, area.Height / source.Y);
+        return area with { Width = source.X * scale, Height = source.Y * scale };
+    }
+
     public static IEnumerable<CanvasBounds> VisibleParts(CanvasBounds content, CanvasBounds viewport,
         IReadOnlyList<CanvasBounds> controls)
     {

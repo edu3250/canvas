@@ -94,7 +94,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
     {
         var window = (nint)handle;
         return !IsIconic(window) && !IsZoomed(window) && GetWindowRect(window, out var bounds)
-            ? bounds
+            ? VisibleFrame(window, bounds)
             : null;
     }
 
@@ -123,12 +123,30 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
     public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y)
     {
         EnsureCurrent(instance);
+        var window = (nint)identity.Handle;
+        if (!GetWindowRect(window, out var full))
+        {
+            throw new Win32Exception();
+        }
+
+        var visible = VisibleFrame(window, full);
         const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
-        if (!SetWindowPos((nint)identity.Handle, 0, x, y, 0, 0, NoSize | NoZOrder | NoActivate))
+        if (!SetWindowPos(window, 0, x - (visible.Left - full.Left), y - (visible.Top - full.Top),
+            0, 0, NoSize | NoZOrder | NoActivate))
         {
             throw new Win32Exception();
         }
     }
+
+    private static WindowRectangle VisibleFrame(nint window, WindowRectangle fallback)
+    {
+        const uint ExtendedFrameBounds = 9;
+        return DwmGetWindowAttribute(window, ExtendedFrameBounds, out var frame, Marshal.SizeOf<WindowRectangle>()) >= 0 &&
+            frame.Right > frame.Left && frame.Bottom > frame.Top ? frame : fallback;
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(nint window, uint attribute, out WindowRectangle bounds, int size);
 
     public static void EnsureCurrent(WindowInstance instance)
     {

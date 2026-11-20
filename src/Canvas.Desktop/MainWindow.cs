@@ -19,6 +19,7 @@ namespace Canvas.Desktop;
 
 public sealed class MainWindow : Window
 {
+    private const double ActivationDurationMs = 200;
     private const double InitialWidth = 1100;
     private const double InitialHeight = 720;
     private static readonly SpaceId Programming = new("Programación");
@@ -31,6 +32,8 @@ public sealed class MainWindow : Window
     private Camera mapCamera;
     private nint windowHandle;
     private bool hotkeyRegistered;
+    private bool activationPending;
+    private bool cancelActivation;
     private readonly DispatcherTimer previewTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly Button homeButton;
     private readonly MinimapWindow minimap = new();
@@ -113,6 +116,12 @@ public sealed class MainWindow : Window
         var viewport = new Grid { ClipToBounds = true };
         viewport.PreviewMouseDown += (_, e) =>
         {
+            if (activationPending)
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left)
             {
                 e.Handled = true;
@@ -136,11 +145,19 @@ public sealed class MainWindow : Window
         spaceView.PreviewMouseWheel += ZoomSurface;
         Deactivated += (_, _) =>
         {
+            cancelActivation = true;
             windowPanels.CancelDrag();
             CancelGesture();
         };
         PreviewKeyDown += (_, e) =>
         {
+            if (activationPending && e.Key != Key.System)
+            {
+                cancelActivation |= e.Key == Key.Escape;
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Escape && windowPanels.IsMouseCaptureWithin)
             {
                 windowPanels.CancelDrag();
@@ -207,6 +224,7 @@ public sealed class MainWindow : Window
         };
         StateChanged += (_, _) =>
         {
+            cancelActivation = true;
             ReturnToMap(activateCanvas: false);
             SyncMinimapWindow();
             windowPanels.Render();
@@ -381,32 +399,55 @@ public sealed class MainWindow : Window
         if (message == NativePanelInput.HotkeyMessage && wParam == NativePanelInput.ReturnHotkey)
         {
             handled = true;
+            cancelActivation = true;
             ReturnToMap();
         }
 
         return 0;
     }
 
-    private void ActivatePanel(WindowPanels.Panel panel)
+    private async void ActivatePanel(WindowPanels.Panel panel) => await ActivatePanelAsync(panel, fromMinimap: false);
+
+    private async Task ActivatePanelAsync(WindowPanels.Panel panel, bool fromMinimap)
     {
-        if (panel == windowPanels.ActivePanel || !ReturnToMap())
+        if (activationPending || panel == windowPanels.ActivePanel)
+        {
+            return;
+        }
+
+        var previous = windowPanels.ActivePanel is null ? ActiveCamera : mapCamera;
+        if (!ReturnToMap(restoreCamera: false))
         {
             return;
         }
 
         CancelGesture();
-        var previous = ActiveCamera;
+        activationPending = true;
+        cancelActivation = false;
         var identity = panel.Window.Identity;
         var saved = false;
         try
         {
+            var start = ActiveCamera;
+            var target = start.Zoom == 1 && !fromMinimap
+                ? start
+                : CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, 1);
+            if (!await AnimateActivationAsync(start, target))
+            {
+                if (!closed)
+                {
+                    ApplyNavigation(new SetCamera(previous));
+                }
+
+                return;
+            }
+
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             recovery.SaveOriginal(identity.Handle, panel.Instance);
             saved = true;
             windowPanels.SuspendPreview(panel);
             windowPanels.ActivePanel = panel;
 
-            ApplyNavigation(new SetCamera(CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, 1)));
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
             placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
@@ -437,9 +478,42 @@ public sealed class MainWindow : Window
                 "No se pudo devolver la ventana. Cierra Escritorio Canvas y ejecuta «Devolver ventanas».",
                 Title, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+        finally
+        {
+            activationPending = false;
+        }
     }
 
-    private bool ReturnToMap(bool restoreMinimized = true, bool activateCanvas = true)
+    private async Task<bool> AnimateActivationAsync(Camera start, Camera target)
+    {
+        if (start != target && SystemParameters.ClientAreaAnimation)
+        {
+            var elapsed = Stopwatch.StartNew();
+            var time = 0d;
+            while (time < 1)
+            {
+                await Task.Delay(16);
+                if (closed || cancelActivation)
+                {
+                    return false;
+                }
+
+                time = Math.Min(elapsed.Elapsed.TotalMilliseconds / ActivationDurationMs, 1);
+                var progress = time * time * (3 - 2 * time);
+                var position = new DomainPoint(
+                    Interpolate(start.Position.X, target.Position.X, progress),
+                    Interpolate(start.Position.Y, target.Position.Y, progress));
+                ApplyNavigation(new SetCamera(new Camera(position, Interpolate(start.Zoom, target.Zoom, progress))));
+            }
+        }
+
+        ApplyNavigation(new SetCamera(target));
+        return true;
+
+        static double Interpolate(double start, double end, double progress) => start + (end - start) * progress;
+    }
+
+    private bool ReturnToMap(bool restoreMinimized = true, bool activateCanvas = true, bool restoreCamera = true)
     {
         if (windowPanels.ActivePanel is not { } panel)
         {
@@ -462,7 +536,11 @@ public sealed class MainWindow : Window
                 Title, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        ApplyNavigation(new SetCamera(mapCamera));
+        if (restoreCamera || !restored)
+        {
+            ApplyNavigation(new SetCamera(mapCamera));
+        }
+
         windowPanels.Render();
         if (activateCanvas)
         {
@@ -489,11 +567,16 @@ public sealed class MainWindow : Window
     private static bool IsPanelError(Exception error) =>
         error is IOException or UnauthorizedAccessException or Win32Exception or InvalidOperationException;
 
-    private void SelectMapPoint(DomainPoint world)
+    private async void SelectMapPoint(DomainPoint world)
     {
+        if (activationPending)
+        {
+            return;
+        }
+
         if (windowPanels.FindPanel(world) is { } panel)
         {
-            ActivatePanel(panel);
+            await ActivatePanelAsync(panel, fromMinimap: true);
         }
         else if (ReturnToMap())
         {
@@ -809,7 +892,7 @@ public sealed class MainWindow : Window
     private void ZoomSurface(object sender, MouseWheelEventArgs e)
     {
         e.Handled = true;
-        if (gesture is null && windowPanels.ActivePanel is null)
+        if (gesture is null && windowPanels.ActivePanel is null && !activationPending)
         {
             var cursor = spaceView.GetPointer(e);
             ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, e.Delta / 120.0)));
