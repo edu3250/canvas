@@ -31,6 +31,26 @@ public sealed class WindowRecoveryTests : IDisposable
     }
 
     [Fact]
+    public void RepeatedActivationPreservesOriginalMinimizedPlacementUntilRecovery()
+    {
+        var original = windows.Placement with { ShowCommand = 2 };
+        windows.Placement = original;
+        using (var recovery = Open())
+        {
+            recovery.SaveOriginal(100);
+            windows.Placement = original with { ShowCommand = 1, NormalPosition = new WindowRectangle(30, 40, 680, 440) };
+            recovery.SaveOriginal(100);
+            Assert.Equal(1, windows.CaptureCount);
+            Assert.Equal(0, windows.RestoreCount);
+            Assert.Equal(1u, windows.Placement.ShowCommand);
+        }
+
+        using var reopened = Open();
+        Assert.Empty(reopened.RestoreAll());
+        Assert.Equal(original, windows.Placement);
+    }
+
+    [Fact]
     public void IndividualRestoreRetainsOtherWindows()
     {
         using var recovery = Open();

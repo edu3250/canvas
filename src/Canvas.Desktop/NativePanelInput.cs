@@ -36,6 +36,12 @@ internal static class NativePanelInput
         return SetWindowPos(canvas, after, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
     }
 
+    public static void RaiseCanvas(nint canvas)
+    {
+        const uint NoSize = 0x0001, NoMove = 0x0002, NoActivate = 0x0010, NoOwnerZOrder = 0x0200;
+        SetWindowPos(canvas, 0, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
+    }
+
     public static void PreventActivation(nint window) =>
         SetWindowLong(window, ExtendedStyle, GetWindowLong(window, ExtendedStyle) | NoActivateStyle);
 

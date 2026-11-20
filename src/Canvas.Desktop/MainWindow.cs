@@ -112,7 +112,7 @@ public sealed class MainWindow : Window
                 (!WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
                     WindowCatalog.IsMinimized(panel.Window.Handle)))
             {
-                ReturnToMap(restoreMinimized: false);
+                ReturnToMap();
             }
 
             windowPanels.RefreshWindows();
@@ -430,10 +430,7 @@ public sealed class MainWindow : Window
         }
 
         var previous = windowPanels.ActivePanel is null ? ActiveCamera : mapCamera;
-        if (!ReturnToMap(restoreCamera: false))
-        {
-            return;
-        }
+        ReturnToMap(restoreCamera: false);
 
         CancelGesture();
         activationPending = true;
@@ -530,11 +527,11 @@ public sealed class MainWindow : Window
         static double Interpolate(double start, double end, double progress) => start + (end - start) * progress;
     }
 
-    private bool ReturnToMap(bool restoreMinimized = true, bool activateCanvas = true, bool restoreCamera = true)
+    private void ReturnToMap(bool activateCanvas = true, bool restoreCamera = true)
     {
-        if (windowPanels.ActivePanel is not { } panel)
+        if (windowPanels.ActivePanel is null)
         {
-            return true;
+            return;
         }
 
         ReleaseReturnShortcut();
@@ -542,26 +539,21 @@ public sealed class MainWindow : Window
         FinishGesture();
         windowPanels.ActivePanel = null;
         edgeTimer.Stop();
-        var restored = !restoreMinimized && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
-            WindowCatalog.IsMinimized(panel.Window.Handle) || RestorePanel(panel);
-        if (!restored)
+
+        // The source stays available to DWM. Its original placement stays in the recovery journal.
+        if (activateCanvas)
         {
-            MessageBox.Show(this, "No se pudo devolver la ventana. Cierra Escritorio Canvas y ejecuta «Devolver ventanas».",
-                Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            NativePanelInput.RaiseCanvas(windowHandle);
+            Activate();
         }
 
-        if (restoreCamera || !restored)
+        if (restoreCamera)
         {
             ApplyNavigation(new SetCamera(mapCamera));
         }
 
         windowPanels.Render();
-        if (activateCanvas)
-        {
-            Activate();
-        }
         SyncMinimapWindow();
-        return restored;
     }
 
     private void ReleaseReturnShortcut()
@@ -603,8 +595,9 @@ public sealed class MainWindow : Window
         {
             await ActivatePanelAsync(panel, fromMinimap: true);
         }
-        else if (ReturnToMap())
+        else
         {
+            ReturnToMap();
             CenterMap(world);
         }
     }
@@ -896,7 +889,7 @@ public sealed class MainWindow : Window
             catch (Exception error) when (IsPanelError(error))
             {
                 Trace.TraceWarning(error.ToString());
-                ReturnToMap(restoreMinimized: false);
+                ReturnToMap();
                 return;
             }
         }
