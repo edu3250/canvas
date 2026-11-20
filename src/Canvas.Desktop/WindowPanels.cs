@@ -35,14 +35,19 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         return PointToScreen(new WpfPoint(point.X, point.Y));
     }
 
-    public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds)
+    public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)
     {
-        var topLeft = PointFromScreen(new WpfPoint(screenBounds.Left, screenBounds.Top));
-        var bottomRight = PointFromScreen(new WpfPoint(screenBounds.Right, screenBounds.Bottom));
-        var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X, topLeft.Y), camera);
-        var width = (bottomRight.X - topLeft.X) / camera.Zoom;
-        var height = (bottomRight.Y - topLeft.Y) / camera.Zoom;
-        var bounds = new CanvasBounds(origin.X - 1, origin.Y - TitleHeight - 1, width + 2, height + TitleHeight + 2);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var width = (screenBounds.Right - (double)screenBounds.Left) / dpi.DpiScaleX / camera.Zoom;
+        var height = (screenBounds.Bottom - (double)screenBounds.Top) / dpi.DpiScaleY / camera.Zoom;
+        var bounds = panel.Bounds with { Width = width + 2, Height = height + TitleHeight + 2 };
+        if (syncPosition)
+        {
+            var topLeft = PointFromScreen(new WpfPoint(screenBounds.Left, screenBounds.Top));
+            var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X, topLeft.Y), camera);
+            bounds = bounds with { X = origin.X - 1, Y = origin.Y - TitleHeight - 1 };
+        }
+
         if (width > 0 && height > 0 && bounds != panel.Bounds)
         {
             panel.Bounds = bounds;
@@ -185,7 +190,9 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             {
                 panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
                 size = panel.Thumbnail?.ReadSourceSize();
-                if (size is { } resolution && bounds.Width > 2 && bounds.Height > TitleHeight + 2)
+                // Keep the work footprint after the source is restored to its desktop proportions.
+                if (panel.WorkingSize is null && size is { } resolution &&
+                    bounds.Width > 2 && bounds.Height > TitleHeight + 2)
                 {
                     var body = PreviewClipping.Fit(
                         new CanvasBounds(0, 0, bounds.Width - 2, bounds.Height - TitleHeight - 2), resolution);

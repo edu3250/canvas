@@ -316,17 +316,14 @@ public sealed class MainWindow : Window
         }
     }
 
-    private void UpdateActivePanelBounds(bool syncBounds = true)
+    private void UpdateActivePanelBounds(bool syncPosition = true)
     {
         if (windowPanels.ActivePanel is { } panel &&
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
             placement.ReadNormalScreenBounds(panel.Window.Handle) is { } bounds)
         {
             panel.WorkingSize = bounds.Size;
-            if (syncBounds)
-            {
-                windowPanels.SyncActiveBounds(panel, bounds.Visible);
-            }
+            windowPanels.SyncActiveBounds(panel, bounds.Visible, syncPosition);
         }
     }
 
@@ -541,7 +538,7 @@ public sealed class MainWindow : Window
         }
 
         ReleaseReturnShortcut();
-        UpdateActivePanelBounds(syncBounds: activateCanvas);
+        UpdateActivePanelBounds(syncPosition: activateCanvas);
         FinishGesture();
         windowPanels.ActivePanel = null;
         edgeTimer.Stop();
