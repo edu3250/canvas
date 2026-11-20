@@ -1,0 +1,12 @@
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\bin\Release\net10.0\Canvas.Domain.deps.json
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\bin\Release\net10.0\Canvas.Domain.dll
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\bin\Release\net10.0\Canvas.Domain.pdb
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.AssemblyInfoInputs.cache
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.AssemblyInfo.cs
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.csproj.CoreCompileInputs.cache
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.sourcelink.json
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.dll
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\refint\Canvas.Domain.dll
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\Canvas.Domain.pdb
+D:\codex\Escritorio\.claude\worktrees\canvas-desktop-review-937c2f\src\Canvas.Domain\obj\Release\net10.0\ref\Canvas.Domain.dll
