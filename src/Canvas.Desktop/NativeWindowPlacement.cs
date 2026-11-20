@@ -9,7 +9,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 {
     private const string MarkerPrefix = "EscritorioCanvas.WindowRecovery.";
     private static readonly nint MarkerValue = 1;
-    private readonly int sessionId = GetCurrentSessionId();
+    public int SessionId { get; } = GetCurrentSessionId();
 
     public WindowIdentity? Identify(long handle)
     {
@@ -30,14 +30,14 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
         using (process)
         {
-            if (process.SessionId != sessionId)
+            if (process.SessionId != SessionId)
             {
                 return null;
             }
 
             var started = process.StartTime.ToUniversalTime().Ticks;
             return GetWindowThreadProcessId((nint)handle, out var currentProcessId) != 0 && processId == currentProcessId
-                ? new WindowIdentity(handle, processId, started, sessionId)
+                ? new WindowIdentity(handle, processId, started, SessionId)
                 : null;
         }
     }

@@ -24,7 +24,7 @@ internal static class Program
 
             if (restoreOnly)
             {
-                MessageBox.Show("Se han procesado todas las devoluciones pendientes.", title,
+                MessageBox.Show("Se han procesado todas las devoluciones pendientes de esta sesión de Windows.", title,
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return 0;
             }

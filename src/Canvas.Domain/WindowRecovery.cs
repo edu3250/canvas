@@ -19,6 +19,7 @@ public sealed record WindowRecoveryEntry(long Handle, int ProcessId, long Proces
 
 public interface IWindowPlacementAccess
 {
+    int SessionId { get; }
     WindowIdentity? Identify(long handle);
     WindowPlacement Capture(long handle);
     void Mark(long handle, Guid marker);
@@ -66,7 +67,12 @@ public sealed class WindowRecovery : IDisposable
     {
         ObjectDisposedException.ThrowIf(gate.SafeFileHandle.IsClosed, this);
         var identity = windows.Identify(handle) ?? throw new InvalidOperationException("The window no longer exists.");
-        var existing = entries.Find(entry => entry.Handle == handle);
+        if (identity.SessionId != windows.SessionId)
+        {
+            throw new InvalidOperationException("The window belongs to another session.");
+        }
+
+        var existing = FindInCurrentSession(handle);
         if (existing is not null && Matches(existing))
         {
             return;
@@ -86,7 +92,7 @@ public sealed class WindowRecovery : IDisposable
                 throw new InvalidOperationException("The original window placement could not be verified.");
             }
 
-            Write([.. entries.Where(current => current.Handle != handle), entry]);
+            Write([.. entries.Where(current => current != existing), entry]);
             committed = true;
             if (!Matches(entry))
             {
@@ -105,7 +111,7 @@ public sealed class WindowRecovery : IDisposable
     public void RestoreWindow(long handle)
     {
         ObjectDisposedException.ThrowIf(gate.SafeFileHandle.IsClosed, this);
-        var entry = entries.Find(item => item.Handle == handle);
+        var entry = FindInCurrentSession(handle);
         if (entry is null)
         {
             return;
@@ -128,7 +134,7 @@ public sealed class WindowRecovery : IDisposable
     {
         ObjectDisposedException.ThrowIf(gate.SafeFileHandle.IsClosed, this);
         var failures = new List<Exception>();
-        foreach (var entry in entries.ToArray())
+        foreach (var entry in entries.Where(item => item.SessionId == windows.SessionId).ToArray())
         {
             try
             {
@@ -144,6 +150,9 @@ public sealed class WindowRecovery : IDisposable
     }
 
     public void Dispose() => gate.Dispose();
+
+    private WindowRecoveryEntry? FindInCurrentSession(long handle) =>
+        entries.Find(entry => entry.SessionId == windows.SessionId && entry.Handle == handle);
 
     private bool Matches(WindowRecoveryEntry entry) =>
         windows.Identify(entry.Handle) == entry.Identity && windows.HasMarker(entry.Handle, entry.Marker);
@@ -167,7 +176,7 @@ public sealed class WindowRecovery : IDisposable
                 var document = JsonSerializer.Deserialize<Journal>(stream, JsonOptions);
                 if (document is null || document.Version != Version || document.Windows is null ||
                     document.Windows.Any(entry => !Valid(entry)) ||
-                    document.Windows.Select(entry => entry.Handle).Distinct().Count() != document.Windows.Count)
+                    document.Windows.Select(entry => (entry.SessionId, entry.Handle)).Distinct().Count() != document.Windows.Count)
                 {
                     throw new InvalidDataException("Invalid or unsupported window recovery journal.");
                 }

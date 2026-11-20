@@ -117,6 +117,68 @@ public sealed class WindowRecoveryTests : IDisposable
         Assert.Throws<IOException>(() => Open());
     }
 
+    [Fact]
+    public void ReturningInAnotherSessionLeavesItsForeignEntryUntouched()
+    {
+        using (var first = Open())
+        {
+            first.SaveOriginal(100);
+        }
+
+        var original = File.ReadAllText(Journal);
+        var otherSession = new FakeWindows { SessionId = 2 };
+        using (var second = new WindowRecovery(Journal, otherSession))
+        {
+            second.RestoreWindow(100);
+            Assert.Empty(second.RestoreAll());
+        }
+
+        Assert.Equal(0, otherSession.IdentifyCount);
+        Assert.Equal(0, otherSession.RestoreCount);
+        Assert.Equal(original, File.ReadAllText(Journal));
+
+        using var retry = Open();
+        Assert.Empty(retry.RestoreAll());
+        Assert.Equal(1, windows.RestoreCount);
+    }
+
+    [Fact]
+    public void SameHandleInTwoSessionsPreservesAndRestoresBothOriginals()
+    {
+        const long handle = 100;
+        var firstOriginal = windows.Placement;
+        using (var first = Open())
+        {
+            first.SaveOriginal(handle);
+        }
+
+        var otherSession = new FakeWindows
+        {
+            SessionId = 2,
+            Placement = firstOriginal with { NormalPosition = new WindowRectangle(80, 120, 420, 360) }
+        };
+        var secondOriginal = otherSession.Placement;
+        using (var second = new WindowRecovery(Journal, otherSession))
+        {
+            second.SaveOriginal(handle);
+        }
+
+        using (var second = new WindowRecovery(Journal, otherSession))
+        {
+            otherSession.Placement = firstOriginal;
+            Assert.Empty(second.RestoreAll());
+            Assert.Equal(secondOriginal, otherSession.Placement);
+        }
+
+        using var retry = Open();
+        windows.Placement = secondOriginal;
+        Assert.Empty(retry.RestoreAll());
+        Assert.Equal(firstOriginal, windows.Placement);
+        Assert.Equal(1, windows.RestoreCount);
+        Assert.Equal(1, otherSession.RestoreCount);
+    }
+
+
     private WindowRecovery Open() => new(Journal, windows);
 
     public void Dispose() => directory.Delete(recursive: true);
@@ -127,12 +189,19 @@ public sealed class WindowRecoveryTests : IDisposable
             new(0, 1, default, default, new WindowRectangle(24, 80, 700, 540));
 
         public Dictionary<long, Guid> Markers { get; } = [];
+        public int SessionId { get; init; } = 1;
         public long Started { get; set; } = 300;
         public long FailRestore { get; set; }
         public int CaptureCount { get; private set; }
         public int RestoreCount { get; private set; }
 
-        public WindowIdentity Identify(long handle) => new(handle, 12, Started, 1);
+        public int IdentifyCount { get; private set; }
+
+        public WindowIdentity Identify(long handle)
+        {
+            IdentifyCount++;
+            return new WindowIdentity(handle, 12, Started, SessionId);
+        }
 
         public WindowPlacement Capture(long handle)
         {
