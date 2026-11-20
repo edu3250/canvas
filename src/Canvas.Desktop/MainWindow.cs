@@ -652,7 +652,7 @@ public sealed class MainWindow : Window
     private void ZoomSurface(object sender, MouseWheelEventArgs e)
     {
         e.Handled = true;
-        if (gesture is null)
+        if (gesture is null && windowPanels.ActivePanel is null)
         {
             var cursor = spaceView.GetPointer(e);
             ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, e.Delta / 120.0)));
