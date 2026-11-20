@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 08 · Iconos reales en Inicio](hitos/08-iconos-reales.md). Cada icono de Inicio es un elemento real de la carpeta de su espacio y se ve igual que en el Explorador.
-- **Siguiente paso:** abrir una sesión `Modo: Construir · Hito: docs/hitos/08-iconos-reales.md` para los pasos 1–4. El paso 5 (guardar posiciones) es zona sensible y va en un PR aparte.
+- **Siguiente paso:** probar los pasos 1–4 en la rama `h08-iconos-reales` y autorizar su fusión con la CI en verde. El paso 5 (guardar posiciones) es zona sensible y va en un PR aparte.
 - **Candidato para después:** *ventanas reales en el lienzo*, con ventanas del usuario como miniaturas DWM y clic para trabajar en su panel.
 
 ## Qué funciona hoy
@@ -20,7 +20,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 | Activar una ventana real en el rectángulo de su panel con el vecino visible | `prototipos/panel-nativo` | Prototipo verificado con VS Code ([ensayo](inspeccion/ensayo-panel-nativo.md)) |
 | Salir al escritorio y volver al lienzo conservando ambos acomodos | prototipos | Verificado con ventanas propias y con VS Code ([fase 3](inspeccion/f03-cierre.md), [fase 4](inspeccion/f04-cierre.md)) |
 
-El producto todavía no muestra ni mueve ventanas reales, y sus iconos aún son dibujos de muestra.
+El producto todavía no muestra ni mueve ventanas reales. La rama del hito sustituye los dibujos de muestra por elementos de las carpetas reales de cada espacio.
 
 ## Riesgos abiertos
 

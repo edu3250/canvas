@@ -5,6 +5,7 @@ using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.IO;
 using DomainPoint = Canvas.Domain.Point;
 using DomainGeometry = Canvas.Domain.Geometry;
 using SurfaceCanvas = System.Windows.Controls.Canvas;
@@ -14,12 +15,11 @@ namespace Canvas.Desktop;
 internal sealed class SpaceView : SurfaceCanvas
 {
     private const double TileSize = 88;
-    private const int GridSpacing = 96;
-    private static readonly DomainPoint FirstCell = HomeGrid.Clamp(new DomainPoint(double.MinValue, double.MinValue));
-    private static readonly DomainPoint LastCell = HomeGrid.Clamp(new DomainPoint(double.MaxValue, double.MaxValue));
+    private const double IconSize = 64;
     private static readonly Brush SelectionFill = new SolidColorBrush(Color.FromArgb(85, 74, 156, 245));
     private static readonly Brush SelectionBorder = new SolidColorBrush(Color.FromRgb(160, 212, 255));
     private readonly Dictionary<SpaceId, Dictionary<string, IconPlacement>> layouts;
+    private readonly ShellItems shell;
     private readonly HashSet<string> selected = [];
     private readonly Border marquee = new()
     {
@@ -33,23 +33,90 @@ internal sealed class SpaceView : SurfaceCanvas
     private Camera camera;
     private DomainPoint previewOffset;
 
-    public SpaceView(SpaceId programming, SpaceId games)
+    public SpaceView(ShellItems shell, IEnumerable<SpaceId> spaces)
     {
+        this.shell = shell;
         Background = Brushes.Transparent;
         ClipToBounds = true;
-        layouts = new()
+        Focusable = true;
+        layouts = spaces.ToDictionary(space => space, _ => new Dictionary<string, IconPlacement>());
+        SizeChanged += (_, _) => RenderIcons();
+    }
+
+    public bool HasChanges(SpaceId space, string[] paths) =>
+        paths.Length != layouts[space].Count || paths.Any(path => !layouts[space].ContainsKey(path));
+
+    public void UpdateItems(SpaceId space, string[] paths, (string OldPath, string NewPath)[] renames)
+    {
+        var icons = layouts[space];
+        var visible = displayedSpace == space;
+        var snapshot = paths.ToHashSet();
+        foreach (var (oldPath, newPath) in renames)
         {
-            [programming] = new()
+            if (!icons.Remove(oldPath, out var placement))
             {
-                ["vscode"] = CreatePlacement("VS Code", "‹›", Color.FromRgb(45, 93, 128), 80),
-                ["codex"] = CreatePlacement("Codex", "✧", Color.FromRgb(72, 75, 130), 176)
-            },
-            [games] = new()
-            {
-                ["steam"] = CreatePlacement("Steam", "◉", Color.FromRgb(45, 80, 107), 80),
-                ["discord"] = CreatePlacement("Discord", "◇", Color.FromRgb(94, 73, 133), 176)
+                continue;
             }
-        };
+
+            RemoveTile(placement, visible);
+            if (icons.Remove(newPath, out var replaced))
+            {
+                RemoveTile(replaced, visible);
+                if (visible)
+                {
+                    selected.Remove(newPath);
+                }
+            }
+
+            var replacement = CreatePlacement(newPath, placement.Origin);
+            icons[newPath] = replacement;
+            if (visible)
+            {
+                if (selected.Remove(oldPath))
+                {
+                    selected.Add(newPath);
+                }
+
+                Children.Insert(Children.Count - 1, replacement.Tile);
+            }
+        }
+
+        foreach (var path in icons.Keys.Where(path => !snapshot.Contains(path)).ToArray())
+        {
+            RemoveTile(icons[path], visible);
+            icons.Remove(path);
+            if (visible)
+            {
+                selected.Remove(path);
+            }
+        }
+
+        var occupied = icons.Values.Select(placement => placement.Origin).ToHashSet();
+        using var freeCells = HomeGrid.FreeCells(occupied).GetEnumerator();
+        foreach (var path in paths.Where(path => !icons.ContainsKey(path)))
+        {
+            freeCells.MoveNext();
+            var placement = CreatePlacement(path, freeCells.Current);
+            icons.Add(path, placement);
+            if (visible)
+            {
+                Children.Insert(Children.Count - 1, placement.Tile);
+            }
+        }
+
+        if (visible)
+        {
+            RenderIcons();
+        }
+    }
+
+    private void RemoveTile(IconPlacement placement, bool visible)
+    {
+        placement.CancelImage();
+        if (visible)
+        {
+            Children.Remove(placement.Tile);
+        }
     }
 
     public bool IsBackground(object source) => ReferenceEquals(source, this);
@@ -80,11 +147,18 @@ internal sealed class SpaceView : SurfaceCanvas
         var icons = layouts[space];
         if (displayedSpace != space)
         {
+            if (displayedSpace is not null)
+            {
+                foreach (var placement in ActiveIcons.Values)
+                {
+                    placement.CancelImage();
+                }
+            }
+
             selected.Clear();
             Children.Clear();
-            foreach (var (id, placement) in icons)
+            foreach (var placement in icons.Values)
             {
-                placement.Tile.Id = id;
                 Children.Add(placement.Tile);
             }
 
@@ -128,8 +202,8 @@ internal sealed class SpaceView : SurfaceCanvas
     {
         var group = selected.Select(id => ActiveIcons[id].Origin).ToArray();
         previewOffset = new DomainPoint(
-            Math.Clamp(requested.X, FirstCell.X - group.Min(point => point.X), LastCell.X - group.Max(point => point.X)),
-            Math.Clamp(requested.Y, FirstCell.Y - group.Min(point => point.Y), LastCell.Y - group.Max(point => point.Y)));
+            Math.Clamp(requested.X, HomeGrid.FirstX - group.Min(point => point.X), HomeGrid.LastX - group.Max(point => point.X)),
+            Math.Clamp(requested.Y, HomeGrid.FirstY - group.Min(point => point.Y), HomeGrid.LastY - group.Max(point => point.Y)));
         RenderIcons();
     }
 
@@ -139,34 +213,12 @@ internal sealed class SpaceView : SurfaceCanvas
         var occupied = icons.Where(entry => !selected.Contains(entry.Key))
             .Select(entry => entry.Value.Origin).ToHashSet();
         var origin = icons[grabbed].Origin;
-        if (selected.Count == 1)
-        {
-            icons[grabbed].Origin = HomeGrid.Snap(Translate(origin, previewOffset), occupied);
-            return;
-        }
-
         var group = selected.Select(id => icons[id]).ToArray();
-        var best = new DomainPoint(0, 0);
-        var bestDistance = double.PositiveInfinity;
-        for (var y = FirstCell.Y; y <= LastCell.Y; y += GridSpacing)
+        var offsets = group.Select(icon => new DomainPoint(icon.Origin.X - origin.X, icon.Origin.Y - origin.Y)).ToArray();
+        var destination = HomeGrid.SnapGroup(Translate(origin, previewOffset), offsets, occupied);
+        for (var index = 0; index < group.Length; index++)
         {
-            for (var x = FirstCell.X; x <= LastCell.X; x += GridSpacing)
-            {
-                var offset = new DomainPoint(x - origin.X, y - origin.Y);
-                var dx = offset.X - previewOffset.X;
-                var dy = offset.Y - previewOffset.Y;
-                var distance = dx * dx + dy * dy;
-                if (distance < bestDistance && group.All(icon => CanPlace(Translate(icon.Origin, offset), occupied)))
-                {
-                    best = offset;
-                    bestDistance = distance;
-                }
-            }
-        }
-
-        foreach (var icon in group)
-        {
-            icon.Origin = Translate(icon.Origin, best);
+            group[index].Origin = Translate(destination, offsets[index]);
         }
     }
 
@@ -177,15 +229,24 @@ internal sealed class SpaceView : SurfaceCanvas
         RenderIcons();
     }
 
-    private static bool CanPlace(DomainPoint point, HashSet<DomainPoint> occupied) =>
-        HomeGrid.Clamp(point) == point && !occupied.Contains(point);
-
     private static DomainPoint Translate(DomainPoint origin, DomainPoint offset) =>
         new(origin.X + offset.X, origin.Y + offset.Y);
 
     private void RenderIcons()
     {
+        if (displayedSpace is null)
+        {
+            return;
+        }
+
         var scale = new ScaleTransform(camera.Zoom, camera.Zoom);
+        var tileSize = TileSize * camera.Zoom;
+        var pixels = ShellItems.LargeIconPixels;
+        var requiredPixels = IconSize * camera.Zoom * VisualTreeHelper.GetDpi(this).DpiScaleX;
+        while (pixels < requiredPixels && pixels < 768)
+        {
+            pixels *= 2;
+        }
         foreach (var (id, placement) in ActiveIcons)
         {
             var isSelected = selected.Contains(id);
@@ -196,63 +257,134 @@ internal sealed class SpaceView : SurfaceCanvas
             placement.Tile.RenderTransform = scale;
             placement.Tile.Background = isSelected ? SelectionFill : Brushes.Transparent;
             placement.Tile.BorderBrush = isSelected ? SelectionBorder : Brushes.Transparent;
+
+            if (projected.X < ActualWidth && projected.Y < ActualHeight &&
+                projected.X + tileSize > 0 && projected.Y + tileSize > 0)
+            {
+                if (!placement.NameRequested)
+                {
+                    placement.NameRequested = true;
+                    _ = LoadNameAsync(placement.Tile);
+                }
+
+                if (placement.RequestedPixels < pixels)
+                {
+                    placement.CancelImage();
+                    placement.RequestedPixels = pixels;
+                    placement.ImageRequest = new CancellationTokenSource();
+                    _ = LoadImageAsync(placement, pixels, placement.ImageRequest.Token);
+                }
+            }
+            else
+            {
+                placement.CancelImage();
+            }
         }
     }
 
-    private static IconPlacement CreatePlacement(string name, string symbol, Color color, double y)
+    private async Task LoadNameAsync(IconTile tile)
     {
-        var badge = new Border
+        try
         {
-            Width = 44,
-            Height = 44,
-            CornerRadius = new CornerRadius(11),
-            Background = new SolidColorBrush(color),
-            Child = new TextBlock
-            {
-                Text = symbol,
-                FontFamily = new FontFamily("Segoe UI Symbol"),
-                FontSize = 24,
-                Foreground = Brushes.White,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            }
-        };
+            tile.SetName(await shell.ReadNameAsync(tile.Id));
+        }
+        catch (OperationCanceledException)
+        {
+            // The Shell dispatcher is shutting down.
+        }
+    }
 
-        var label = new Border
+    private async Task LoadImageAsync(IconPlacement placement, int pixels, CancellationToken cancellation)
+    {
+        try
         {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(0, 5, 0, 0),
-            Padding = new Thickness(6, 2, 6, 2),
-            CornerRadius = new CornerRadius(4),
-            Background = new SolidColorBrush(Color.FromRgb(24, 51, 65)),
-            Child = new TextBlock { Text = name, FontSize = 12, Foreground = Brushes.White }
-        };
-        var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        content.Children.Add(badge);
-        content.Children.Add(label);
-        var tile = new IconTile
+            var (image, overlay) = await shell.ReadImageAsync(placement.Tile.Id, pixels, cancellation);
+            if (!cancellation.IsCancellationRequested)
+            {
+                placement.Tile.Icon.Source = image;
+                placement.Tile.Overlay.Source = overlay;
+                placement.LoadedPixels = pixels;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The icon left the view or its requested size changed.
+        }
+    }
+
+    private static IconPlacement CreatePlacement(string path, DomainPoint origin)
+    {
+        var tile = new IconTile(path)
         {
             Width = TileSize,
             Height = TileSize,
             Background = Brushes.Transparent,
             BorderThickness = new Thickness(1),
             BorderBrush = Brushes.Transparent,
-            CornerRadius = new CornerRadius(6),
-            Child = content
+            CornerRadius = new CornerRadius(6)
         };
-        AutomationProperties.SetName(tile, name);
-        return new IconPlacement(new DomainPoint(24, y), tile);
+        return new IconPlacement(origin, tile);
     }
 
     private sealed class IconPlacement(DomainPoint origin, IconTile tile)
     {
         public DomainPoint Origin { get; set; } = origin;
         public IconTile Tile { get; } = tile;
+        public bool NameRequested { get; set; }
+        public int RequestedPixels { get; set; }
+        public int LoadedPixels { get; set; }
+        public CancellationTokenSource? ImageRequest { get; set; }
+
+        public void CancelImage()
+        {
+            ImageRequest?.Cancel();
+            ImageRequest?.Dispose();
+            ImageRequest = null;
+            RequestedPixels = LoadedPixels;
+        }
     }
 
     private sealed class IconTile : Border
     {
-        public string Id { get; set; } = "";
+        private readonly TextBlock label = new()
+        {
+            FontSize = 12,
+            Foreground = Brushes.White,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextAlignment = TextAlignment.Center
+        };
+
+        public IconTile(string id)
+        {
+            Id = id;
+            var artwork = new Grid { Width = IconSize, Height = IconSize };
+            artwork.Children.Add(Icon);
+            artwork.Children.Add(Overlay);
+            var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            content.Children.Add(artwork);
+            content.Children.Add(new Border
+            {
+                Margin = new Thickness(2, 2, 2, 0),
+                Padding = new Thickness(3, 1, 3, 1),
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(Color.FromRgb(24, 51, 65)),
+                Child = label
+            });
+            Child = content;
+            SetName(Path.GetFileName(id));
+        }
+
+        public string Id { get; }
+        public Image Icon { get; } = new();
+        public Image Overlay { get; } = new() { IsHitTestVisible = false };
+
+        public void SetName(string name)
+        {
+            label.Text = name;
+            ToolTip = name;
+            AutomationProperties.SetName(this, name);
+        }
+
         protected override AutomationPeer OnCreateAutomationPeer() => new IconTilePeer(this);
     }
 

@@ -13,3 +13,4 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Vista (posición y zoom) | `View` |
 | Vista de retorno | `ReturnView` |
 | Acomodo | `Layout` |
+| Carpeta del espacio | `SpaceFolder` |

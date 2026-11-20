@@ -5,6 +5,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
+using System.IO;
 using SurfaceCanvas = System.Windows.Controls.Canvas;
 using ShapePath = System.Windows.Shapes.Path;
 using DomainPoint = Canvas.Domain.Point;
@@ -19,6 +21,12 @@ public sealed class MainWindow : Window
     private static readonly SpaceId Games = new("Juegos");
     private readonly SpaceView spaceView;
     private readonly Button homeButton;
+    private readonly ShellItems shell = new();
+    private readonly Dictionary<SpaceId, SpaceFolderMonitor> folders;
+    private readonly DispatcherTimer folderTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private bool readingFolders;
+    private bool closed;
+    private string? previousClick;
     private SessionState session;
     private Gesture? gesture;
 
@@ -37,7 +45,10 @@ public sealed class MainWindow : Window
             [Programming] = new(home, home, null),
             [Games] = new(home, home, null)
         });
-        spaceView = new SpaceView(Programming, Games);
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        folders = session.Spaces.Keys.ToDictionary(space => space,
+            space => new SpaceFolderMonitor(SpaceFolder.GetPath(profile, space)));
+        spaceView = new SpaceView(shell, folders.Keys);
         spaceView.PreviewMouseDown += BeginGesture;
         spaceView.MouseMove += ContinueGesture;
         spaceView.PreviewMouseUp += EndGesture;
@@ -57,6 +68,15 @@ public sealed class MainWindow : Window
                 CancelGesture();
                 e.Handled = true;
             }
+            else if (e.Key == Key.Enter && spaceView.IsKeyboardFocusWithin && gesture is null)
+            {
+                foreach (var path in spaceView.GetSelection())
+                {
+                    ShellItems.Open(path);
+                }
+
+                e.Handled = true;
+            }
         };
         homeButton = new Button { MinWidth = 130, Padding = new Thickness(12, 4, 12, 4) };
         homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
@@ -72,6 +92,79 @@ public sealed class MainWindow : Window
         viewport.Children.Add(CreateToolbar());
         Content = viewport;
         RefreshSpace();
+
+        Loaded += (_, _) =>
+        {
+            folderTimer.Start();
+            _ = RefreshFoldersAsync();
+        };
+        folderTimer.Tick += (_, _) => _ = RefreshFoldersAsync();
+        Closed += (_, _) =>
+        {
+            closed = true;
+            folderTimer.Stop();
+            shell.Dispose();
+            if (!readingFolders)
+            {
+                DisposeFolders();
+            }
+        };
+    }
+
+    private async Task RefreshFoldersAsync()
+    {
+        if (readingFolders || closed)
+        {
+            return;
+        }
+
+        readingFolders = true;
+        try
+        {
+            await Task.WhenAll(folders.Select(async entry =>
+            {
+                var (space, monitor) = entry;
+                (string[] Paths, (string OldPath, string NewPath)[] Renames) snapshot;
+                try
+                {
+                    snapshot = await Task.Run(monitor.ReadSnapshot);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    System.Diagnostics.Trace.TraceWarning("No se pudo leer la carpeta del espacio: {0}", error.Message);
+                    return;
+                }
+
+                if (closed || snapshot.Renames.Length == 0 && !spaceView.HasChanges(space, snapshot.Paths))
+                {
+                    return;
+                }
+
+                if (space == session.ActiveSpaceId)
+                {
+                    CancelGesture();
+                    previousClick = null;
+                }
+
+                spaceView.UpdateItems(space, snapshot.Paths, snapshot.Renames);
+            }));
+        }
+        finally
+        {
+            readingFolders = false;
+            if (closed)
+            {
+                DisposeFolders();
+            }
+        }
+    }
+
+    private void DisposeFolders()
+    {
+        foreach (var folder in folders.Values)
+        {
+            folder.Dispose();
+        }
     }
 
     private Camera ActiveCamera => session.Spaces[session.ActiveSpaceId].Camera;
@@ -98,8 +191,11 @@ public sealed class MainWindow : Window
             return;
         }
 
+        spaceView.Focus();
+        var openOnRelease = kind == GestureKind.Icons && e.ClickCount == 2 && previousClick == icon;
+        previousClick = null;
         gesture = new Gesture(e.ChangedButton, spaceView.GetPointer(e), ActiveCamera,
-            kind.Value, icon, spaceView.GetSelection());
+            kind.Value, icon, spaceView.GetSelection(), openOnRelease);
         if (kind == GestureKind.Marquee)
         {
             spaceView.SetSelection([]);
@@ -170,6 +266,18 @@ public sealed class MainWindow : Window
         }
 
         FinishGesture();
+        if (active.Kind == GestureKind.Icons && !active.HasMoved && spaceView.FindIcon(spaceView.InputHitTest(e.GetPosition(spaceView))!) == active.Icon)
+        {
+            if (active.OpenOnRelease)
+            {
+                ShellItems.Open(active.Icon!);
+            }
+            else
+            {
+                previousClick = active.Icon;
+            }
+        }
+
         e.Handled = true;
     }
 
@@ -231,6 +339,14 @@ public sealed class MainWindow : Window
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         controls.Children.Add(selector);
         controls.Children.Add(homeButton);
+        var folderButton = new Button
+        {
+            Content = "Abrir carpeta del espacio",
+            Margin = new Thickness(8, 0, 0, 0),
+            Padding = new Thickness(12, 4, 12, 4)
+        };
+        folderButton.Click += (_, _) => ShellItems.Open(folders[session.ActiveSpaceId].Path);
+        controls.Children.Add(folderButton);
         return new Border
         {
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -248,6 +364,7 @@ public sealed class MainWindow : Window
         if (command is ToggleHome || command is SwitchSpace change && change.Target != session.ActiveSpaceId)
         {
             CancelGesture();
+            previousClick = null;
         }
 
         var result = Navigation.Apply(session, command);
@@ -263,7 +380,7 @@ public sealed class MainWindow : Window
     private enum GestureKind { Pan, Marquee, Icons }
 
     private sealed record Gesture(MouseButton Button, DomainPoint Pointer, Camera Camera,
-        GestureKind Kind, string? Icon, string[] Selection)
+        GestureKind Kind, string? Icon, string[] Selection, bool OpenOnRelease)
     {
         public bool HasMoved { get; set; }
     }
