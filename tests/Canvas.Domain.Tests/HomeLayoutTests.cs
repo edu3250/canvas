@@ -139,6 +139,35 @@ public sealed class HomeLayoutTests : IDisposable
     }
 
     [Fact]
+    public void AnUnreadableNameIsDroppedWithoutLosingItsNeighbours()
+    {
+        // Regression from the second PR #37 review: a lone surrogate escape passes JsonDocument.Parse
+        // but throws when the name is decoded, which used to escape Load and stop the app at startup.
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        File.WriteAllText(FilePath, """
+            {
+              "\uDC00raiz": 1,
+              "version": 1,
+              "spaces": {
+                "Juegos": {
+                  "\uD800malo.txt": { "x": 24, "y": 80 },
+                  "bueno.txt": { "x": 120, "y": 176 }
+                },
+                "\uD800espacio": { "a.txt": { "x": 24, "y": 80 } },
+                "Programación": { "b.txt": { "x": 216, "y": 80 } }
+              }
+            }
+            """);
+
+        var (layouts, damaged) = HomeLayout.Load(FilePath);
+
+        Assert.False(damaged);
+        Assert.Equal(new Point(120, 176), Assert.Single(layouts[Games]).Value);
+        Assert.Equal(new Point(216, 80), layouts[Programming]["b.txt"]);
+        Assert.Equal(2, layouts.Count);
+    }
+
+    [Fact]
     public void AVersionThatIsNotANumberMarksTheFileDamaged()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);

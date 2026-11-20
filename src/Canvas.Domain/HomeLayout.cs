@@ -68,7 +68,8 @@ public static class HomeLayout
             var layouts = new Dictionary<SpaceId, Dictionary<string, Point>>();
             foreach (var space in spaces.EnumerateObject())
             {
-                if (string.IsNullOrEmpty(space.Name) || space.Value.ValueKind != JsonValueKind.Object)
+                if (!TryReadName(space, out var spaceName) || spaceName.Length == 0 ||
+                    space.Value.ValueKind != JsonValueKind.Object)
                 {
                     continue;
                 }
@@ -77,14 +78,14 @@ public static class HomeLayout
                 var cells = new HashSet<Point>();
                 foreach (var item in space.Value.EnumerateObject())
                 {
-                    if (IsValidName(item.Name) && TryReadPoint(item.Value, out var cell) &&
-                        IsGridCell(cell) && !layout.ContainsKey(item.Name) && cells.Add(cell))
+                    if (TryReadName(item, out var name) && IsValidName(name) && TryReadPoint(item.Value, out var cell) &&
+                        IsGridCell(cell) && !layout.ContainsKey(name) && cells.Add(cell))
                     {
-                        layout.Add(item.Name, cell);
+                        layout.Add(name, cell);
                     }
                 }
 
-                layouts.TryAdd(new SpaceId(space.Name), layout);
+                layouts.TryAdd(new SpaceId(spaceName), layout);
             }
 
             return (layouts, false);
@@ -105,11 +106,30 @@ public static class HomeLayout
         return true;
     }
 
+    /// <summary>
+    /// Names are decoded lazily: an escape such as a lone surrogate passes <see cref="JsonDocument.Parse(string, JsonDocumentOptions)"/>
+    /// but throws when read. Such an entry is unreadable and is skipped like any other invalid entry.
+    /// </summary>
+    private static bool TryReadName(JsonProperty property, out string name)
+    {
+        try
+        {
+            name = property.Name;
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            name = string.Empty;
+            return false;
+        }
+    }
+
     private static bool TryGetProperty(JsonElement element, string name, out JsonElement value)
     {
         foreach (var property in element.EnumerateObject())
         {
-            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            if (TryReadName(property, out var propertyName) &&
+                string.Equals(propertyName, name, StringComparison.OrdinalIgnoreCase))
             {
                 value = property.Value;
                 return true;
