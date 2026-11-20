@@ -64,11 +64,23 @@ internal sealed class WindowCatalog
         }
     }
 
-    public bool IsLive(WindowIdentity identity)
+    public WindowInstance? Track(WindowIdentity identity)
     {
         try
         {
-            return placement.Identify(identity.Handle) == identity && IsWindowVisible((nint)identity.Handle);
+            return WindowInstance.Track(placement, identity);
+        }
+        catch (Exception error) when (error is Win32Exception or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    public static bool IsLive(WindowIdentity identity, WindowInstance instance)
+    {
+        try
+        {
+            return instance.IsCurrent() && IsWindowVisible((nint)identity.Handle);
         }
         catch (Exception error) when (error is Win32Exception or InvalidOperationException)
         {

@@ -127,8 +127,7 @@ public sealed class MainWindow : Window
         var zoomControls = CreateZoomControls();
         viewport.Children.Add(toolbar);
         viewport.Children.Add(zoomControls);
-        toolbar.SizeChanged += (_, _) => windowPanels.TopInset = toolbar.ActualHeight + toolbar.Margin.Top;
-        zoomControls.SizeChanged += (_, _) => windowPanels.BottomInset = zoomControls.ActualHeight + zoomControls.Margin.Bottom;
+        windowPanels.OccludingControls = [toolbar, zoomControls];
         Content = viewport;
         RefreshSpace();
 

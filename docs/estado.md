@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** Construir corrige el recorte de las miniaturas y la detección de ventanas reemplazadas en el [PR #42](https://github.com/edu3250/escritorio-canvas/pull/42). Quedan la prueba de uso y la revisión de la corrección antes del paso 4.
+- **Siguiente paso:** probar las miniaturas y revisar las correcciones de recorte y de identidad de ventana del [PR #42](https://github.com/edu3250/escritorio-canvas/pull/42) antes del paso 4.
 
 ## Qué funciona hoy
 

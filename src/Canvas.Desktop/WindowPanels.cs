@@ -22,11 +22,14 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
     public event Action? MapChanged;
 
+    public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
+
     public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space)
         .Select(panel => new MinimapItem(panel.Bounds, null, IsPanel: true)).ToArray();
 
     public void ShowPicker(Button button)
     {
+        RefreshWindows();
         var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
         foreach (var window in catalog.List().Where(window => panels.All(panel => panel.Window.Identity != window.Identity)))
         {
@@ -46,9 +49,17 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
     private void Add(WindowCandidate selected)
     {
+        RefreshWindows();
         if (catalog.Find(selected.Handle) is not { } window || window.Identity != selected.Identity ||
             panels.Any(panel => panel.Window.Identity == window.Identity))
         {
+            return;
+        }
+
+        if (catalog.Track(window.Identity) is not { } instance)
+        {
+            MessageBox.Show(owner, "La ventana ya no está disponible. Vuelve a abrir el selector.", "Añadir ventana",
+                MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -57,7 +68,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         var height = (window.NormalBounds.Bottom - (double)window.NormalBounds.Top) / dpi.DpiScaleY + TitleHeight;
         var center = CanvasBounds.Viewport(camera, new DomainPoint(ActualWidth, ActualHeight)).Center;
         var desired = new CanvasBounds(center.X - width / 2, center.Y - height / 2, width, height);
-        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title),
+        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title), instance,
             WindowThumbnail.Register(new WindowInteropHelper(owner).Handle, window.Handle));
         panels.Add(panel);
         Children.Add(panel.Card);
@@ -83,7 +94,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
     public void RefreshWindows()
     {
-        var removed = panels.Where(panel => !catalog.IsLive(panel.Window.Identity)).ToArray();
+        var removed = panels.Where(panel => !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)).ToArray();
         if (removed.Length != 0)
         {
             foreach (var panel in removed)
@@ -93,7 +104,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
                     CancelDrag();
                 }
 
-                panel.Thumbnail?.Dispose();
+                panel.Dispose();
                 Children.Remove(panel.Card);
                 panels.Remove(panel);
             }
@@ -103,9 +114,6 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
         Render();
     }
-
-    public double TopInset { get; set; } = 60;
-    public double BottomInset { get; set; } = 60;
 
     public void Render()
     {
@@ -117,7 +125,13 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         var matrix = source.CompositionTarget.TransformToDevice;
         var transform = TransformToAncestor(root);
         WpfPoint ToDevice(double x, double y) => matrix.Transform(transform.Transform(new WpfPoint(x, y)));
-        var clip = new Rect(ToDevice(0, TopInset), ToDevice(ActualWidth, Math.Max(TopInset, ActualHeight - BottomInset)));
+        var clip = new Rect(ToDevice(0, 0), ToDevice(ActualWidth, ActualHeight));
+        var controls = OccludingControls.Where(control => control.IsVisible).Select(control =>
+        {
+            var bounds = control.TransformToAncestor(root).TransformBounds(new Rect(control.RenderSize));
+            var pixels = new Rect(matrix.Transform(bounds.TopLeft), matrix.Transform(bounds.BottomRight));
+            return new CanvasBounds(pixels.X, pixels.Y, pixels.Width, pixels.Height);
+        }).ToArray();
 
         foreach (var panel in panels)
         {
@@ -146,7 +160,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
             var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
                 ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
-            panel.Card.Text.Text = panel.Thumbnail?.Display(area, clip) == true ? "" : "Vista previa no disponible";
+            panel.Card.Text.Text = panel.Thumbnail?.Display(area, clip, controls) == true ? "" : "Vista previa no disponible";
         }
     }
 
@@ -231,7 +245,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     {
         foreach (var panel in panels)
         {
-            panel.Thumbnail?.Dispose();
+            panel.Dispose();
         }
 
         panels.Clear();
@@ -259,12 +273,19 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     private sealed record Drag(Panel Panel, WpfPoint Pointer, CanvasBounds Original);
 
     private sealed class Panel(WindowCandidate window, SpaceId space, CanvasBounds bounds,
-        PanelCard card, WindowThumbnail? thumbnail)
+        PanelCard card, WindowInstance instance, WindowThumbnail? thumbnail) : IDisposable
     {
         public WindowCandidate Window { get; } = window;
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
         public PanelCard Card { get; } = card;
         public WindowThumbnail? Thumbnail { get; } = thumbnail;
+        public WindowInstance Instance { get; } = instance;
+
+        public void Dispose()
+        {
+            Thumbnail?.Dispose();
+            Instance.Dispose();
+        }
     }
 }

@@ -1,3 +1,4 @@
+using Canvas.Domain;
 using System.Runtime.InteropServices;
 using System.Windows;
 
@@ -5,17 +6,25 @@ namespace Canvas.Desktop;
 
 internal sealed class WindowThumbnail : IDisposable
 {
-    private readonly nint handle;
-    private bool visible;
+    private readonly nint destination;
+    private readonly nint source;
+    private readonly List<nint> handles;
 
-    private WindowThumbnail(nint handle) => this.handle = handle;
+    private WindowThumbnail(nint destination, nint source, nint initial)
+    {
+        this.destination = destination;
+        this.source = source;
+        handles = [initial];
+    }
 
     public static WindowThumbnail? Register(nint destination, long source) =>
-        DwmRegisterThumbnail(destination, (nint)source, out var thumbnail) >= 0 ? new WindowThumbnail(thumbnail) : null;
+        DwmRegisterThumbnail(destination, (nint)source, out var thumbnail) >= 0
+            ? new WindowThumbnail(destination, (nint)source, thumbnail)
+            : null;
 
-    public bool Display(Rect area, Rect viewport)
+    public bool Display(Rect area, Rect viewport, IReadOnlyList<CanvasBounds> controls)
     {
-        if (area.Width < 1 || area.Height < 1 || DwmQueryThumbnailSourceSize(handle, out var size) < 0 ||
+        if (area.Width < 1 || area.Height < 1 || DwmQueryThumbnailSourceSize(handles[0], out var size) < 0 ||
             size.Width <= 0 || size.Height <= 0)
         {
             Hide();
@@ -25,43 +34,69 @@ internal sealed class WindowThumbnail : IDisposable
         var scale = Math.Min(area.Width / size.Width, area.Height / size.Height);
         var width = size.Width * scale;
         var height = size.Height * scale;
-        var content = new Rect(area.X + (area.Width - width) / 2, area.Y + (area.Height - height) / 2, width, height);
-        var clipped = Rect.Intersect(content, viewport);
-        if (clipped.IsEmpty || clipped.Width < 1 || clipped.Height < 1)
+        var content = new CanvasBounds(area.X + (area.Width - width) / 2, area.Y + (area.Height - height) / 2, width, height);
+        var visible = PreviewClipping.VisibleParts(content,
+            new CanvasBounds(viewport.X, viewport.Y, viewport.Width, viewport.Height), controls);
+        var used = 0;
+        foreach (var part in visible)
         {
-            Hide();
-            return true;
+            var target = ToNative(new Rect(part.X, part.Y, part.Width, part.Height));
+            var crop = ToNative(new Rect((part.X - content.X) / scale, (part.Y - content.Y) / scale,
+                part.Width / scale, part.Height / scale));
+            if (target.Left >= target.Right || target.Top >= target.Bottom ||
+                crop.Left >= crop.Right || crop.Top >= crop.Bottom)
+            {
+                continue;
+            }
+
+            if (used == handles.Count)
+            {
+                if (DwmRegisterThumbnail(destination, source, out var thumbnail) < 0)
+                {
+                    Hide();
+                    return false;
+                }
+                handles.Add(thumbnail);
+            }
+
+            var properties = new ThumbnailProperties
+            {
+                Flags = 0x01 | 0x02 | 0x08,
+                Visible = true,
+                Destination = target,
+                Source = crop
+            };
+            if (DwmUpdateThumbnailProperties(handles[used], in properties) < 0)
+            {
+                Hide();
+                return false;
+            }
+            used++;
         }
 
-        var properties = new ThumbnailProperties
-        {
-            Flags = 0x01 | 0x02 | 0x08,
-            Visible = true,
-            Destination = ToNative(clipped),
-            Source = ToNative(new Rect((clipped.X - content.X) / scale, (clipped.Y - content.Y) / scale,
-                clipped.Width / scale, clipped.Height / scale))
-        };
-        if (DwmUpdateThumbnailProperties(handle, in properties) < 0)
-        {
-            Hide();
-            return false;
-        }
-
-        visible = true;
+        HideFrom(used);
         return true;
     }
 
-    public void Hide()
+    public void Hide() => HideFrom(0);
+
+    private void HideFrom(int first)
     {
-        if (visible)
+        var properties = new ThumbnailProperties { Flags = 0x08 };
+        for (var index = first; index < handles.Count; index++)
         {
-            var properties = new ThumbnailProperties { Flags = 0x08 };
-            DwmUpdateThumbnailProperties(handle, in properties);
-            visible = false;
+            DwmUpdateThumbnailProperties(handles[index], in properties);
         }
     }
 
-    public void Dispose() => DwmUnregisterThumbnail(handle);
+    public void Dispose()
+    {
+        foreach (var handle in handles)
+        {
+            DwmUnregisterThumbnail(handle);
+        }
+        handles.Clear();
+    }
 
     private static NativeRect ToNative(Rect rect) => new()
     {

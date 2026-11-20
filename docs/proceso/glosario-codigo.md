@@ -17,3 +17,4 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Acomodo de Inicio (posiciones de sus iconos) | `HomeLayout` |
 | Minimapa | `Minimap` |
 | Registro de devolución | `WindowRecovery` |
+| Instancia de ventana | `WindowInstance` |
