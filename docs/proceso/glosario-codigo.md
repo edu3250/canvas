@@ -16,3 +16,4 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Carpeta del espacio | `SpaceFolder` |
 | Acomodo de Inicio (posiciones de sus iconos) | `HomeLayout` |
 | Minimapa | `Minimap` |
+| Registro de devolución | `WindowRecovery` |
