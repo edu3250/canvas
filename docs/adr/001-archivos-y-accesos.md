@@ -12,4 +12,8 @@ El modelo debe distinguir el destino de un acceso de la ubicación de un documen
 
 ## Guardado y proyectos externos
 
-Cada espacio tendrá una carpeta con nombre y ruta accesible desde el Explorador. Cuando el usuario seleccione esa ruta en el diálogo habitual de guardado de una aplicación, el escritorio del espacio mostrará el archivo. «Crear acceso aquí» permitirá añadir un proyecto existente conservando su ruta, y «Mover a este espacio» trasladará el contenido. Queda pendiente elegir la carpeta raíz y la integración visual con el escritorio de Windows.
+Cada espacio tendrá una carpeta con nombre y ruta accesible desde el Explorador. Cuando el usuario seleccione esa ruta en el diálogo habitual de guardado de una aplicación, el escritorio del espacio mostrará el archivo. «Crear acceso aquí» permitirá añadir un proyecto existente conservando su ruta, y «Mover a este espacio» trasladará el contenido. La carpeta raíz se acordó después (ver «Carpeta raíz»). Queda pendiente la integración visual con el escritorio de Windows.
+
+## Carpeta raíz
+
+Acordado en la entrevista del [hito 08](../hitos/08-iconos-reales.md) el 19-11-2026. Cada espacio usa `%USERPROFILE%\Escritorio Canvas\<Espacio>`, fuera de las carpetas que suele sincronizar OneDrive. Inicio muestra el contenido de esa carpeta: las aplicaciones como accesos directos y los archivos y carpetas tal como están. La integración visual con el escritorio de Windows sigue pendiente.
