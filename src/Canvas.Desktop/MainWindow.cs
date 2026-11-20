@@ -32,6 +32,15 @@ public sealed class MainWindow : Window
     private Camera mapCamera;
     private nint windowHandle;
     private bool hotkeyRegistered;
+    private readonly TextBlock returnShortcutStatus = new()
+    {
+        Foreground = SystemColors.ControlTextBrush,
+        VerticalAlignment = VerticalAlignment.Center,
+        Margin = new Thickness(12, 0, 12, 0),
+        Text = "Ctrl+Alt+Espacio no disponible. Usa el minimapa para volver.",
+        TextTrimming = TextTrimming.CharacterEllipsis,
+        Visibility = Visibility.Collapsed
+    };
     private bool activationPending;
     private bool cancelActivation;
     private readonly DispatcherTimer previewTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
@@ -207,7 +216,6 @@ public sealed class MainWindow : Window
         {
             windowHandle = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(windowHandle).AddHook(HandleWindowMessage);
-            hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
         };
         ContentRendered += (_, _) =>
         {
@@ -215,11 +223,6 @@ public sealed class MainWindow : Window
             {
                 minimap.Owner = this;
                 SyncMinimapWindow();
-                if (!hotkeyRegistered)
-                {
-                    MessageBox.Show(this, "Ctrl+Alt+Espacio no está disponible. Puedes volver al mapa con el minimapa o con un clic en el lienzo.",
-                        Title, MessageBoxButton.OK, MessageBoxImage.Information);
-                }
             }
         };
         StateChanged += (_, _) =>
@@ -250,10 +253,7 @@ public sealed class MainWindow : Window
             folderTimer.Stop();
             previewTimer.Stop();
             edgeTimer.Stop();
-            if (hotkeyRegistered)
-            {
-                NativePanelInput.UnregisterReturn(windowHandle);
-            }
+            ReleaseReturnShortcut();
             windowPanels.Dispose();
             shell.Dispose();
             if (!readingFolders)
@@ -270,6 +270,8 @@ public sealed class MainWindow : Window
         DockPanel.SetDock(buttons, Dock.Right);
         WindowChrome.SetIsHitTestVisibleInChrome(buttons, true);
         caption.Children.Add(buttons);
+        DockPanel.SetDock(returnShortcutStatus, Dock.Right);
+        caption.Children.Add(returnShortcutStatus);
         caption.Children.Add(new TextBlock
         {
             Text = Title,
@@ -314,13 +316,17 @@ public sealed class MainWindow : Window
         }
     }
 
-    private void UpdateActivePanelBounds()
+    private void UpdateActivePanelBounds(bool syncBounds = true)
     {
         if (windowPanels.ActivePanel is { } panel &&
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
             placement.ReadNormalScreenBounds(panel.Window.Handle) is { } bounds)
         {
-            windowPanels.SyncActiveBounds(panel, bounds);
+            panel.WorkingSize = bounds.Size;
+            if (syncBounds)
+            {
+                windowPanels.SyncActiveBounds(panel, bounds.Visible);
+            }
         }
     }
 
@@ -396,7 +402,8 @@ public sealed class MainWindow : Window
             ReturnToMap(activateCanvas: false);
         }
 
-        if (message == NativePanelInput.HotkeyMessage && wParam == NativePanelInput.ReturnHotkey)
+        if (message == NativePanelInput.HotkeyMessage && wParam == NativePanelInput.ReturnHotkey &&
+            hotkeyRegistered && windowPanels.ActivePanel is not null)
         {
             handled = true;
             cancelActivation = true;
@@ -410,8 +417,18 @@ public sealed class MainWindow : Window
 
     private async Task ActivatePanelAsync(WindowPanels.Panel panel, bool fromMinimap)
     {
-        if (activationPending || panel == windowPanels.ActivePanel)
+        if (activationPending)
         {
+            return;
+        }
+
+        if (panel == windowPanels.ActivePanel)
+        {
+            if (fromMinimap)
+            {
+                PanTo(CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, ActiveCamera.Zoom));
+            }
+
             return;
         }
 
@@ -449,7 +466,7 @@ public sealed class MainWindow : Window
             windowPanels.ActivePanel = panel;
 
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
-            placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
+            placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y), panel.WorkingSize);
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
             if (!NativePanelInput.SetForegroundWindow(application))
@@ -466,11 +483,14 @@ public sealed class MainWindow : Window
             mapCamera = previous;
             windowPanels.Render();
             minimap.Hide();
+            hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
+            returnShortcutStatus.Visibility = hotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
             edgeTimer.Start();
         }
         catch (Exception error) when (IsPanelError(error))
         {
             Trace.TraceWarning(error.ToString());
+            ReleaseReturnShortcut();
             windowPanels.ActivePanel = null;
             var restored = !saved || RestorePanel(panel);
             ApplyNavigation(new SetCamera(previous));
@@ -520,11 +540,8 @@ public sealed class MainWindow : Window
             return true;
         }
 
-        if (activateCanvas)
-        {
-            UpdateActivePanelBounds();
-        }
-
+        ReleaseReturnShortcut();
+        UpdateActivePanelBounds(syncBounds: activateCanvas);
         FinishGesture();
         windowPanels.ActivePanel = null;
         edgeTimer.Stop();
@@ -548,6 +565,17 @@ public sealed class MainWindow : Window
         }
         SyncMinimapWindow();
         return restored;
+    }
+
+    private void ReleaseReturnShortcut()
+    {
+        if (hotkeyRegistered)
+        {
+            NativePanelInput.UnregisterReturn(windowHandle);
+            hotkeyRegistered = false;
+        }
+
+        returnShortcutStatus.Visibility = Visibility.Collapsed;
     }
 
     private bool RestorePanel(WindowPanels.Panel panel)

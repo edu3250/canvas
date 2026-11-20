@@ -367,6 +367,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
         public CanvasBounds DisplayBounds { get; set; } = bounds;
+        public (int Width, int Height)? WorkingSize { get; set; }
         public PanelCard Card { get; } = card;
         public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;

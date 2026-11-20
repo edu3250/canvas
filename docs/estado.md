@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** corregir los tres fallos del [dictamen del PR #43](https://github.com/edu3250/escritorio-canvas/pull/43#issuecomment-7047743055), confirmar la alineación y la cámara al activar Chrome y Claude y probar el vídeo en la miniatura, el paneo y el redimensionado. Revisar el [PR #43](https://github.com/edu3250/escritorio-canvas/pull/43) antes del paso 5.
+- **Siguiente paso:** repetir la prueba de uso con Chrome y Claude, con vídeo en la miniatura, paneo, redimensionado y dos activaciones. Revisar las correcciones del [PR #43](https://github.com/edu3250/escritorio-canvas/pull/43) antes del paso 5.
 
 ## Qué funciona hoy
 

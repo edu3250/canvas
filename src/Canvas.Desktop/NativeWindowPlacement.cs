@@ -90,11 +90,11 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
-    public WindowRectangle? ReadNormalScreenBounds(long handle)
+    public (WindowRectangle Visible, (int Width, int Height) Size)? ReadNormalScreenBounds(long handle)
     {
         var window = (nint)handle;
         return !IsIconic(window) && !IsZoomed(window) && GetWindowRect(window, out var bounds)
-            ? VisibleFrame(window, bounds)
+            ? (VisibleFrame(window, bounds), (bounds.Right - bounds.Left, bounds.Bottom - bounds.Top))
             : null;
     }
 
@@ -107,7 +107,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
     [DllImport("user32.dll")]
     private static extern bool IsZoomed(nint window);
 
-    public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y)
+    public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
     {
         EnsureCurrent(instance);
         var current = Capture(identity.Handle);
@@ -117,10 +117,10 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
             Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
         }
 
-        Reposition(identity, instance, x, y);
+        Reposition(identity, instance, x, y, size);
     }
 
-    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y)
+    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size = null)
     {
         EnsureCurrent(instance);
         var window = (nint)identity.Handle;
@@ -131,8 +131,14 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
         var visible = VisibleFrame(window, full);
         const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
+        var flags = NoZOrder | NoActivate;
+        if (size is null)
+        {
+            flags |= NoSize;
+        }
+
         if (!SetWindowPos(window, 0, x - (visible.Left - full.Left), y - (visible.Top - full.Top),
-            0, 0, NoSize | NoZOrder | NoActivate))
+            size?.Width ?? 0, size?.Height ?? 0, flags))
         {
             throw new Win32Exception();
         }
