@@ -1,6 +1,6 @@
 # Glosario de código
 
-Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y los nombres en el código. Planificación añade una fila cuando un contrato introduce un término de dominio nuevo. Una propuesta de arquitectura no adoptada no añade filas.
+Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y los nombres en el código. Quien introduce un término de dominio nuevo, al definir o al construir un hito, añade su fila en el mismo PR. Una propuesta de arquitectura no adoptada no añade filas.
 
 | Término | Código |
 | --- | --- |

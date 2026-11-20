@@ -1,44 +1,28 @@
-<!-- PR de una tarea (rama fNN-tNN-slug). Lo abre Ejecución. Para un bloqueo, pasar a borrador y usar docs/plantillas/informe-bloqueo.md. El PR del plan (fNN-plan) lleva un resumen, la lista de tareas y las decisiones acordadas. -->
+<!-- Un PR por rama (hNN-slug). Para un bloqueo, pasar a borrador y anotarlo en «Bloqueos» del hito. -->
 
-**Tarea:** `docs/desarrollo/NN-slug/plan.md#tNN`
+**Hito y pasos:** `docs/hitos/NN-slug.md` · pasos …
 
-## Verificación
+## Qué cambia
 
-| Comando o ensayo | Resultado |
-| --- | --- |
-| `dotnet build` | |
-| `dotnet test` | |
+Una o dos frases.
 
-Entorno: versión de Windows, DPI, SDK y aplicaciones probadas.
+## Cómo probarlo
 
-## Criterios de aceptación
+Pasos para que el usuario lo pruebe. Para Win32: qué se probó, con qué ventanas y qué se observó.
 
-| Criterio | Estado (verificado, fallido o pendiente) | Evidencia |
-| --- | --- | --- |
-| | | |
+- [ ] `dotnet build EscritorioCanvas.sln -c Release`
+- [ ] `dotnet test EscritorioCanvas.sln -c Release`
 
-## Desviaciones y pendientes
+## Zona sensible
 
-Ninguna | lista.
+- [ ] No toca la zona sensible: fusiona Construir tras la prueba y la autorización del usuario.
+- [ ] Toca la zona sensible: fusiona Revisar tras su dictamen.
 
-## Esfuerzo
+## Comprobaciones
 
-- Herramienta y modelo:
-- Intentos:
-- Duración real (inicio y fin de la sesión o de los commits):
-
-## Límites
-
-- [ ] Solo se tocaron archivos permitidos por la tarea
-- [ ] Tests y firmas idénticos a los del plan
-- [ ] No se añadieron dependencias
+- [ ] Registro del hito y `docs/estado.md` actualizados
+- [ ] Sin dependencias nuevas, o autorizadas por el usuario
 - [ ] Sin `bin/`, `obj/`, `evidencia-local/`, rutas del perfil ni secretos
 - [ ] Ensayos interactivos solo tras el «adelante» del usuario
 
-## Dictamen de Revisión
-
-<!-- Se publica como comentario con gh pr comment, no como aprobación formal. -->
-
-- SHA dictaminado:
-- Resultado: aprobado | cambios pedidos | devuelto a Planificación
-- Tareas siguientes: siguen siendo válidas | afectadas (cuáles)
+Herramienta y modelo:

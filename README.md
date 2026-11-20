@@ -4,7 +4,8 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Dónde empezar
 
-- [Cómo se trabaja en el repositorio: roles, flujo y reglas](AGENTS.md)
+- [Cómo se trabaja en el repositorio: hitos, modos y reglas](AGENTS.md)
+- [Estado actual y siguiente paso](docs/estado.md)
 - [Diseño y glosario](docs/diseno-inicial.md)
 - [Mapa del proyecto](docs/plan-por-fases.md)
 - [Fase 1 · Plan de inspección de Canvas Window Composer](docs/desarrollo/01-inspeccion-cwc.md)
@@ -16,7 +17,7 @@ Diseño de un entorno de trabajo para Windows en un monitor. Cada espacio tiene 
 
 ## Cómo se trabaja
 
-El usuario abre una sesión por rol: Planificación entrevista al usuario y redacta un plan por fase, que el usuario aprueba. Ejecución implementa una tarea por sesión, cada una en su PR, y Revisión contrasta el trabajo con el plan. Revisión fusiona cuando todo cumple. [Reglas](AGENTS.md) · [Guías por rol](docs/proceso/)
+El trabajo avanza por hitos que el usuario puede usar. Cada hito empieza con una entrevista en la que el usuario decide qué se construye. Después se implementa en uno o varios PR. Los cambios que mueven ventanas reales o guardan acomodos pasan además por una revisión en otra sesión. Varios modelos comparten el trabajo a través de [docs/estado.md](docs/estado.md) y del registro de cada hito. [Reglas](AGENTS.md) · [Estado actual](docs/estado.md) · [Diario de uso](docs/diario.md)
 
 ## Estado
 
