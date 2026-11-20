@@ -20,7 +20,7 @@ public sealed class MainWindow : Window
     private readonly SpaceView spaceView;
     private readonly Button homeButton;
     private SessionState session;
-    private (DomainPoint Pointer, Camera Camera)? panStart;
+    private Gesture? gesture;
 
     public MainWindow()
     {
@@ -38,18 +38,26 @@ public sealed class MainWindow : Window
             [Games] = new(home, home, null)
         });
         spaceView = new SpaceView(Programming, Games);
-        spaceView.MouseLeftButtonDown += BeginPan;
-        spaceView.MouseMove += ContinuePan;
-        spaceView.MouseLeftButtonUp += EndPan;
+        spaceView.PreviewMouseDown += BeginGesture;
+        spaceView.MouseMove += ContinueGesture;
+        spaceView.PreviewMouseUp += EndGesture;
         spaceView.LostMouseCapture += (_, _) =>
         {
             if (!spaceView.IsMouseCaptured)
             {
-                panStart = null;
+                CancelGesture();
             }
         };
         spaceView.PreviewMouseWheel += ZoomSurface;
-        Deactivated += (_, _) => CancelPan();
+        Deactivated += (_, _) => CancelGesture();
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape && gesture is not null)
+            {
+                CancelGesture();
+                e.Handled = true;
+            }
+        };
         homeButton = new Button { MinWidth = 130, Padding = new Thickness(12, 4, 12, 4) };
         homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
 
@@ -68,46 +76,122 @@ public sealed class MainWindow : Window
 
     private Camera ActiveCamera => session.Spaces[session.ActiveSpaceId].Camera;
 
-    private void BeginPan(object sender, MouseButtonEventArgs e)
+    private void BeginGesture(object sender, MouseButtonEventArgs e)
     {
-        if (spaceView.IsBackground(e.OriginalSource) && spaceView.CaptureMouse())
+        if (gesture is not null)
         {
-            panStart = (spaceView.GetPointer(e), ActiveCamera);
             e.Handled = true;
+            return;
         }
-    }
 
-    private void ContinuePan(object sender, MouseEventArgs e)
-    {
-        if (panStart is not { } start)
+        var background = spaceView.IsBackground(e.OriginalSource);
+        var icon = spaceView.FindIcon(e.OriginalSource);
+        var kind = e.ChangedButton switch
+        {
+            MouseButton.Right when background => GestureKind.Pan,
+            MouseButton.Left when background => GestureKind.Marquee,
+            MouseButton.Left when icon is not null => GestureKind.Icons,
+            _ => (GestureKind?)null
+        };
+        if (kind is null || !spaceView.CaptureMouse())
         {
             return;
         }
 
-        if (e.LeftButton != MouseButtonState.Pressed || !spaceView.IsMouseCaptured)
+        gesture = new Gesture(e.ChangedButton, spaceView.GetPointer(e), ActiveCamera,
+            kind.Value, icon, spaceView.GetSelection());
+        if (kind == GestureKind.Marquee)
         {
-            CancelPan();
-            return;
+            spaceView.SetSelection([]);
+        }
+        else if (kind == GestureKind.Icons && !gesture.Selection.Contains(icon!))
+        {
+            spaceView.SetSelection([icon!]);
         }
 
-        var pointer = spaceView.GetPointer(e);
-        var delta = new DomainPoint(pointer.X - start.Pointer.X, pointer.Y - start.Pointer.Y);
-        ApplyNavigation(new SetCamera(CameraGestures.Pan(start.Camera, delta)));
         e.Handled = true;
     }
 
-    private void EndPan(object sender, MouseButtonEventArgs e)
+    private void ContinueGesture(object sender, MouseEventArgs e)
     {
-        if (panStart.HasValue)
+        if (gesture is not { } active)
         {
-            CancelPan();
-            e.Handled = true;
+            return;
+        }
+
+        var pressed = active.Button == MouseButton.Right ? e.RightButton : e.LeftButton;
+        if (pressed != MouseButtonState.Pressed || !spaceView.IsMouseCaptured)
+        {
+            CancelGesture();
+            return;
+        }
+
+        UpdateGesture(active, spaceView.GetPointer(e));
+        e.Handled = true;
+    }
+
+    private void UpdateGesture(Gesture active, DomainPoint pointer)
+    {
+        var delta = new DomainPoint(pointer.X - active.Pointer.X, pointer.Y - active.Pointer.Y);
+        switch (active.Kind)
+        {
+            case GestureKind.Pan:
+                ApplyNavigation(new SetCamera(CameraGestures.Pan(active.Camera, delta)));
+                break;
+            case GestureKind.Marquee:
+                if (delta.X != 0 || delta.Y != 0 || active.HasMoved)
+                {
+                    active.HasMoved = true;
+                    spaceView.ShowMarquee(active.Pointer, pointer);
+                }
+                break;
+            case GestureKind.Icons:
+                if (active.HasMoved || Math.Abs(delta.X) >= SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(delta.Y) >= SystemParameters.MinimumVerticalDragDistance)
+                {
+                    active.HasMoved = true;
+                    spaceView.PreviewMove(new DomainPoint(delta.X / active.Camera.Zoom, delta.Y / active.Camera.Zoom));
+                }
+                break;
         }
     }
 
-    private void CancelPan()
+    private void EndGesture(object sender, MouseButtonEventArgs e)
     {
-        panStart = null;
+        if (gesture is not { } active || active.Button != e.ChangedButton)
+        {
+            return;
+        }
+
+        UpdateGesture(active, spaceView.GetPointer(e));
+        if (active.Kind == GestureKind.Icons && active.HasMoved)
+        {
+            spaceView.CommitMove(active.Icon!);
+        }
+
+        FinishGesture();
+        e.Handled = true;
+    }
+
+    private void CancelGesture()
+    {
+        if (gesture is not { } active)
+        {
+            return;
+        }
+
+        FinishGesture();
+        spaceView.SetSelection(active.Selection);
+        if (active.Kind == GestureKind.Pan)
+        {
+            ApplyNavigation(new SetCamera(active.Camera));
+        }
+    }
+
+    private void FinishGesture()
+    {
+        gesture = null;
+        spaceView.ClearPreview();
         if (spaceView.IsMouseCaptured)
         {
             spaceView.ReleaseMouseCapture();
@@ -116,10 +200,12 @@ public sealed class MainWindow : Window
 
     private void ZoomSurface(object sender, MouseWheelEventArgs e)
     {
-        CancelPan();
-        var cursor = spaceView.GetPointer(e);
-        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, e.Delta / 120.0)));
         e.Handled = true;
+        if (gesture is null)
+        {
+            var cursor = spaceView.GetPointer(e);
+            ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, e.Delta / 120.0)));
+        }
     }
 
     private Border CreateToolbar()
@@ -159,19 +245,27 @@ public sealed class MainWindow : Window
 
     private void ApplyNavigation(NavigationCommand command)
     {
+        if (command is ToggleHome || command is SwitchSpace change && change.Target != session.ActiveSpaceId)
+        {
+            CancelGesture();
+        }
+
         var result = Navigation.Apply(session, command);
         if (ReferenceEquals(result.State, session))
         {
             return;
         }
 
-        if (result.State.ActiveSpaceId != session.ActiveSpaceId || command is ToggleHome)
-        {
-            CancelPan();
-        }
-
         session = result.State;
         RefreshSpace();
+    }
+
+    private enum GestureKind { Pan, Marquee, Icons }
+
+    private sealed record Gesture(MouseButton Button, DomainPoint Pointer, Camera Camera,
+        GestureKind Kind, string? Icon, string[] Selection)
+    {
+        public bool HasMoved { get; set; }
     }
 
     private void RefreshSpace()
