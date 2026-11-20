@@ -1,6 +1,6 @@
 # Hito 08 · Iconos reales en Inicio
 
-**Estado:** en curso
+**Estado:** cerrado
 
 ## Objetivo
 
@@ -78,3 +78,4 @@ Ninguno.
 | 20-11-2026 | Construir | Claude Code · claude-opus-5-5 | Paso 5: `HomeLayout` guarda las posiciones por espacio en `%LOCALAPPDATA%\Escritorio Canvas\posiciones.json` con escritura atómica; reacomodo automático si falta o está dañado. [ADR 003](../adr/003-posiciones-de-inicio.md). 38 pruebas, cobertura del dominio 97,4 %. | [#37](https://github.com/edu3250/escritorio-canvas/pull/37) | Revisar en otra sesión. Después, el usuario cierra el hito con su prueba de reinicio. |
 | 20-11-2026 | Construir | Claude Code · claude-opus-5-5 | Corrección pedida por Revisar en el #37: `HomeLayout.Load` valida cada espacio e icono por separado, así que un valor de tipo incorrecto ya no descarta el archivo entero. Prueba de regresión `bueno.txt`/`malo.txt`. 40 pruebas, cobertura del dominio 97,6 %. | [#37](https://github.com/edu3250/escritorio-canvas/pull/37) | Nueva revisión del #37. |
 | 20-11-2026 | Construir | Claude Code · claude-opus-5-5 | Segunda corrección pedida por Revisar en el #37: los nombres con un escape Unicode incompleto se descartan en vez de lanzar una excepción al arrancar. Prueba de regresión con vecinos válidos. 41 pruebas, cobertura del dominio 97,7 %. | [#37](https://github.com/edu3250/escritorio-canvas/pull/37) | Nueva revisión del #37. |
+| 20-11-2026 | Revisar | Codex ? GPT-6 | Tras la fusi?n, el usuario confirm? que al cerrar y reabrir la aplicaci?n ambos iconos conservaron su casilla, uno en Programaci?n y otro en Juegos. | [#37](https://github.com/edu3250/escritorio-canvas/pull/37) | Hito cerrado. |

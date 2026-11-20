@@ -6,8 +6,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 ## Ahora
 
-- **En curso:** [hito 08 · Iconos reales en Inicio](hitos/08-iconos-reales.md). Cada icono de Inicio es un elemento real de la carpeta de su espacio y se ve igual que en el Explorador.
-- **Siguiente paso:** el paso 5 (guardar posiciones) está construido y espera una sesión `Modo: Revisar` sobre su PR, porque es zona sensible. Tras la fusión, el usuario hace la prueba final del hito, cerrando y volviendo a abrir la aplicación.
+- El usuario verific? la persistencia de las posiciones en Programaci?n y Juegos tras reiniciar la aplicaci?n. El siguiente hito queda por definir.
 - **Candidato para después:** *ventanas reales en el lienzo*, con ventanas del usuario como miniaturas DWM y clic para trabajar en su panel.
 
 ## Qué funciona hoy
@@ -40,3 +39,4 @@ El producto todavía no muestra ni mueve ventanas reales.
 | --- | --- | --- |
 | Fases 1–6 | Inspección de CWC, ensayos nativos, arquitectura y consola de navegación | [Mapa de fases](plan-por-fases.md) |
 | Fase 7 | Primer lienzo gráfico en WPF con iconos de muestra que se seleccionan y mueven en grupo | [Plan](desarrollo/07-lienzo/plan.md) · [PR #32](https://github.com/edu3250/escritorio-canvas/pull/32) |
+| Hito 08 | Iconos reales en Inicio con posiciones que se conservan al reiniciar | [Cierre del hito](hitos/08-iconos-reales.md) ? [PR #37](https://github.com/edu3250/escritorio-canvas/pull/37) |
