@@ -7,6 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets\Fonts\Geist-*.ttf" />
+    <None Include="Assets\Fonts\OFL.txt" CopyToOutputDirectory="PreserveNewest" Link="Licencias\Geist-OFL.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Canvas.Domain\Canvas.Domain.csproj" />
   </ItemGroup>
 </Project>
