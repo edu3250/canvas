@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using System.IO;
 using SurfaceCanvas = System.Windows.Controls.Canvas;
@@ -59,6 +60,16 @@ public sealed class MainWindow : Window
         MinWidth = 640;
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        WindowStyle = WindowStyle.None;
+        AllowsTransparency = true;
+        Background = SystemColors.WindowBrush;
+        WindowChrome.SetWindowChrome(this, new WindowChrome
+        {
+            CaptionHeight = 30,
+            ResizeBorderThickness = SystemParameters.WindowResizeBorderThickness,
+            GlassFrameThickness = new Thickness(0),
+            UseAeroCaptionButtons = false
+        });
         WindowState = WindowState.Maximized;
 
         var home = new Camera(new Canvas.Domain.Point(0, 0), 1);
@@ -94,8 +105,13 @@ public sealed class MainWindow : Window
 
             windowPanels.RefreshWindows();
         };
-        edgeTimer.Tick += (_, _) => UpdateMinimapVisibility();
-        PreviewMouseDown += (_, e) =>
+        edgeTimer.Tick += (_, _) =>
+        {
+            UpdateActivePanelBounds();
+            UpdateMinimapVisibility();
+        };
+        var viewport = new Grid { ClipToBounds = true };
+        viewport.PreviewMouseDown += (_, e) =>
         {
             if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left)
             {
@@ -148,7 +164,6 @@ public sealed class MainWindow : Window
         homeButton = new Button { MinWidth = 130, Padding = new Thickness(12, 4, 12, 4) };
         homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
 
-        var viewport = new Grid { ClipToBounds = true };
         viewport.Children.Add(new Viewbox
         {
             Stretch = Stretch.UniformToFill,
@@ -162,14 +177,19 @@ public sealed class MainWindow : Window
         viewport.Children.Add(toolbar);
         viewport.Children.Add(zoomControls);
         windowPanels.OccludingControls = [toolbar, zoomControls];
-        Content = viewport;
+        var surface = new DockPanel();
+        var caption = CreateCaption();
+        DockPanel.SetDock(caption, Dock.Top);
+        surface.Children.Add(caption);
+        surface.Children.Add(viewport);
+        Content = surface;
         RefreshSpace();
 
         minimap.CenterRequested += SelectMapPoint;
         SourceInitialized += (_, _) =>
         {
             windowHandle = new WindowInteropHelper(this).Handle;
-            HwndSource.FromHwnd(windowHandle).AddHook(HandleHotkey);
+            HwndSource.FromHwnd(windowHandle).AddHook(HandleWindowMessage);
             hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
         };
         ContentRendered += (_, _) =>
@@ -187,6 +207,7 @@ public sealed class MainWindow : Window
         };
         StateChanged += (_, _) =>
         {
+            ReturnToMap(activateCanvas: false);
             SyncMinimapWindow();
             windowPanels.Render();
         };
@@ -222,6 +243,67 @@ public sealed class MainWindow : Window
                 DisposeFolders();
             }
         };
+    }
+
+    private DockPanel CreateCaption()
+    {
+        var caption = new DockPanel { Height = 38, Background = SystemColors.ControlBrush };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal };
+        DockPanel.SetDock(buttons, Dock.Right);
+        WindowChrome.SetIsHitTestVisibleInChrome(buttons, true);
+        caption.Children.Add(buttons);
+        caption.Children.Add(new TextBlock
+        {
+            Text = Title,
+            Foreground = SystemColors.ControlTextBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(12, 0, 0, 0)
+        });
+
+        AddButton("−", "Minimizar", () => SystemCommands.MinimizeWindow(this));
+        var maximize = AddButton("", "", () =>
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                SystemCommands.RestoreWindow(this);
+            }
+            else
+            {
+                SystemCommands.MaximizeWindow(this);
+            }
+        });
+        AddButton("×", "Cerrar", () => SystemCommands.CloseWindow(this));
+        UpdateMaximize();
+        StateChanged += (_, _) => UpdateMaximize();
+        return caption;
+
+        Button AddButton(string glyph, string label, Action action)
+        {
+            var button = new Button { Content = glyph, Width = 46, Height = 32, FontSize = 16, ToolTip = label };
+            AutomationProperties.SetName(button, label);
+            button.Click += (_, _) => action();
+            buttons.Children.Add(button);
+            return button;
+        }
+
+        void UpdateMaximize()
+        {
+            var maximized = WindowState == WindowState.Maximized;
+            var label = maximized ? "Restaurar tamaño" : "Maximizar";
+            maximize.Content = maximized ? "❐" : "□";
+            maximize.ToolTip = label;
+            AutomationProperties.SetName(maximize, label);
+        }
+    }
+
+    private void UpdateActivePanelBounds()
+    {
+        if (windowPanels.ActivePanel is { } panel &&
+            WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
+            placement.ReadNormalScreenBounds(panel.Window.Handle) is { } bounds)
+        {
+            windowPanels.SyncActiveBounds(panel, bounds);
+        }
     }
 
     private DomainPoint ViewportSize => new(spaceView.ActualWidth, spaceView.ActualHeight);
@@ -283,8 +365,19 @@ public sealed class MainWindow : Window
                 relative.X >= right - MinimapWindow.MapWidth - MinimapWindow.Inset && relative.X <= right;
     }
 
-    private nint HandleHotkey(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
+    private nint HandleWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
+        if (message == NativeCanvasFrame.GetMinMaxInfo)
+        {
+            NativeCanvasFrame.MaximizeToWorkArea(hwnd, lParam);
+        }
+
+        const int EnterSizeMove = 0x0231;
+        if (message == EnterSizeMove)
+        {
+            ReturnToMap(activateCanvas: false);
+        }
+
         if (message == NativePanelInput.HotkeyMessage && wParam == NativePanelInput.ReturnHotkey)
         {
             handled = true;
@@ -346,11 +439,16 @@ public sealed class MainWindow : Window
         }
     }
 
-    private bool ReturnToMap(bool restoreMinimized = true)
+    private bool ReturnToMap(bool restoreMinimized = true, bool activateCanvas = true)
     {
         if (windowPanels.ActivePanel is not { } panel)
         {
             return true;
+        }
+
+        if (activateCanvas)
+        {
+            UpdateActivePanelBounds();
         }
 
         FinishGesture();
@@ -366,7 +464,10 @@ public sealed class MainWindow : Window
 
         ApplyNavigation(new SetCamera(mapCamera));
         windowPanels.Render();
-        Activate();
+        if (activateCanvas)
+        {
+            Activate();
+        }
         SyncMinimapWindow();
         return restored;
     }

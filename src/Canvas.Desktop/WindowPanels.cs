@@ -35,6 +35,22 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         return PointToScreen(new WpfPoint(point.X, point.Y));
     }
 
+    public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds)
+    {
+        var topLeft = PointFromScreen(new WpfPoint(screenBounds.Left, screenBounds.Top));
+        var bottomRight = PointFromScreen(new WpfPoint(screenBounds.Right, screenBounds.Bottom));
+        var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X, topLeft.Y), camera);
+        var width = (bottomRight.X - topLeft.X) / camera.Zoom;
+        var height = (bottomRight.Y - topLeft.Y) / camera.Zoom;
+        var bounds = new CanvasBounds(origin.X, origin.Y - TitleHeight, width, height + TitleHeight);
+        if (width > 0 && height > 0 && bounds != panel.Bounds)
+        {
+            panel.Bounds = bounds;
+            Render();
+            MapChanged?.Invoke();
+        }
+    }
+
     public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
 
     public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space)

@@ -30,6 +30,7 @@ Entrevista del 20-11-2026. El diario de uso estaba vacío y el candidato salió 
 | P8b · Maximizar | «si adelante» | ⤢ lleva al panel y la ventana real ocupa la pantalla mientras se trabaja. Al volver al mapa recupera su tamaño de panel. |
 | P8c · Minimizar | «si adelante» | Sin botón propio en este hito. Si la ventana se minimiza con su botón nativo, el panel muestra el icono de la aplicación y el aviso «minimizada», y un clic la restaura. |
 | Resumen y dos detalles propuestos | «adelante» | Un panel nuevo toma el tamaño actual de la ventana y se coloca en el centro de la zona visible, o en el hueco libre más cercano. Condición de replanteo: ver «Riesgos». |
+| Barra del lienzo y tamaño del panel | «si crea la barra propia» y «al hacer la ventana mas ancha como en la segunda captura la ventana real sale de la ventana de la apliacion» | Se permite la barra propia para la composición por capas. El panel sigue el tamaño normal de la ventana nativa cuando se redimensiona. |
 
 ## Riesgos
 
@@ -61,7 +62,7 @@ Con VS Code, Chrome y Discord abiertos:
 
 ## Bloqueos
 
-Chrome se activa en su panel, pero al volver al mapa su miniatura DWM puede conservar el último cuadro. Claude puede quedar en blanco. El ensayo con Chrome descartable y una animación local mostró que Windows Graphics Capture devolvía un cuadro fijo detrás de una ventana opaca. Con una ventana WPF por capas que seguía cubriendo Chrome, la miniatura DWM mostró los dos colores de la animación. WPF requiere una ventana sin marco nativo para esta composición. Queda decidir si se sustituye la barra de título por una propia y verificar el resultado con Claude.
+Falta confirmar la vista en vivo con Claude y vídeo real en Chrome. Con una ventana Chrome descartable, la miniatura DWM de Escritorio Canvas captó los dos colores de una animación local mientras el lienzo por capas cubría el navegador.
 
 ## Registro de sesiones
 
@@ -83,3 +84,4 @@ Chrome se activa en su panel, pero al volver al mapa su miniatura DWM puede cons
 | 20-11-2026 | Construir | Codex · GPT-6 | Paso 4. Activación del panel al 100 %, regreso al mapa y minimapa al borde inferior. Pasaron 65 pruebas y el ensayo Win32 verificó foco, tamaño normal y devolución con una ventana descartable en tres estados. Windows rechazó el registro del atajo en el ensayo local. | [#43](https://github.com/edu3250/escritorio-canvas/pull/43) | Prueba de uso y revisión en otra sesión antes del paso 5. |
 | 20-11-2026 | Construir | Codex · GPT-6 | En la prueba con Claude el usuario informó que la activación mostraba el escritorio y la miniatura quedaba en blanco al volver. Se ajustaron el orden de ventanas y el foco del minimapa, se renovó la miniatura al salir y se excluyó el escritorio de Windows del selector. Pasaron 65 pruebas y un ensayo con la ventana WPF de otro proceso descartable. | [#43](https://github.com/edu3250/escritorio-canvas/pull/43) | Repetir la prueba con Claude y revisar en otra sesión. |
 | 20-11-2026 | Construir | Codex · GPT-6 | Chrome funcionó dentro del panel en la prueba del usuario. Se corrigió el arrastre derecho que cerraba la edición. Pasaron 65 pruebas y un ensayo Win32 con una ventana descartable confirmó paneo al 100 %, tamaño y devolución. En el ensayo con Chrome descartable faltó validar el foco inicial. | [#43](https://github.com/edu3250/escritorio-canvas/pull/43) | Probar el gesto completo en Chrome. Decidir si se usa composición por capas y verificar Claude. |
+| 20-11-2026 | Construir | Codex · GPT-6 | Se integraron la composición por capas y la barra de título propia. El panel sigue el tamaño nativo y el lienzo maximizado respeta la barra de tareas. Pasaron 65 pruebas. Con Chrome descartable se verificaron cuadros distintos en la miniatura cubierta, crecimiento del panel de 600 a 720 píxeles y devolución del acomodo original. | [#43](https://github.com/edu3250/escritorio-canvas/pull/43) | Prueba de uso con vídeo, Claude y paneo. Revisar en otra sesión. |

@@ -90,6 +90,23 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
+    public WindowRectangle? ReadNormalScreenBounds(long handle)
+    {
+        var window = (nint)handle;
+        return !IsIconic(window) && !IsZoomed(window) && GetWindowRect(window, out var bounds)
+            ? bounds
+            : null;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(nint window, out WindowRectangle bounds);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(nint window);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsZoomed(nint window);
+
     public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y)
     {
         EnsureCurrent(instance);
