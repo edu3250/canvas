@@ -43,10 +43,10 @@ Entrevista del 19-11-2026. Las preguntas completas y las respuestas recomendadas
 
 ## Pasos
 
-- [ ] 1. Carpetas por espacio y lectura de su contenido: crear las carpetas si faltan, listar elementos sin ocultos ni de sistema, retirar las muestras y añadir el botón «Abrir carpeta del espacio». Lógica en el dominio con pruebas xUnit · `src/Canvas.Domain`, `src/Canvas.Desktop`, `tests/`
-- [ ] 2. Iconos, miniaturas y nombres tomados del shell, nítidos al ampliar el lienzo, con el nombre completo al pasar el ratón · `src/Canvas.Desktop`
-- [ ] 3. Abrir con doble clic (un elemento) e Intro (los seleccionados) · `src/Canvas.Desktop`
-- [ ] 4. Actualización en vivo (≤ 1 s, el renombrado conserva la posición) y cuadrícula de 4 columnas que crece hacia abajo · `src/Canvas.Domain/HomeGrid.cs`, `src/Canvas.Desktop`, `tests/`
+- [x] 1. Carpetas por espacio y lectura de su contenido: crear las carpetas si faltan, listar elementos sin ocultos ni de sistema, retirar las muestras y añadir el botón «Abrir carpeta del espacio». Lógica en el dominio con pruebas xUnit · `src/Canvas.Domain`, `src/Canvas.Desktop`, `tests/`
+- [x] 2. Iconos, miniaturas y nombres tomados del shell, nítidos al ampliar el lienzo, con el nombre completo al pasar el ratón · `src/Canvas.Desktop`
+- [x] 3. Abrir con doble clic (un elemento) e Intro (los seleccionados) · `src/Canvas.Desktop`
+- [x] 4. Actualización en vivo (≤ 1 s, el renombrado conserva la posición) y cuadrícula de 4 columnas que crece hacia abajo · `src/Canvas.Domain/HomeGrid.cs`, `src/Canvas.Desktop`, `tests/`
 - [ ] 5. **Zona sensible.** Guardar las posiciones por espacio en `%LOCALAPPDATA%`, con reacomodo automático si el archivo falta o está dañado, y un ADR con el formato · `src/`, `tests/`, `docs/adr/003-*.md`
 
 Los pasos 1–4 pueden ir en uno o varios PR que el usuario prueba antes de fusionar. El paso 5 va en un PR aparte.
@@ -73,3 +73,5 @@ Ninguno.
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
 | 19-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en tres rondas (P1–P18) y redacción del hito. Raíz de carpetas anotada en el ADR 001. | [#34](https://github.com/edu3250/escritorio-canvas/pull/34) | Construir los pasos 1–4 |
+| 19-11-2026 | Construir | Codex · GPT-6 | Pasos 1–4. Compilación, 27 pruebas y comprobación del shell y el seguimiento de renombrados con archivos temporales en Windows. | [#35](https://github.com/edu3250/escritorio-canvas/pull/35) | Comparación visual y apertura con el juego del hito, autorización de fusión y paso 5 en su propio PR. |
+| 20-11-2026 | Construir | Codex · GPT-6 | El usuario verificó los iconos y aprobó el PR. Se añadió el script de arranque y un acceso directo local excluido de Git. | [#35](https://github.com/edu3250/escritorio-canvas/pull/35) | Paso 5 en su propio PR. |
