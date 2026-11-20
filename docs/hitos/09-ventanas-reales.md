@@ -44,7 +44,7 @@ Entrevista del 20-11-2026. El diario de uso estaba vacío y el candidato salió 
 
 - [x] 1. Lienzo maximizado, control de zoom (−, %, +, ⛶) y minimapa con los iconos de Inicio, todavía sin ventanas. Fuera de la zona sensible · `src/Canvas.Desktop`, `src/Canvas.Domain`, `tests/`
 - [x] 2. **Zona sensible.** Registro de acomodos originales en disco antes de mover nada, devolución al quitar, al cerrar y tras un cierre brusco, y acceso «Devolver ventanas» independiente. ADR del formato · `src/`, `tests/`, `docs/adr/`
-- [ ] 3. **Zona sensible.** «Añadir ventana» con la lista de ventanas abiertas, paneles con miniatura DWM en vivo que se arrastran por el lienzo y colocación del panel nuevo · `src/Canvas.Desktop`, `src/Canvas.Domain`, `tests/`
+- [x] 3. **Zona sensible.** «Añadir ventana» con la lista de ventanas abiertas, paneles con miniatura DWM en vivo que se arrastran por el lienzo y colocación del panel nuevo · `src/Canvas.Desktop`, `src/Canvas.Domain`, `tests/`
 - [ ] 4. **Zona sensible.** Activar la ventana en su panel con el acercamiento al 100 % y volver al mapa con el minimapa, Ctrl+Alt+Espacio o un clic fuera. El minimapa se oculta mientras se trabaja y reaparece en el borde inferior · `src/Canvas.Desktop`
 - [ ] 5. **Zona sensible.** Barra del panel (✕, ⤢, «Quitar del lienzo») y aviso de ventana minimizada · `src/Canvas.Desktop`
 
@@ -75,3 +75,4 @@ Ninguno.
 | 20-11-2026 | Revisar | Codex · GPT-6 | Compilación Release y 54 pruebas correctas. La revisión detectó que recuperar desde otra sesión de Windows puede borrar el acomodo original. | [#41](https://github.com/edu3250/escritorio-canvas/pull/41) | Construir corrige el aislamiento por sesión y añade una prueba de regresión. |
 | 20-11-2026 | Construir | Codex · GPT-6 | Se corrigió el aislamiento del registro de devolución por sesión de Windows. Pasaron 56 pruebas, incluidas dos regresiones con dos sesiones y el mismo identificador de ventana. | [#41](https://github.com/edu3250/escritorio-canvas/pull/41) | Revisar la corrección y fusionar antes del paso 3. |
 | 20-11-2026 | Revisar | Codex · GPT-6 | Verificado el aislamiento de acomodos al guardar y devolver con el mismo identificador en dos sesiones simuladas. Compilación Release limpia y 56 pruebas superadas. | [#41](https://github.com/edu3250/escritorio-canvas/pull/41) | Construir el paso 3. |
+| 20-11-2026 | Construir | Codex · GPT-6 | Se añadió el selector, la colocación y los paneles con miniatura DWM. Pasaron 60 pruebas y un ensayo sin activar las ventanas descartables. | Rama h09-minimapa-3 | Prueba de uso y revisión en otra sesión antes del paso 4. |

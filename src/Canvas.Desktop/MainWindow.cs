@@ -20,6 +20,8 @@ public sealed class MainWindow : Window
     private static readonly SpaceId Programming = new("Programación");
     private static readonly SpaceId Games = new("Juegos");
     private readonly SpaceView spaceView;
+    private readonly WindowPanels windowPanels;
+    private readonly DispatcherTimer previewTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly Button homeButton;
     private readonly MinimapWindow minimap = new();
     private readonly TextBlock zoomValue = new() { MinWidth = 52, TextAlignment = TextAlignment.Center,
@@ -66,6 +68,10 @@ public sealed class MainWindow : Window
         }
 
         spaceView = new SpaceView(shell, folders.Keys);
+        windowPanels = new WindowPanels(this, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
+        windowPanels.MapChanged += RefreshMap;
+        windowPanels.PreviewMouseWheel += ZoomSurface;
+        previewTimer.Tick += (_, _) => windowPanels.RefreshWindows();
         spaceView.MapChanged += RefreshMap;
         spaceView.PreviewMouseDown += BeginGesture;
         spaceView.MouseMove += ContinueGesture;
@@ -78,10 +84,19 @@ public sealed class MainWindow : Window
             }
         };
         spaceView.PreviewMouseWheel += ZoomSurface;
-        Deactivated += (_, _) => CancelGesture();
+        Deactivated += (_, _) =>
+        {
+            windowPanels.CancelDrag();
+            CancelGesture();
+        };
         PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == Key.Escape && gesture is not null)
+            if (e.Key == Key.Escape && windowPanels.IsMouseCaptureWithin)
+            {
+                windowPanels.CancelDrag();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && gesture is not null)
             {
                 CancelGesture();
                 e.Handled = true;
@@ -107,8 +122,13 @@ public sealed class MainWindow : Window
             Child = CreateLandscape()
         });
         viewport.Children.Add(spaceView);
-        viewport.Children.Add(CreateToolbar());
-        viewport.Children.Add(CreateZoomControls());
+        viewport.Children.Add(windowPanels);
+        var toolbar = CreateToolbar();
+        var zoomControls = CreateZoomControls();
+        viewport.Children.Add(toolbar);
+        viewport.Children.Add(zoomControls);
+        toolbar.SizeChanged += (_, _) => windowPanels.TopInset = toolbar.ActualHeight + toolbar.Margin.Top;
+        zoomControls.SizeChanged += (_, _) => windowPanels.BottomInset = zoomControls.ActualHeight + zoomControls.Margin.Bottom;
         Content = viewport;
         RefreshSpace();
 
@@ -121,14 +141,23 @@ public sealed class MainWindow : Window
                 SyncMinimapWindow();
             }
         };
-        StateChanged += (_, _) => SyncMinimapWindow();
+        StateChanged += (_, _) =>
+        {
+            SyncMinimapWindow();
+            windowPanels.Render();
+        };
         LocationChanged += (_, _) => SyncMinimapWindow();
-        spaceView.SizeChanged += (_, _) => SyncMinimapWindow();
+        spaceView.SizeChanged += (_, _) =>
+        {
+            SyncMinimapWindow();
+            windowPanels.Render();
+        };
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, (Action)SyncMinimapWindow);
 
         Loaded += (_, _) =>
         {
             folderTimer.Start();
+            previewTimer.Start();
             _ = RefreshFoldersAsync();
         };
         folderTimer.Tick += (_, _) => _ = RefreshFoldersAsync();
@@ -136,6 +165,8 @@ public sealed class MainWindow : Window
         {
             closed = true;
             folderTimer.Stop();
+            previewTimer.Stop();
+            windowPanels.Dispose();
             shell.Dispose();
             if (!readingFolders)
             {
@@ -170,7 +201,7 @@ public sealed class MainWindow : Window
     {
         var size = ViewportSize;
         var camera = ActiveCamera;
-        var items = spaceView.GetMapItems(includePreview: true);
+        MinimapItem[] items = [.. spaceView.GetMapItems(includePreview: true), .. windowPanels.GetMapItems()];
         zoomValue.Text = camera.Zoom < 0.01 ? "<1 %" : $"{camera.Zoom * 100:0} %";
         zoomOut.IsEnabled = camera.Zoom > CameraGestures.MinZoom;
         zoomIn.IsEnabled = camera.Zoom < CameraGestures.MaxZoom;
@@ -228,7 +259,7 @@ public sealed class MainWindow : Window
     private void FitContent()
     {
         CancelGesture();
-        var items = spaceView.GetMapItems();
+        MinimapItem[] items = [.. spaceView.GetMapItems(), .. windowPanels.GetMapItems()];
         if (items.Length != 0)
         {
             var bounds = items.Select(item => item.Bounds).Aggregate((left, right) => left.Union(right));
@@ -489,6 +520,14 @@ public sealed class MainWindow : Window
         };
         folderButton.Click += (_, _) => ShellItems.Open(folders[session.ActiveSpaceId].Path);
         controls.Children.Add(folderButton);
+        var addWindow = new Button
+        {
+            Content = "Añadir ventana",
+            Margin = new Thickness(8, 0, 0, 0),
+            Padding = new Thickness(12, 4, 12, 4)
+        };
+        addWindow.Click += (_, _) => windowPanels.ShowPicker(addWindow);
+        controls.Children.Add(addWindow);
         return new Border
         {
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -530,6 +569,7 @@ public sealed class MainWindow : Window
     private void RefreshSpace()
     {
         var navigation = session.Spaces[session.ActiveSpaceId];
+        windowPanels.ShowSpace(session.ActiveSpaceId, navigation.Camera);
         spaceView.ShowSpace(session.ActiveSpaceId, navigation.Camera);
         var homeLabel = navigation.ReturnView.HasValue ? "Volver a mi vista" : "Inicio";
         homeButton.Content = homeLabel;
