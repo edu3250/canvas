@@ -1,6 +1,6 @@
 # Fase 7 · Primer lienzo gráfico
 
-**Estado: en aprobación.** Entregar una ventana WPF que permita recorrer Programación y Juegos, reorganizar sus iconos y recuperar una vista anterior. El criterio visible es que, después de visitar Inicio, Codex recupere la misma posición y tamaño en pantalla. El paisaje conserva su encuadre durante todo el recorrido.
+**Estado: revisión 1 pendiente de aprobación.** T01–t05 están integradas. T06 corrige el gesto de paneo publicado en el [PR #30](https://github.com/edu3250/escritorio-canvas/pull/30). Entregar una ventana WPF que permita recorrer Programación y Juegos, reorganizar sus iconos y recuperar una vista anterior. El criterio visible es que, después de visitar Inicio, Codex recupere la misma posición y tamaño en pantalla. El paisaje conserva su encuadre durante todo el recorrido.
 
 ## Decisiones acordadas
 
@@ -8,12 +8,13 @@
 | --- | --- |
 | «Ver y recorrer el primer lienzo gráfico» | Primer incremento gráfico del producto. |
 | «espero encontrarme un espacio casi vacio como en deska en donde mis iconos vivan en alguna parte del lienzo pensada solo para iconos» | Inicio agrupa los accesos a la izquierda; el centro queda despejado. |
-| «2. la opcion recomendada» | Arrastrar el fondo desplaza la vista; la rueda acerca y aleja alrededor del puntero. |
+| «2. la opcion recomendada» | Desde t06, arrastrar el fondo con el botón derecho desplaza la vista; la rueda acerca y aleja alrededor del puntero. |
 | «En una barra pequeña siempre visible» | Selector de espacio e Inicio/retorno permanecen accesibles. |
 | «Por los propios iconos sobre el fondo» | Sin marco permanente alrededor de Inicio. |
 | «puedes poner un icono de vs code y otro de codex por ejemplo para probar» | Dos accesos de muestra en Programación. |
-| «un icono lo resalta como en windows, lo puedes mover manteniendo el click izquierdo tal cual funciona en windows» | Selección individual y arrastre desde el icono o su nombre. |
+| «un icono lo resalta como en windows, lo puedes mover manteniendo el click izquierdo tal cual funciona en windows» | Clic para seleccionar; arrastre desde el icono o su nombre. |
 | «el fondo se mantiene igual de momento» y «al cambiar de escritorio quiero que salgan otros iconos» | Un mismo paisaje fijo. Juegos muestra Steam y Discord. Cada espacio conserva su propio acomodo durante la sesión. |
+| «Mover juntos los iconos seleccionados» | El marco izquierdo selecciona varios iconos y su arrastre conserva las posiciones relativas. |
 | «En la última posición válida dentro de Inicio» y «Alineado en una cuadrícula invisible» | Limitar el arrastre y encajar al soltar, sin superposición. |
 | «Sí, usar WPF y publicar el plan para revisión» | WPF del SDK de Windows; presentar este PR antes de ejecutar. |
 
@@ -100,11 +101,17 @@ Modificar U/MainWindow.cs y U/SpaceView.cs. Al pulsar fondo libre, capturar el r
 
 ## t06 · Seleccionar y arrastrar
 
-Modificar U/MainWindow.cs y U/SpaceView.cs. Pulsar icono o etiqueta selecciona solo esa ficha y conserva el desplazamiento inicial entre puntero y ficha. Resaltar con borde y fondo translúcido. Al superar el umbral horizontal o vertical de arrastre del sistema, calcular el delta en mundo con Geometry.ViewToWorld; aplicar Clamp durante el gesto. Congelar la cámara durante este arrastre. Soltar confirma Snap en el espacio propietario. Escape, desactivación o pérdida de captura antes de confirmar restaura la casilla inicial. Clic en fondo limpia selección; cambio de espacio limpia selección y conserva los acomodos. Doble clic conserva la selección. Verificar al 100 % y tras zoom: mover solo Codex, intentar ocupar VS Code, atravesar cada borde de Inicio, cancelar, cambiar de espacio y volver. Capturas de selección, arrastre al borde y acomodo recuperado. Una ficha nunca tapa el rótulo contiguo al soltar.
+Modificar U/MainWindow.cs y U/SpaceView.cs. Arrastrar con el botón derecho desde el fondo mueve la cámara. Arrastrar con el izquierdo desde el fondo mantiene fija la cámara y dibuja un marco azul translúcido entre el punto inicial y el puntero. Normalizar las esquinas en las cuatro direcciones y seleccionar todas las fichas del espacio activo cuyo rectángulo proyectado (incluido el nombre) toque el marco. Mostrar el resaltado durante el gesto y conservar el conjunto al soltar. Clic izquierdo en vacío limpia la selección. La barra queda fuera del área seleccionable. Las ventanas como paneles son una integración futura.
+
+Al pulsar un icono ajeno al conjunto, seleccionarlo en solitario. Al iniciar un arrastre desde un miembro seleccionado, conservar todo el conjunto. Usar el umbral de arrastre del sistema y capturar el puntero. A partir de las posiciones originales y del delta en mundo, limitar una única traslación común a los cuatro bordes de Inicio. Al soltar, elegir la traslación de cuadrícula más próxima al delta limitado que mantenga todas las fichas dentro y en celdas libres de elementos ajenos al grupo. Desempatar por fila y columna del icono agarrado. La posición original es una opción válida. Actualizar todo el grupo a la vez. El arrastre de un solo icono conserva las reglas de t02.
+
+Mantener un único gesto activo. Congelar el zoom durante selección o movimiento de fichas. Escape, desactivación o pérdida de captura cancelan el gesto y restauran la selección y las posiciones previas. Al cambiar de espacio cancelar primero, limpiar la selección y conservar sus acomodos confirmados.
+
+**Aceptación.** A zoom 1 y tras acercar, seleccionar VS Code y Codex desde las cuatro direcciones, incluir parcialmente una ficha, seleccionar en vacío y comprobar que el marco no mueve la cámara. Arrastrar ambos hasta un borde, comprobar su separación y soltar; repetir cancelando. Mover uno hacia una celda ocupada, recorrer el lienzo con el derecho y volver desde Juegos. Adjuntar capturas de marco activo, grupo resaltado y posición final, con la misma escala y el SHA probado.
 
 ## t07 · Reproducir y cerrar
 
-Ejecución crea docs/desarrollo/07-lienzo/recorrido.md. Revisión añade docs/inspeccion/f07-cierre.md y actualiza README.md y docs/plan-por-fases.md en ese PR. Registrar SHA, Windows, DPI, SDK, tamaño de ventana, resultados xUnit y CI. Enlazar evidencia de cada tarea y anotar esfuerzo medido por rol. Repetir el recorrido: mover Codex a una casilla libre, acercar sobre él, capturar A, visitar Inicio, mover la vista allí, volver y capturar B; visitar Juegos, mover su vista y volver a Programación para C. Comparar el borde y centro de la ficha en A/B/C a tamaño y DPI constantes (tolerancia de rasterización: 1 píxel físico); comprobar encuadre de paisaje y barra con dos puntos de referencia fijos. Caso negativo: soltar sobre una ficha ocupada deja ambos iconos en casillas distintas. La verificación del cambio de espacio incluye los nombres visibles en ambos.
+Ejecución crea docs/desarrollo/07-lienzo/recorrido.md. Revisión añade docs/inspeccion/f07-cierre.md y actualiza README.md y docs/plan-por-fases.md en ese PR. Registrar SHA, Windows, DPI, SDK, tamaño de ventana, resultados xUnit y CI. Enlazar evidencia de cada tarea y anotar esfuerzo medido por rol. Repetir el recorrido: mover Codex a una casilla libre, acercar sobre él, capturar A, visitar Inicio, mover la vista allí, volver y capturar B; visitar Juegos, mover su vista y volver a Programación para C. Comparar el borde y centro de la ficha en A/B/C a tamaño y DPI constantes (tolerancia de rasterización: 1 píxel físico); comprobar encuadre de paisaje y barra con dos puntos de referencia fijos. Repetir la selección por marco y el arrastre conjunto hasta el borde con la cámara fija; verificar las dos posiciones antes y después del viaje a Juegos. Caso negativo: soltar sobre una ficha ocupada deja ambos iconos en casillas distintas. La verificación del cambio de espacio incluye los nombres visibles en ambos.
 
 ## Evidencia y condiciones de parada
 
