@@ -2,12 +2,12 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 20-11-2026 (hito 09 definido).
+**Actualizado:** 20-11-2026.
 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** abrir una sesión `Modo: Construir · Hito: docs/hitos/09-ventanas-reales.md` para el paso 1 (lienzo maximizado, control de zoom y minimapa, fuera de la zona sensible). El paso 2, la red de seguridad, se fusiona antes de mover cualquier ventana.
+- **Siguiente paso:** probar y autorizar la fusión del paso 1 en `h09-minimapa`. El paso 2, la red de seguridad, se fusiona antes de mover cualquier ventana.
 
 ## Qué funciona hoy
 
@@ -19,7 +19,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 | Activar una ventana real en el rectángulo de su panel con el vecino visible | `prototipos/panel-nativo` | Prototipo verificado con VS Code ([ensayo](inspeccion/ensayo-panel-nativo.md)) |
 | Salir al escritorio y volver al lienzo conservando ambos acomodos | prototipos | Verificado con ventanas propias y con VS Code ([fase 3](inspeccion/f03-cierre.md), [fase 4](inspeccion/f04-cierre.md)) |
 
-El producto todavía no muestra ni mueve ventanas reales.
+La rama del hito 09 añade el inicio maximizado, el control de zoom y el minimapa de Inicio. El producto todavía no muestra ni mueve ventanas reales.
 
 ## Riesgos abiertos
 

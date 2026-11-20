@@ -21,6 +21,12 @@ public sealed class MainWindow : Window
     private static readonly SpaceId Games = new("Juegos");
     private readonly SpaceView spaceView;
     private readonly Button homeButton;
+    private readonly MinimapWindow minimap = new();
+    private readonly TextBlock zoomValue = new() { MinWidth = 52, TextAlignment = TextAlignment.Center,
+        Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button zoomOut = CreateZoomButton("−", "Alejar");
+    private readonly Button zoomIn = CreateZoomButton("+", "Acercar");
+    private readonly Button fitContent = CreateZoomButton("⛶", "Encuadrar el contenido");
     private readonly ShellItems shell = new();
     private readonly Dictionary<SpaceId, SpaceFolderMonitor> folders;
     private readonly string layoutPath;
@@ -40,6 +46,7 @@ public sealed class MainWindow : Window
         MinWidth = 640;
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        WindowState = WindowState.Maximized;
 
         var home = new Camera(new Canvas.Domain.Point(0, 0), 1);
         session = new SessionState(Programming, new Dictionary<SpaceId, SpaceNavigation>
@@ -59,6 +66,7 @@ public sealed class MainWindow : Window
         }
 
         spaceView = new SpaceView(shell, folders.Keys);
+        spaceView.MapChanged += RefreshMap;
         spaceView.PreviewMouseDown += BeginGesture;
         spaceView.MouseMove += ContinueGesture;
         spaceView.PreviewMouseUp += EndGesture;
@@ -100,8 +108,23 @@ public sealed class MainWindow : Window
         });
         viewport.Children.Add(spaceView);
         viewport.Children.Add(CreateToolbar());
+        viewport.Children.Add(CreateZoomControls());
         Content = viewport;
         RefreshSpace();
+
+        minimap.CenterRequested += CenterMap;
+        ContentRendered += (_, _) =>
+        {
+            if (minimap.Owner is null)
+            {
+                minimap.Owner = this;
+                SyncMinimapWindow();
+            }
+        };
+        StateChanged += (_, _) => SyncMinimapWindow();
+        LocationChanged += (_, _) => SyncMinimapWindow();
+        spaceView.SizeChanged += (_, _) => SyncMinimapWindow();
+        DpiChanged += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, (Action)SyncMinimapWindow);
 
         Loaded += (_, _) =>
         {
@@ -119,6 +142,98 @@ public sealed class MainWindow : Window
                 DisposeFolders();
             }
         };
+    }
+
+    private DomainPoint ViewportSize => new(spaceView.ActualWidth, spaceView.ActualHeight);
+
+    private void SyncMinimapWindow()
+    {
+        if (minimap.Owner is null || closed)
+        {
+            return;
+        }
+
+        if (WindowState == WindowState.Minimized)
+        {
+            minimap.Hide();
+            return;
+        }
+
+        minimap.AnchorTo(spaceView);
+        if (!minimap.IsVisible)
+        {
+            minimap.Show();
+        }
+    }
+
+    private void RefreshMap()
+    {
+        var size = ViewportSize;
+        var camera = ActiveCamera;
+        var items = spaceView.GetMapItems(includePreview: true);
+        zoomValue.Text = camera.Zoom < 0.01 ? "<1 %" : $"{camera.Zoom * 100:0} %";
+        zoomOut.IsEnabled = camera.Zoom > CameraGestures.MinZoom;
+        zoomIn.IsEnabled = camera.Zoom < CameraGestures.MaxZoom;
+        fitContent.IsEnabled = items.Length != 0;
+        if (size.X > 0 && size.Y > 0)
+        {
+            minimap.UpdateMap(CanvasBounds.Viewport(camera, size), items);
+        }
+    }
+
+    private void CenterMap(DomainPoint world)
+    {
+        CancelGesture();
+        ApplyNavigation(new SetCamera(CameraGestures.CenterOn(world, ViewportSize, ActiveCamera.Zoom)));
+    }
+
+    private Border CreateZoomControls()
+    {
+        zoomOut.Click += (_, _) => StepZoom(-1);
+        zoomIn.Click += (_, _) => StepZoom(1);
+        fitContent.Click += (_, _) => FitContent();
+
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(zoomOut);
+        row.Children.Add(zoomValue);
+        row.Children.Add(zoomIn);
+        row.Children.Add(fitContent);
+        return new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, MinimapWindow.MapWidth + MinimapWindow.Inset + 8, MinimapWindow.Inset),
+            Padding = new Thickness(5),
+            CornerRadius = new CornerRadius(8),
+            Background = BrushFromRgb(24, 51, 65),
+            Child = row
+        };
+    }
+
+    private static Button CreateZoomButton(string content, string name)
+    {
+        var button = new Button { Content = content, Width = 36, Height = 32, FontSize = 16, ToolTip = name };
+        AutomationProperties.SetName(button, name);
+        return button;
+    }
+
+    private void StepZoom(double steps)
+    {
+        CancelGesture();
+        var size = ViewportSize;
+        var center = new DomainPoint(size.X / 2, size.Y / 2);
+        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, center, steps)));
+    }
+
+    private void FitContent()
+    {
+        CancelGesture();
+        var items = spaceView.GetMapItems();
+        if (items.Length != 0)
+        {
+            var bounds = items.Select(item => item.Bounds).Aggregate((left, right) => left.Union(right));
+            ApplyNavigation(new SetCamera(bounds.Fit(ViewportSize, 64, 1)));
+        }
     }
 
     private async Task RefreshFoldersAsync()

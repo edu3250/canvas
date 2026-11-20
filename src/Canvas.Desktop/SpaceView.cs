@@ -43,6 +43,18 @@ internal sealed class SpaceView : SurfaceCanvas
         SizeChanged += (_, _) => RenderIcons();
     }
 
+    public event Action? MapChanged;
+
+    public MinimapItem[] GetMapItems(bool includePreview = false) =>
+        ActiveIcons.Select(entry =>
+        {
+            var placement = entry.Value;
+            var origin = includePreview && selected.Contains(entry.Key)
+                ? Translate(placement.Origin, previewOffset)
+                : placement.Origin;
+            return new MinimapItem(new CanvasBounds(origin.X, origin.Y, TileSize, TileSize), placement.Tile.Icon.Source);
+        }).ToArray();
+
     public bool HasChanges(SpaceId space, string[] paths) =>
         paths.Length != layouts[space].Count || paths.Any(path => !layouts[space].ContainsKey(path));
 
@@ -285,6 +297,8 @@ internal sealed class SpaceView : SurfaceCanvas
                 placement.CancelImage();
             }
         }
+
+        MapChanged?.Invoke();
     }
 
     private async Task LoadNameAsync(IconTile tile)
@@ -309,6 +323,7 @@ internal sealed class SpaceView : SurfaceCanvas
                 placement.Tile.Icon.Source = image;
                 placement.Tile.Overlay.Source = overlay;
                 placement.LoadedPixels = pixels;
+                MapChanged?.Invoke();
             }
         }
         catch (OperationCanceledException)
