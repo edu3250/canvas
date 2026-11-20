@@ -15,3 +15,4 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Acomodo | `Layout` |
 | Carpeta del espacio | `SpaceFolder` |
 | Acomodo de Inicio (posiciones de sus iconos) | `HomeLayout` |
+| Minimapa | `Minimap` |

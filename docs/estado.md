@@ -2,12 +2,12 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 20-11-2026 (hito 09 definido).
+**Actualizado:** 20-11-2026.
 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** abrir una sesión `Modo: Construir · Hito: docs/hitos/09-ventanas-reales.md` para el paso 1 (lienzo maximizado, control de zoom y minimapa, fuera de la zona sensible). El paso 2, la red de seguridad, se fusiona antes de mover cualquier ventana.
+- **Siguiente paso:** construir el paso 2 del hito 09, la red de seguridad. Se fusiona antes de mover cualquier ventana.
 
 ## Qué funciona hoy
 
@@ -19,7 +19,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 | Activar una ventana real en el rectángulo de su panel con el vecino visible | `prototipos/panel-nativo` | Prototipo verificado con VS Code ([ensayo](inspeccion/ensayo-panel-nativo.md)) |
 | Salir al escritorio y volver al lienzo conservando ambos acomodos | prototipos | Verificado con ventanas propias y con VS Code ([fase 3](inspeccion/f03-cierre.md), [fase 4](inspeccion/f04-cierre.md)) |
 
-El producto todavía no muestra ni mueve ventanas reales.
+El lienzo abre maximizado e incluye control de zoom y minimapa de Inicio ([PR #40](https://github.com/edu3250/escritorio-canvas/pull/40)). El producto todavía no muestra ni mueve ventanas reales.
 
 ## Riesgos abiertos
 

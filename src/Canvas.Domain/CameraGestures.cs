@@ -2,6 +2,12 @@ namespace Canvas.Domain;
 
 public static class CameraGestures
 {
+    public const double MinZoom = 0.25;
+    public const double MaxZoom = 4;
+
+    public static Camera CenterOn(Point world, Point viewport, double zoom) =>
+        Pan(new Camera(world, zoom), new Point(viewport.X / 2, viewport.Y / 2));
+
     public static Camera Pan(Camera start, Point delta)
     {
         var position = Geometry.ViewToWorld(new Point(-delta.X, -delta.Y), start);
@@ -26,7 +32,8 @@ public static class CameraGestures
         var scaledZoom = double.IsNormal(factor)
             ? start.Zoom * factor
             : Math.Exp(Math.Log(start.Zoom) + steps * Math.Log(1.25));
-        var zoom = Math.Clamp(scaledZoom, 0.25, 4);
+        // Fit can go below the manual limit when items are far apart.
+        var zoom = Math.Clamp(scaledZoom, Math.Min(start.Zoom, MinZoom), MaxZoom);
 
         return Pan(new Camera(anchor, zoom), cursor);
     }
