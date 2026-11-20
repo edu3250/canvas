@@ -67,4 +67,4 @@ Ninguno.
 
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
-| 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en cuatro rondas (P1–P8c) con capturas de Deska como referencia y lectura del minimapa de CWC. Redacción del hito. | ver PR de `h09-definir` | Construir el paso 1 |
+| 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en cuatro rondas (P1–P8c) con capturas de Deska como referencia y lectura del minimapa de CWC. Redacción del hito. | [#39](https://github.com/edu3250/escritorio-canvas/pull/39) | Construir el paso 1 |
