@@ -29,8 +29,8 @@ Las posiciones de los iconos de Inicio se guardan en un único archivo JSON por 
 ## Archivo ausente o dañado
 
 - Si el archivo no existe, los iconos se acomodan en las primeras casillas libres.
-- Si no se puede leer, no es JSON válido o su `version` no es 1, se trata como vacío y se registra un aviso. El siguiente guardado lo reemplaza.
-- Se descartan las entradas inválidas: fuera de la cuadrícula, desalineadas, repetidas en la misma casilla o con un nombre que contiene una ruta. El resto se conserva.
+- Solo la envoltura puede invalidar el archivo entero. Si no se puede leer, no es JSON válido, `version` no es el número 1 o `spaces` no es un objeto, se trata como vacío y se registra un aviso. El siguiente guardado lo reemplaza.
+- Cada espacio y cada icono se validan por separado. Se descartan las entradas inválidas: con un valor de tipo incorrecto, sin `x` o `y`, fuera de la cuadrícula, desalineadas, repetidas en la misma casilla o con un nombre que contiene una ruta. El resto se conserva.
 - Al colocar los iconos, una posición guardada solo se usa si la casilla sigue libre. Si no, el icono va a la primera casilla libre.
 
 Este archivo solo contiene posiciones. Perderlo o dañarlo **nunca** modifica las carpetas de los espacios ni sus archivos.

@@ -14,7 +14,6 @@ public static class HomeLayout
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
         WriteIndented = true,
         // Keep space and file names such as "Programación" readable in the file.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -43,49 +42,82 @@ public static class HomeLayout
             return ([], true);
         }
 
-        LayoutFile? file;
+        JsonDocument document;
         try
         {
-            file = JsonSerializer.Deserialize<LayoutFile>(json, Options);
+            document = JsonDocument.Parse(json);
         }
         catch (JsonException)
         {
             return ([], true);
         }
 
-        if (file is not { Version: Version } || file.Spaces is null)
+        using (document)
         {
-            return ([], true);
-        }
-
-        var layouts = new Dictionary<SpaceId, Dictionary<string, Point>>();
-        foreach (var (space, items) in file.Spaces)
-        {
-            if (string.IsNullOrEmpty(space) || items is null)
+            // Only the envelope (version and spaces) can damage the whole file.
+            // Each space and each icon is validated on its own so one bad entry never drops the rest.
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !TryGetProperty(root, "version", out var version) ||
+                version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out var number) || number != Version ||
+                !TryGetProperty(root, "spaces", out var spaces) || spaces.ValueKind != JsonValueKind.Object)
             {
-                continue;
+                return ([], true);
             }
 
-            var layout = new Dictionary<string, Point>(StringComparer.OrdinalIgnoreCase);
-            var cells = new HashSet<Point>();
-            foreach (var (name, saved) in items)
+            var layouts = new Dictionary<SpaceId, Dictionary<string, Point>>();
+            foreach (var space in spaces.EnumerateObject())
             {
-                if (!IsValidName(name) || saved is null)
+                if (string.IsNullOrEmpty(space.Name) || space.Value.ValueKind != JsonValueKind.Object)
                 {
                     continue;
                 }
 
-                var cell = new Point(saved.X, saved.Y);
-                if (IsGridCell(cell) && cells.Add(cell))
+                var layout = new Dictionary<string, Point>(StringComparer.OrdinalIgnoreCase);
+                var cells = new HashSet<Point>();
+                foreach (var item in space.Value.EnumerateObject())
                 {
-                    layout.TryAdd(name, cell);
+                    if (IsValidName(item.Name) && TryReadPoint(item.Value, out var cell) &&
+                        IsGridCell(cell) && !layout.ContainsKey(item.Name) && cells.Add(cell))
+                    {
+                        layout.Add(item.Name, cell);
+                    }
                 }
+
+                layouts.TryAdd(new SpaceId(space.Name), layout);
             }
 
-            layouts.TryAdd(new SpaceId(space), layout);
+            return (layouts, false);
+        }
+    }
+
+    private static bool TryReadPoint(JsonElement element, out Point point)
+    {
+        point = default;
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryGetProperty(element, "x", out var x) || x.ValueKind != JsonValueKind.Number || !x.TryGetDouble(out var px) ||
+            !TryGetProperty(element, "y", out var y) || y.ValueKind != JsonValueKind.Number || !y.TryGetDouble(out var py))
+        {
+            return false;
         }
 
-        return (layouts, false);
+        point = new Point(px, py);
+        return true;
+    }
+
+    private static bool TryGetProperty(JsonElement element, string name, out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
     }
 
     /// <summary>
@@ -98,9 +130,9 @@ public static class HomeLayout
             .OrderBy(entry => entry.Key.Value, StringComparer.Ordinal)
             .ToDictionary(
                 entry => entry.Key.Value,
-                entry => (Dictionary<string, SavedPoint?>?)entry.Value
+                entry => entry.Value
                     .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(item => item.Key, item => (SavedPoint?)new SavedPoint(item.Value.X, item.Value.Y))));
+                    .ToDictionary(item => item.Key, item => new SavedPoint(item.Value.X, item.Value.Y))));
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temporary = path + ".tmp";
@@ -148,7 +180,7 @@ public static class HomeLayout
         (cell.X - HomeGrid.FirstX) % HomeGrid.Spacing == 0 &&
         (cell.Y - HomeGrid.FirstY) % HomeGrid.Spacing == 0;
 
-    private sealed record LayoutFile(int Version, Dictionary<string, Dictionary<string, SavedPoint?>?>? Spaces);
+    private sealed record LayoutFile(int Version, Dictionary<string, Dictionary<string, SavedPoint>> Spaces);
 
     private sealed record SavedPoint(double X, double Y);
 }

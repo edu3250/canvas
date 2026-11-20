@@ -109,6 +109,48 @@ public sealed class HomeLayoutTests : IDisposable
     }
 
     [Fact]
+    public void AnEntryWithTheWrongTypeIsDroppedWithoutLosingTheValidOnes()
+    {
+        // Regression from the PR #37 review: one bad value used to discard the whole file.
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        File.WriteAllText(FilePath, """
+            {
+              "version": 1,
+              "spaces": {
+                "Juegos": {
+                  "bueno.txt": { "x": 120, "y": 176 },
+                  "malo.txt": { "x": "error", "y": 80 },
+                  "sin-y.txt": { "x": 24 },
+                  "texto.txt": "24,80"
+                },
+                "Programación": "no es un objeto",
+                "Otro": { "a.txt": { "x": 24, "y": 80 } }
+              }
+            }
+            """);
+
+        var (layouts, damaged) = HomeLayout.Load(FilePath);
+
+        Assert.False(damaged);
+        Assert.Equal(new Point(120, 176), Assert.Single(layouts[Games]).Value);
+        Assert.True(layouts[Games].ContainsKey("bueno.txt"));
+        Assert.False(layouts.ContainsKey(Programming));
+        Assert.Equal(new Point(24, 80), layouts[new SpaceId("Otro")]["a.txt"]);
+    }
+
+    [Fact]
+    public void AVersionThatIsNotANumberMarksTheFileDamaged()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        File.WriteAllText(FilePath, """{ "version": "1", "spaces": { "Juegos": { "a.txt": { "x": 24, "y": 80 } } } }""");
+
+        var (layouts, damaged) = HomeLayout.Load(FilePath);
+
+        Assert.Empty(layouts);
+        Assert.True(damaged);
+    }
+
+    [Fact]
     public void PlaceUsesSavedCellsFirstAndFillsTheRestInOrder()
     {
         var saved = new Dictionary<string, Point>(StringComparer.OrdinalIgnoreCase)
