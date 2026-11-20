@@ -1,4 +1,7 @@
 using Canvas.Domain;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows.Interop;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -21,6 +24,12 @@ public sealed class MainWindow : Window
     private static readonly SpaceId Games = new("Juegos");
     private readonly SpaceView spaceView;
     private readonly WindowPanels windowPanels;
+    private readonly WindowRecovery recovery;
+    private readonly NativeWindowPlacement placement;
+    private readonly DispatcherTimer edgeTimer = new() { Interval = TimeSpan.FromMilliseconds(75) };
+    private Camera mapCamera;
+    private nint windowHandle;
+    private bool hotkeyRegistered;
     private readonly DispatcherTimer previewTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly Button homeButton;
     private readonly MinimapWindow minimap = new();
@@ -40,8 +49,10 @@ public sealed class MainWindow : Window
     private SessionState session;
     private Gesture? gesture;
 
-    public MainWindow()
+    internal MainWindow(WindowRecovery recovery, NativeWindowPlacement placement)
     {
+        this.recovery = recovery;
+        this.placement = placement;
         Title = "Escritorio Canvas";
         Width = InitialWidth;
         Height = InitialHeight;
@@ -71,7 +82,27 @@ public sealed class MainWindow : Window
         windowPanels = new WindowPanels(this, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
         windowPanels.MapChanged += RefreshMap;
         windowPanels.PreviewMouseWheel += ZoomSurface;
-        previewTimer.Tick += (_, _) => windowPanels.RefreshWindows();
+        windowPanels.ActivationRequested += ActivatePanel;
+        previewTimer.Tick += (_, _) =>
+        {
+            if (windowPanels.ActivePanel is { } panel &&
+                (!WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
+                    WindowCatalog.IsMinimized(panel.Window.Handle)))
+            {
+                ReturnToMap(restoreMinimized: false);
+            }
+
+            windowPanels.RefreshWindows();
+        };
+        edgeTimer.Tick += (_, _) => SyncMinimapWindow();
+        PreviewMouseDown += (_, e) =>
+        {
+            if (windowPanels.ActivePanel is not null)
+            {
+                e.Handled = true;
+                ReturnToMap();
+            }
+        };
         spaceView.MapChanged += RefreshMap;
         spaceView.PreviewMouseDown += BeginGesture;
         spaceView.MouseMove += ContinueGesture;
@@ -131,13 +162,24 @@ public sealed class MainWindow : Window
         Content = viewport;
         RefreshSpace();
 
-        minimap.CenterRequested += CenterMap;
+        minimap.CenterRequested += SelectMapPoint;
+        SourceInitialized += (_, _) =>
+        {
+            windowHandle = new WindowInteropHelper(this).Handle;
+            HwndSource.FromHwnd(windowHandle).AddHook(HandleHotkey);
+            hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
+        };
         ContentRendered += (_, _) =>
         {
             if (minimap.Owner is null)
             {
                 minimap.Owner = this;
                 SyncMinimapWindow();
+                if (!hotkeyRegistered)
+                {
+                    MessageBox.Show(this, "Ctrl+Alt+Espacio no está disponible. Puedes volver al mapa con el minimapa o con un clic en el lienzo.",
+                        Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
         };
         StateChanged += (_, _) =>
@@ -165,6 +207,11 @@ public sealed class MainWindow : Window
             closed = true;
             folderTimer.Stop();
             previewTimer.Stop();
+            edgeTimer.Stop();
+            if (hotkeyRegistered)
+            {
+                NativePanelInput.UnregisterReturn(windowHandle);
+            }
             windowPanels.Dispose();
             shell.Dispose();
             if (!readingFolders)
@@ -183,7 +230,8 @@ public sealed class MainWindow : Window
             return;
         }
 
-        if (WindowState == WindowState.Minimized)
+        if (WindowState == WindowState.Minimized ||
+            windowPanels.ActivePanel is not null && !PointerRevealsMinimap())
         {
             minimap.Hide();
             return;
@@ -208,6 +256,129 @@ public sealed class MainWindow : Window
         if (size.X > 0 && size.Y > 0)
         {
             minimap.UpdateMap(CanvasBounds.Viewport(camera, size), items);
+        }
+    }
+
+    private bool PointerRevealsMinimap()
+    {
+        if (!NativePanelInput.TryGetPointer(out var pointer))
+        {
+            return false;
+        }
+
+        var relative = spaceView.PointFromScreen(pointer);
+        var bottom = spaceView.ActualHeight;
+        var right = spaceView.ActualWidth;
+        return pointer.Y >= NativePanelInput.ScreenBottom - 2 ||
+            relative.Y >= bottom - 2 && relative.X >= 0 && relative.X <= right ||
+            minimap.IsVisible && relative.Y >= bottom - MinimapWindow.MapHeight - MinimapWindow.Inset &&
+                relative.X >= right - MinimapWindow.MapWidth - MinimapWindow.Inset && relative.X <= right;
+    }
+
+    private nint HandleHotkey(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
+    {
+        if (message == NativePanelInput.HotkeyMessage && wParam == NativePanelInput.ReturnHotkey)
+        {
+            handled = true;
+            ReturnToMap();
+        }
+
+        return 0;
+    }
+
+    private void ActivatePanel(WindowPanels.Panel panel)
+    {
+        if (panel == windowPanels.ActivePanel || !ReturnToMap())
+        {
+            return;
+        }
+
+        CancelGesture();
+        var previous = ActiveCamera;
+        var identity = panel.Window.Identity;
+        var saved = false;
+        try
+        {
+            NativeWindowPlacement.EnsureCurrent(panel.Instance);
+            recovery.SaveOriginal(identity.Handle, panel.Instance);
+            saved = true;
+
+            ApplyNavigation(new SetCamera(CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, 1)));
+            var origin = windowPanels.GetWindowOrigin(panel);
+            placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
+            NativeWindowPlacement.EnsureCurrent(panel.Instance);
+            if (!NativePanelInput.SetForegroundWindow((nint)identity.Handle))
+            {
+                throw new InvalidOperationException("Windows denied foreground activation.");
+            }
+
+            mapCamera = previous;
+            windowPanels.ActivePanel = panel;
+            windowPanels.Render();
+            minimap.Hide();
+            edgeTimer.Start();
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
+            var restored = !saved || RestorePanel(panel);
+            ApplyNavigation(new SetCamera(previous));
+            MessageBox.Show(this, restored ? "No se pudo activar la ventana en su panel." :
+                "No se pudo devolver la ventana. Cierra Escritorio Canvas y ejecuta «Devolver ventanas».",
+                Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private bool ReturnToMap(bool restoreMinimized = true)
+    {
+        if (windowPanels.ActivePanel is not { } panel)
+        {
+            return true;
+        }
+
+        windowPanels.ActivePanel = null;
+        edgeTimer.Stop();
+        var restored = !restoreMinimized && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
+            WindowCatalog.IsMinimized(panel.Window.Handle) || RestorePanel(panel);
+        if (!restored)
+        {
+            MessageBox.Show(this, "No se pudo devolver la ventana. Cierra Escritorio Canvas y ejecuta «Devolver ventanas».",
+                Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        ApplyNavigation(new SetCamera(mapCamera));
+        windowPanels.Render();
+        Activate();
+        SyncMinimapWindow();
+        return restored;
+    }
+
+    private bool RestorePanel(WindowPanels.Panel panel)
+    {
+        try
+        {
+            recovery.RestoreWindow(panel.Window.Handle);
+            return true;
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
+            return false;
+        }
+    }
+
+    private static bool IsPanelError(Exception error) =>
+        error is IOException or UnauthorizedAccessException or Win32Exception or InvalidOperationException;
+
+    private void SelectMapPoint(DomainPoint world)
+    {
+        if (windowPanels.FindPanel(world) is { } panel)
+        {
+            ActivatePanel(panel);
+        }
+        else if (ReturnToMap())
+        {
+            CenterMap(world);
         }
     }
 

@@ -90,6 +90,35 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
+    public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y)
+    {
+        EnsureCurrent(instance);
+        var current = Capture(identity.Handle);
+        if (current.ShowCommand != 1)
+        {
+            EnsureCurrent(instance);
+            Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
+        }
+
+        EnsureCurrent(instance);
+        const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
+        if (!SetWindowPos((nint)identity.Handle, 0, x, y, 0, 0, NoSize | NoZOrder | NoActivate))
+        {
+            throw new Win32Exception();
+        }
+    }
+
+    public static void EnsureCurrent(WindowInstance instance)
+    {
+        if (!instance.IsCurrent())
+        {
+            throw new InvalidOperationException("The window is no longer available.");
+        }
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+
     private static string MarkerName(Guid marker) => MarkerPrefix + marker.ToString("N");
 
     private static int GetCurrentSessionId()

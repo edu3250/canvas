@@ -21,6 +21,19 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     private Drag? drag;
 
     public event Action? MapChanged;
+    public event Action<Panel>? ActivationRequested;
+
+    public Panel? ActivePanel { get; set; }
+
+    public Panel? FindPanel(DomainPoint point) => panels.LastOrDefault(panel =>
+        panel.Space == space && point.X >= panel.Bounds.X && point.X <= panel.Bounds.X + panel.Bounds.Width &&
+        point.Y >= panel.Bounds.Y && point.Y <= panel.Bounds.Y + panel.Bounds.Height);
+
+    public WpfPoint GetWindowOrigin(Panel panel)
+    {
+        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X, panel.Bounds.Y + TitleHeight), camera);
+        return PointToScreen(new WpfPoint(point.X, point.Y));
+    }
 
     public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
 
@@ -151,6 +164,13 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             panel.Card.Height = bounds.Height;
             panel.Card.RenderTransform = new ScaleTransform(camera.Zoom, camera.Zoom);
 
+            if (panel == ActivePanel)
+            {
+                panel.Thumbnail?.Hide();
+                panel.Card.Text.Text = "";
+                continue;
+            }
+
             if (WindowCatalog.IsMinimized(panel.Window.Handle))
             {
                 panel.Thumbnail?.Hide();
@@ -183,7 +203,20 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             return;
         }
 
-        var delta = e.GetPosition(this) - active.Pointer;
+        UpdateDrag(active, e.GetPosition(this));
+        e.Handled = true;
+    }
+
+    private void UpdateDrag(Drag active, WpfPoint pointer)
+    {
+        var delta = pointer - active.Pointer;
+        if (!active.HasMoved && Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        active.HasMoved = true;
         var desired = active.Original with
         {
             X = active.Original.X + delta.X / camera.Zoom,
@@ -192,16 +225,20 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         active.Panel.Bounds = PanelPlacement.FindFree(desired, Occupied(active.Panel));
         Render();
         MapChanged?.Invoke();
-        e.Handled = true;
     }
 
     private void FinishDrag(MouseButtonEventArgs e)
     {
         if (drag is { } active)
         {
+            UpdateDrag(active, e.GetPosition(this));
             drag = null;
             active.Panel.Card.ReleaseMouseCapture();
             e.Handled = true;
+            if (!active.HasMoved)
+            {
+                ActivationRequested?.Invoke(active.Panel);
+            }
         }
     }
 
@@ -251,7 +288,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         panels.Clear();
     }
 
-    private sealed class PanelCard : Border
+    internal sealed class PanelCard : Border
     {
         public PanelCard()
         {
@@ -270,9 +307,12 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         };
     }
 
-    private sealed record Drag(Panel Panel, WpfPoint Pointer, CanvasBounds Original);
+    private sealed record Drag(Panel Panel, WpfPoint Pointer, CanvasBounds Original)
+    {
+        public bool HasMoved { get; set; }
+    }
 
-    private sealed class Panel(WindowCandidate window, SpaceId space, CanvasBounds bounds,
+    internal sealed class Panel(WindowCandidate window, SpaceId space, CanvasBounds bounds,
         PanelCard card, WindowInstance instance, WindowThumbnail? thumbnail) : IDisposable
     {
         public WindowCandidate Window { get; } = window;

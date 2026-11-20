@@ -199,6 +199,21 @@ public sealed class WindowRecoveryTests : IDisposable
     }
 
 
+    [Fact]
+    public void CannotSavePlacementForAReplacementUsingAStalePanel()
+    {
+        const long handle = 100;
+        using var panel = WindowInstance.Track(windows, windows.Identify(handle));
+        Assert.NotNull(panel);
+        windows.Markers.Clear();
+
+        using var recovery = Open();
+        Assert.Throws<InvalidOperationException>(() => recovery.SaveOriginal(handle, panel));
+        Assert.Equal(0, windows.CaptureCount);
+        Assert.Empty(windows.Markers);
+        Assert.False(File.Exists(Journal));
+    }
+
     private WindowRecovery Open() => new(Journal, windows);
 
     public void Dispose() => directory.Delete(recursive: true);

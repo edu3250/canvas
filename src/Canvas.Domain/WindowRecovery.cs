@@ -63,10 +63,15 @@ public sealed class WindowRecovery : IDisposable
     public static string GetPath(string localData) =>
         Path.Combine(localData, "Escritorio Canvas", "devolucion-ventanas.json");
 
-    public void SaveOriginal(long handle)
+    public void SaveOriginal(long handle, WindowInstance? instance = null)
     {
         ObjectDisposedException.ThrowIf(gate.SafeFileHandle.IsClosed, this);
         var identity = windows.Identify(handle) ?? throw new InvalidOperationException("The window no longer exists.");
+        if (instance is not null && !instance.Matches(identity))
+        {
+            throw new InvalidOperationException("The window instance is no longer available.");
+        }
+
         if (identity.SessionId != windows.SessionId)
         {
             throw new InvalidOperationException("The window belongs to another session.");
@@ -87,7 +92,7 @@ public sealed class WindowRecovery : IDisposable
             var placement = windows.Capture(handle);
             var entry = new WindowRecoveryEntry(handle, identity.ProcessId, identity.ProcessStartedUtcTicks,
                 identity.SessionId, marker, placement);
-            if (!Valid(entry) || !Matches(entry))
+            if (!Valid(entry) || !Matches(entry) || instance is not null && !instance.Matches(identity))
             {
                 throw new InvalidOperationException("The original window placement could not be verified.");
             }

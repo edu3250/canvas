@@ -33,6 +33,8 @@ public sealed class WindowInstance : IDisposable
         return null;
     }
 
+    internal bool Matches(WindowIdentity candidate) => identity == candidate && IsCurrent();
+
     public bool IsCurrent() => !disposed && windows.Identify(identity.Handle) == identity &&
         windows.HasMarker(identity.Handle, marker);
 
