@@ -73,4 +73,4 @@ Ninguno.
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
 | 19-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en tres rondas (P1–P18) y redacción del hito. Raíz de carpetas anotada en el ADR 001. | [#34](https://github.com/edu3250/escritorio-canvas/pull/34) | Construir los pasos 1–4 |
-| 19-11-2026 | Construir | Codex · GPT-6 | Pasos 1–4. Compilación, 27 pruebas y comprobación del shell y el seguimiento de renombrados con archivos temporales en Windows. | Rama `h08-iconos-reales` | Comparación visual y apertura con el juego del hito, autorización de fusión y paso 5 en su propio PR. |
+| 19-11-2026 | Construir | Codex · GPT-6 | Pasos 1–4. Compilación, 27 pruebas y comprobación del shell y el seguimiento de renombrados con archivos temporales en Windows. | [#35](https://github.com/edu3250/escritorio-canvas/pull/35) | Comparación visual y apertura con el juego del hito, autorización de fusión y paso 5 en su propio PR. |

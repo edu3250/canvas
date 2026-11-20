@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 08 · Iconos reales en Inicio](hitos/08-iconos-reales.md). Cada icono de Inicio es un elemento real de la carpeta de su espacio y se ve igual que en el Explorador.
-- **Siguiente paso:** probar los pasos 1–4 en la rama `h08-iconos-reales` y autorizar su fusión con la CI en verde. El paso 5 (guardar posiciones) es zona sensible y va en un PR aparte.
+- **Siguiente paso:** probar los pasos 1–4 del [PR #35](https://github.com/edu3250/escritorio-canvas/pull/35) y autorizar su fusión con la CI en verde. El paso 5 (guardar posiciones) es zona sensible y va en un PR aparte.
 - **Candidato para después:** *ventanas reales en el lienzo*, con ventanas del usuario como miniaturas DWM y clic para trabajar en su panel.
 
 ## Qué funciona hoy
