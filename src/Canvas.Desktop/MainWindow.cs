@@ -23,6 +23,8 @@ public sealed class MainWindow : Window
     private readonly Button homeButton;
     private readonly ShellItems shell = new();
     private readonly Dictionary<SpaceId, SpaceFolderMonitor> folders;
+    private readonly string layoutPath;
+    private readonly Dictionary<SpaceId, Dictionary<string, DomainPoint>> savedLayouts;
     private readonly DispatcherTimer folderTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool readingFolders;
     private bool closed;
@@ -48,6 +50,14 @@ public sealed class MainWindow : Window
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         folders = session.Spaces.Keys.ToDictionary(space => space,
             space => new SpaceFolderMonitor(SpaceFolder.GetPath(profile, space)));
+        layoutPath = HomeLayout.GetPath(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        var loaded = HomeLayout.Load(layoutPath);
+        savedLayouts = loaded.Layouts;
+        if (loaded.Damaged)
+        {
+            System.Diagnostics.Trace.TraceWarning("El archivo de posiciones no se pudo leer; los iconos se acomodan de nuevo.");
+        }
+
         spaceView = new SpaceView(shell, folders.Keys);
         spaceView.PreviewMouseDown += BeginGesture;
         spaceView.MouseMove += ContinueGesture;
@@ -146,7 +156,9 @@ public sealed class MainWindow : Window
                     previousClick = null;
                 }
 
-                spaceView.UpdateItems(space, snapshot.Paths, snapshot.Renames);
+                spaceView.UpdateItems(space, snapshot.Paths, snapshot.Renames,
+                    savedLayouts.GetValueOrDefault(space) ?? []);
+                SaveLayout(space);
             }));
         }
         finally
@@ -156,6 +168,20 @@ public sealed class MainWindow : Window
             {
                 DisposeFolders();
             }
+        }
+    }
+
+    private void SaveLayout(SpaceId space)
+    {
+        // Only spaces whose folder has been read replace their saved entry; the others keep it intact.
+        savedLayouts[space] = spaceView.GetLayout(space);
+        try
+        {
+            HomeLayout.Save(layoutPath, savedLayouts);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Trace.TraceWarning("No se pudieron guardar las posiciones: {0}", error.Message);
         }
     }
 
@@ -263,6 +289,7 @@ public sealed class MainWindow : Window
         if (active.Kind == GestureKind.Icons && active.HasMoved)
         {
             spaceView.CommitMove(active.Icon!);
+            SaveLayout(session.ActiveSpaceId);
         }
 
         FinishGesture();

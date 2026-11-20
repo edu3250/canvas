@@ -2,12 +2,12 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 20-11-2026.
+**Actualizado:** 20-11-2026 (paso 5 del hito 08 en revisión).
 
 ## Ahora
 
 - **En curso:** [hito 08 · Iconos reales en Inicio](hitos/08-iconos-reales.md). Cada icono de Inicio es un elemento real de la carpeta de su espacio y se ve igual que en el Explorador.
-- **Siguiente paso:** construir el paso 5 del hito 08. Guardar posiciones es zona sensible y va en un PR aparte.
+- **Siguiente paso:** el paso 5 (guardar posiciones) está construido y espera una sesión `Modo: Revisar` sobre su PR, porque es zona sensible. Tras la fusión, el usuario hace la prueba final del hito, cerrando y volviendo a abrir la aplicación.
 - **Candidato para después:** *ventanas reales en el lienzo*, con ventanas del usuario como miniaturas DWM y clic para trabajar en su panel.
 
 ## Qué funciona hoy

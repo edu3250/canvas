@@ -46,7 +46,12 @@ internal sealed class SpaceView : SurfaceCanvas
     public bool HasChanges(SpaceId space, string[] paths) =>
         paths.Length != layouts[space].Count || paths.Any(path => !layouts[space].ContainsKey(path));
 
-    public void UpdateItems(SpaceId space, string[] paths, (string OldPath, string NewPath)[] renames)
+    public Dictionary<string, DomainPoint> GetLayout(SpaceId space) =>
+        layouts[space].ToDictionary(entry => Path.GetFileName(entry.Key), entry => entry.Value.Origin,
+            StringComparer.OrdinalIgnoreCase);
+
+    public void UpdateItems(SpaceId space, string[] paths, (string OldPath, string NewPath)[] renames,
+        IReadOnlyDictionary<string, DomainPoint> saved)
     {
         var icons = layouts[space];
         var visible = displayedSpace == space;
@@ -92,11 +97,11 @@ internal sealed class SpaceView : SurfaceCanvas
         }
 
         var occupied = icons.Values.Select(placement => placement.Origin).ToHashSet();
-        using var freeCells = HomeGrid.FreeCells(occupied).GetEnumerator();
-        foreach (var path in paths.Where(path => !icons.ContainsKey(path)))
+        var added = paths.Where(path => !icons.ContainsKey(path)).ToArray();
+        var cells = HomeLayout.Place(occupied, added.Select(Path.GetFileName).ToArray()!, saved);
+        foreach (var path in added)
         {
-            freeCells.MoveNext();
-            var placement = CreatePlacement(path, freeCells.Current);
+            var placement = CreatePlacement(path, cells[Path.GetFileName(path)]);
             icons.Add(path, placement);
             if (visible)
             {

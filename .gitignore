@@ -1,1 +1,5 @@
 /Escritorio Canvas.lnk
+bin/
+obj/
+TestResults/
+evidencia-local/
