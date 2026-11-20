@@ -94,7 +94,7 @@ public sealed class MainWindow : Window
 
             windowPanels.RefreshWindows();
         };
-        edgeTimer.Tick += (_, _) => SyncMinimapWindow();
+        edgeTimer.Tick += (_, _) => UpdateMinimapVisibility();
         PreviewMouseDown += (_, e) =>
         {
             if (windowPanels.ActivePanel is not null)
@@ -230,6 +230,12 @@ public sealed class MainWindow : Window
             return;
         }
 
+        minimap.AnchorTo(spaceView);
+        UpdateMinimapVisibility();
+    }
+
+    private void UpdateMinimapVisibility()
+    {
         if (WindowState == WindowState.Minimized ||
             windowPanels.ActivePanel is not null && !PointerRevealsMinimap())
         {
@@ -237,7 +243,6 @@ public sealed class MainWindow : Window
             return;
         }
 
-        minimap.AnchorTo(spaceView);
         if (!minimap.IsVisible)
         {
             minimap.Show();
@@ -302,18 +307,26 @@ public sealed class MainWindow : Window
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             recovery.SaveOriginal(identity.Handle, panel.Instance);
             saved = true;
+            windowPanels.SuspendPreview(panel);
+            windowPanels.ActivePanel = panel;
 
             ApplyNavigation(new SetCamera(CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, 1)));
             var origin = windowPanels.GetWindowOrigin(panel);
             placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
-            if (!NativePanelInput.SetForegroundWindow((nint)identity.Handle))
+            var application = (nint)identity.Handle;
+            if (!NativePanelInput.SetForegroundWindow(application))
             {
                 throw new InvalidOperationException("Windows denied foreground activation.");
             }
 
+            NativeWindowPlacement.EnsureCurrent(panel.Instance);
+            if (!NativePanelInput.KeepCanvasBehind(windowHandle, application))
+            {
+                throw new Win32Exception();
+            }
+
             mapCamera = previous;
-            windowPanels.ActivePanel = panel;
             windowPanels.Render();
             minimap.Hide();
             edgeTimer.Start();
@@ -321,6 +334,7 @@ public sealed class MainWindow : Window
         catch (Exception error) when (IsPanelError(error))
         {
             Trace.TraceWarning(error.ToString());
+            windowPanels.ActivePanel = null;
             var restored = !saved || RestorePanel(panel);
             ApplyNavigation(new SetCamera(previous));
             MessageBox.Show(this, restored ? "No se pudo activar la ventana en su panel." :

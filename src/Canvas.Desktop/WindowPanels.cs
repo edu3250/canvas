@@ -81,8 +81,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         var height = (window.NormalBounds.Bottom - (double)window.NormalBounds.Top) / dpi.DpiScaleY + TitleHeight;
         var center = CanvasBounds.Viewport(camera, new DomainPoint(ActualWidth, ActualHeight)).Center;
         var desired = new CanvasBounds(center.X - width / 2, center.Y - height / 2, width, height);
-        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title), instance,
-            WindowThumbnail.Register(new WindowInteropHelper(owner).Handle, window.Handle));
+        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title), instance);
         panels.Add(panel);
         Children.Add(panel.Card);
         panel.Card.PreviewMouseLeftButtonDown += (_, e) => StartDrag(panel, e);
@@ -126,6 +125,12 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         }
 
         Render();
+    }
+
+    public void SuspendPreview(Panel panel)
+    {
+        panel.Thumbnail?.Dispose();
+        panel.Thumbnail = null;
     }
 
     public void Render()
@@ -178,6 +183,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
                 continue;
             }
 
+            panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
             var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
                 ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
             panel.Card.Text.Text = panel.Thumbnail?.Display(area, clip, controls) == true ? "" : "Vista previa no disponible";
@@ -313,13 +319,13 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     }
 
     internal sealed class Panel(WindowCandidate window, SpaceId space, CanvasBounds bounds,
-        PanelCard card, WindowInstance instance, WindowThumbnail? thumbnail) : IDisposable
+        PanelCard card, WindowInstance instance) : IDisposable
     {
         public WindowCandidate Window { get; } = window;
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
         public PanelCard Card { get; } = card;
-        public WindowThumbnail? Thumbnail { get; } = thumbnail;
+        public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;
 
         public void Dispose()

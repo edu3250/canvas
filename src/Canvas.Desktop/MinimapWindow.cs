@@ -63,7 +63,9 @@ internal sealed class MinimapWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        ((HwndSource)PresentationSource.FromVisual(this)).AddHook(PreventMouseActivation);
+        var source = (HwndSource)PresentationSource.FromVisual(this);
+        NativePanelInput.PreventActivation(source.Handle);
+        source.AddHook(PreventMouseActivation);
     }
 
     private static IntPtr PreventMouseActivation(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)

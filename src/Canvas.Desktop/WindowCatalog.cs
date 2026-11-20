@@ -33,7 +33,8 @@ internal sealed class WindowCatalog
     {
         var hwnd = (nint)handle;
         const uint Cloaked = 14;
-        if (!IsWindowVisible(hwnd) || GetWindow(hwnd, 4) != 0 ||
+        if (hwnd == GetShellWindow() || hwnd == GetDesktopWindow() || hwnd == GetShellTaskbar() ||
+            !IsWindowVisible(hwnd) || GetWindow(hwnd, 4) != 0 ||
             DwmGetWindowAttribute(hwnd, Cloaked, out var cloaked, sizeof(int)) < 0 || cloaked != 0)
         {
             return null;
@@ -106,6 +107,17 @@ internal sealed class WindowCatalog
             return GetTokenInformation(token, TokenElevation, out var elevated, sizeof(int), out _) && elevated == 0;
         }
     }
+
+    private static nint GetShellTaskbar() => FindWindow("Shell_TrayWnd", null);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern nint FindWindow(string className, string? title);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetShellWindow();
+
+    [DllImport("user32.dll")]
+    private static extern nint GetDesktopWindow();
 
     private delegate bool WindowCallback(nint window, nint parameter);
 

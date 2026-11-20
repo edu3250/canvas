@@ -25,8 +25,31 @@ internal static class NativePanelInput
 
     public static int ScreenBottom => GetSystemMetrics(1);
 
+    private const int ExtendedStyle = -20;
+    private const int Topmost = 0x00000008;
+    private const int NoActivateStyle = 0x08000000;
+
+    public static bool KeepCanvasBehind(nint canvas, nint application)
+    {
+        const uint NoSize = 0x0001, NoMove = 0x0002, NoActivate = 0x0010, NoOwnerZOrder = 0x0200;
+        var after = (GetWindowLong(application, ExtendedStyle) & Topmost) == 0 ? application : 0;
+        return SetWindowPos(canvas, after, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
+    }
+
+    public static void PreventActivation(nint window) =>
+        SetWindowLong(window, ExtendedStyle, GetWindowLong(window, ExtendedStyle) | NoActivateStyle);
+
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(nint window);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    private static extern int GetWindowLong(nint window, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+    private static extern int SetWindowLong(nint window, int index, int value);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
 
     [DllImport("user32.dll")]
     private static extern bool RegisterHotKey(nint window, int id, uint modifiers, uint key);
