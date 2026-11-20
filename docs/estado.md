@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** construir el paso 2 del hito 09, la red de seguridad. Se fusiona antes de mover cualquier ventana.
+- **Siguiente paso:** autorizar el formato propuesto en el [ADR 004](adr/004-devolucion-de-ventanas.md), en el PR en borrador del paso 2. La red de seguridad se fusiona antes de mover cualquier ventana.
 
 ## Qué funciona hoy
 

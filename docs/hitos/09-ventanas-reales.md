@@ -70,3 +70,4 @@ Ninguno.
 | 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en cuatro rondas (P1–P8c) con capturas de Deska como referencia y lectura del minimapa de CWC. Redacción del hito. | [#39](https://github.com/edu3250/escritorio-canvas/pull/39) | Construir el paso 1 |
 | 20-11-2026 | Construir | Codex · GPT-6 | Paso 1. Inicio maximizado, control de zoom y minimapa interactivo. Compilación, 44 pruebas y dibujo WPF fuera de pantalla. | [#40](https://github.com/edu3250/escritorio-canvas/pull/40) | Prueba de uso, autorización de fusión y paso 2. |
 | 20-11-2026 | Construir | Codex · GPT-6 | El usuario probó el paso 1 y confirmó «funciona bien». Autorizó la fusión en el chat. | [#40](https://github.com/edu3250/escritorio-canvas/pull/40) | Construir el paso 2. |
+| 20-11-2026 | Construir | Codex · GPT-6 | Propuesta de ADR 004 para el registro de devolución de ventanas. | Rama h09-minimapa-2 (borrador) | Autorizar el formato e implementar el paso 2. |
