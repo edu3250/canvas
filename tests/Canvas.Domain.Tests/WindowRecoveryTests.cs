@@ -179,6 +179,26 @@ public sealed class WindowRecoveryTests : IDisposable
     }
 
 
+    [Fact]
+    public void ReusedHandleInSameProcessCanBeTrackedAsANewWindow()
+    {
+        var identity = windows.Identify(100);
+        using var originalPanel = WindowInstance.Track(windows, identity);
+        Assert.NotNull(originalPanel);
+        Assert.True(originalPanel.IsCurrent());
+
+        // A destroyed HWND loses its properties, even if the same process reuses its value.
+        windows.Markers.Clear();
+        Assert.False(originalPanel.IsCurrent());
+        using var replacementPanel = WindowInstance.Track(windows, identity);
+        Assert.NotNull(replacementPanel);
+        originalPanel.Dispose();
+        Assert.True(replacementPanel.IsCurrent());
+        replacementPanel.Dispose();
+        Assert.Empty(windows.Markers);
+    }
+
+
     private WindowRecovery Open() => new(Journal, windows);
 
     public void Dispose() => directory.Delete(recursive: true);

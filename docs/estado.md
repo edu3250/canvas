@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** construir el paso 3 del hito 09: añadir ventanas al espacio y mostrar sus miniaturas en paneles. La devolución de ventanas del paso 2 se verificó en el [PR #41](https://github.com/edu3250/escritorio-canvas/pull/41).
+- **Siguiente paso:** construir el paso 4 del hito 09: activar la ventana en su panel al 100 % y volver al mapa. El usuario verificó las miniaturas, el arrastre, el zoom, el cambio de espacio y la retirada del panel al cerrar su ventana en el [PR #42](https://github.com/edu3250/escritorio-canvas/pull/42).
 
 ## Qué funciona hoy
 
@@ -19,7 +19,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 | Activar una ventana real en el rectángulo de su panel con el vecino visible | `prototipos/panel-nativo` | Prototipo verificado con VS Code ([ensayo](inspeccion/ensayo-panel-nativo.md)) |
 | Salir al escritorio y volver al lienzo conservando ambos acomodos | prototipos | Verificado con ventanas propias y con VS Code ([fase 3](inspeccion/f03-cierre.md), [fase 4](inspeccion/f04-cierre.md)) |
 
-El lienzo abre maximizado e incluye control de zoom y minimapa de Inicio ([PR #40](https://github.com/edu3250/escritorio-canvas/pull/40)). El producto todavía no muestra ni mueve ventanas reales.
+El lienzo abre maximizado e incluye control de zoom y minimapa de Inicio ([PR #40](https://github.com/edu3250/escritorio-canvas/pull/40)). La rama del paso 3 muestra ventanas abiertas como miniaturas DWM en paneles arrastrables. La activación en su panel corresponde al paso 4.
 
 ## Riesgos abiertos
 

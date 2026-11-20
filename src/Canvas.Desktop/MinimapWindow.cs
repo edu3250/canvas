@@ -114,7 +114,11 @@ internal sealed class MinimapWindow : Window
             foreach (var item in items)
             {
                 var bounds = Project(item.Bounds, map);
-                if (item.Image is { } image && bounds.Width >= 8)
+                if (item.IsPanel)
+                {
+                    drawing.DrawRectangle(ViewFill, ViewOutline, bounds);
+                }
+                else if (item.Image is { } image && bounds.Width >= 8)
                 {
                     var scale = Math.Min(bounds.Width / image.Width, bounds.Height / image.Height);
                     var width = image.Width * scale;
@@ -139,4 +143,4 @@ internal sealed class MinimapWindow : Window
     }
 }
 
-internal readonly record struct MinimapItem(CanvasBounds Bounds, ImageSource? Image);
+internal readonly record struct MinimapItem(CanvasBounds Bounds, ImageSource? Image, bool IsPanel = false);
