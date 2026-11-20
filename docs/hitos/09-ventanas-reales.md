@@ -43,7 +43,7 @@ Entrevista del 20-11-2026. El diario de uso estaba vacío y el candidato salió 
 ## Pasos
 
 - [x] 1. Lienzo maximizado, control de zoom (−, %, +, ⛶) y minimapa con los iconos de Inicio, todavía sin ventanas. Fuera de la zona sensible · `src/Canvas.Desktop`, `src/Canvas.Domain`, `tests/`
-- [ ] 2. **Zona sensible.** Registro de acomodos originales en disco antes de mover nada, devolución al quitar, al cerrar y tras un cierre brusco, y acceso «Devolver ventanas» independiente. ADR del formato · `src/`, `tests/`, `docs/adr/`
+- [x] 2. **Zona sensible.** Registro de acomodos originales en disco antes de mover nada, devolución al quitar, al cerrar y tras un cierre brusco, y acceso «Devolver ventanas» independiente. ADR del formato · `src/`, `tests/`, `docs/adr/`
 - [ ] 3. **Zona sensible.** «Añadir ventana» con la lista de ventanas abiertas, paneles con miniatura DWM en vivo que se arrastran por el lienzo y colocación del panel nuevo · `src/Canvas.Desktop`, `src/Canvas.Domain`, `tests/`
 - [ ] 4. **Zona sensible.** Activar la ventana en su panel con el acercamiento al 100 % y volver al mapa con el minimapa, Ctrl+Alt+Espacio o un clic fuera. El minimapa se oculta mientras se trabaja y reaparece en el borde inferior · `src/Canvas.Desktop`
 - [ ] 5. **Zona sensible.** Barra del panel (✕, ⤢, «Quitar del lienzo») y aviso de ventana minimizada · `src/Canvas.Desktop`
@@ -70,4 +70,5 @@ Ninguno.
 | 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en cuatro rondas (P1–P8c) con capturas de Deska como referencia y lectura del minimapa de CWC. Redacción del hito. | [#39](https://github.com/edu3250/escritorio-canvas/pull/39) | Construir el paso 1 |
 | 20-11-2026 | Construir | Codex · GPT-6 | Paso 1. Inicio maximizado, control de zoom y minimapa interactivo. Compilación, 44 pruebas y dibujo WPF fuera de pantalla. | [#40](https://github.com/edu3250/escritorio-canvas/pull/40) | Prueba de uso, autorización de fusión y paso 2. |
 | 20-11-2026 | Construir | Codex · GPT-6 | El usuario probó el paso 1 y confirmó «funciona bien». Autorizó la fusión en el chat. | [#40](https://github.com/edu3250/escritorio-canvas/pull/40) | Construir el paso 2. |
-| 20-11-2026 | Construir | Codex · GPT-6 | Propuesta de ADR 004 para el registro de devolución de ventanas. | Rama h09-minimapa-2 (borrador) | Autorizar el formato e implementar el paso 2. |
+| 20-11-2026 | Construir | Codex · GPT-6 | Propuesta de ADR 004 para el registro de devolución de ventanas. | [#41](https://github.com/edu3250/escritorio-canvas/pull/41) | Autorizar el formato e implementar el paso 2. |
+| 20-11-2026 | Construir | Codex · GPT-6 | El usuario aprobó el ADR 004 («adelante aprobado»). Se implementó el paso 2, con 54 pruebas y un ensayo en Windows con una ventana y un proceso descartables. | [#41](https://github.com/edu3250/escritorio-canvas/pull/41) | Revisar el PR de zona sensible y fusionarlo antes del paso 3. |

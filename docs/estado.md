@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** autorizar el formato propuesto en el [ADR 004](adr/004-devolucion-de-ventanas.md), en el PR en borrador del paso 2. La red de seguridad se fusiona antes de mover cualquier ventana.
+- **Siguiente paso:** revisar el [PR #41](https://github.com/edu3250/escritorio-canvas/pull/41) en una sesión distinta de la que lo construyó. La red de seguridad del paso 2 se fusiona antes de mover cualquier ventana.
 
 ## Qué funciona hoy
 
