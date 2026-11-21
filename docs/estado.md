@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** verificar el regreso desde una ventana siempre encima en el [PR #43](https://github.com/edu3250/escritorio-canvas/pull/43) y revisar la corrección antes de fusionar. La prueba de uso anterior está confirmada. Las mejoras de interacción inspiradas en Deska quedan para otro PR.
+- **Siguiente paso:** construir en un PR separado la continuidad visual acordada para la cámara y la activación de paneles. El paso 4 recibió dictamen favorable tras la prueba interactiva del usuario.
 
 ## Qué funciona hoy
 
