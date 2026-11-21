@@ -323,6 +323,7 @@ public sealed class MainWindow : Window
     }
 
     private DomainPoint ViewportSize => new(spaceView.ActualWidth, spaceView.ActualHeight);
+    private Camera MapZoomCamera => windowPanels.ActivePanel is null ? ActiveCamera : mapCamera;
 
     private void SyncMinimapWindow()
     {
@@ -358,7 +359,7 @@ public sealed class MainWindow : Window
         MinimapItem[] items = [.. spaceView.GetMapItems(includePreview: true), .. windowPanels.GetMapItems()];
         if (size.X > 0 && size.Y > 0)
         {
-            minimap.UpdateMap(CanvasBounds.Viewport(camera, size), camera.Zoom, items);
+            minimap.UpdateMap(CanvasBounds.Viewport(camera, size), MapZoomCamera.Zoom, items);
         }
     }
 
@@ -452,6 +453,7 @@ public sealed class MainWindow : Window
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             recovery.SaveOriginal(identity.Handle, panel.Instance);
             saved = true;
+            mapCamera = previous;
             windowPanels.ActivePanel = panel;
             UpdateMapPriority();
 
@@ -470,10 +472,10 @@ public sealed class MainWindow : Window
                 throw new Win32Exception();
             }
 
-            mapCamera = previous;
             windowPanels.SuspendPreview(panel);
             UpdateActivePanelBounds(syncPosition: false);
             windowPanels.Render();
+            RefreshMap();
             minimap.Hide();
             hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
             returnShortcutStatus.Visibility = hotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
@@ -569,6 +571,7 @@ public sealed class MainWindow : Window
         }
 
         windowPanels.Render();
+        RefreshMap();
         SyncMinimapWindow();
         if (restoreFailed)
         {
@@ -673,7 +676,10 @@ public sealed class MainWindow : Window
 
     private void StepZoom(double steps)
     {
-        if (activationPending)
+        var camera = MapZoomCamera;
+        if (activationPending ||
+            (steps < 0 && camera.Zoom <= CameraGestures.MinZoom) ||
+            (steps > 0 && camera.Zoom >= CameraGestures.MaxZoom))
         {
             return;
         }
@@ -682,7 +688,7 @@ public sealed class MainWindow : Window
         CancelGesture();
         var size = ViewportSize;
         var center = new DomainPoint(size.X / 2, size.Y / 2);
-        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, center, steps)));
+        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(camera, center, steps)));
     }
 
     private void FitContent()
