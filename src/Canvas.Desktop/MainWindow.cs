@@ -7,12 +7,9 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using System.IO;
-using SurfaceCanvas = System.Windows.Controls.Canvas;
-using ShapePath = System.Windows.Shapes.Path;
 using DomainPoint = Canvas.Domain.Point;
 
 namespace Canvas.Desktop;
@@ -22,6 +19,9 @@ public sealed class MainWindow : Window
     private const double ActivationDurationMs = 200;
     private const double InitialWidth = 1100;
     private const double InitialHeight = 720;
+    private static readonly Brush SelectedSpaceBrush =
+        DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
+    private static readonly Brush InactiveSpaceBrush = DeskControls.Brush(VisualTokens.Colors.Raised);
     private static readonly SpaceId Programming = new("Programación");
     private static readonly SpaceId Games = new("Juegos");
     private readonly SpaceView spaceView;
@@ -35,9 +35,13 @@ public sealed class MainWindow : Window
     private bool hotkeyRegistered;
     private readonly TextBlock returnShortcutStatus = new()
     {
-        Foreground = SystemColors.ControlTextBrush,
-        VerticalAlignment = VerticalAlignment.Center,
-        Margin = new Thickness(12, 0, 12, 0),
+        Foreground = DeskControls.Brush(VisualTokens.Colors.Warning),
+        Background = DeskControls.Brush(VisualTokens.Colors.Slate),
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Bottom,
+        Margin = new Thickness(12),
+        Padding = new Thickness(8, 4, 8, 4),
+        IsHitTestVisible = false,
         Text = "Ctrl+Alt+Espacio no disponible. Usa el minimapa para volver.",
         TextTrimming = TextTrimming.CharacterEllipsis,
         Visibility = Visibility.Collapsed
@@ -46,9 +50,10 @@ public sealed class MainWindow : Window
     private bool cancelActivation;
     private readonly DispatcherTimer previewTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly Button homeButton;
+    private readonly Dictionary<SpaceId, Button> spaceButtons = [];
     private readonly MinimapWindow minimap = new();
     private readonly TextBlock zoomValue = new() { MinWidth = 52, TextAlignment = TextAlignment.Center,
-        Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center };
+        Foreground = DeskControls.Brush(VisualTokens.Colors.Bone), VerticalAlignment = VerticalAlignment.Center };
     private readonly Button zoomOut = CreateZoomButton("−", "Alejar");
     private readonly Button zoomIn = CreateZoomButton("+", "Acercar");
     private readonly Button fitContent = CreateZoomButton("⛶", "Encuadrar el contenido");
@@ -75,10 +80,14 @@ public sealed class MainWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
-        Background = SystemColors.WindowBrush;
+        FontFamily = Theme.Font;
+        FontSize = VisualTokens.Type.Interface;
+        Foreground = DeskControls.Brush(VisualTokens.Colors.Bone);
+        Background = DeskControls.NightGrid();
+        UseLayoutRounding = true;
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
-            CaptionHeight = 30,
+            CaptionHeight = 0,
             ResizeBorderThickness = SystemParameters.WindowResizeBorderThickness,
             GlassFrameThickness = new Thickness(0),
             UseAeroCaptionButtons = false
@@ -125,6 +134,10 @@ public sealed class MainWindow : Window
             UpdateActivePanelBounds();
             UpdateMinimapVisibility();
         };
+        homeButton = new Button { Style = DeskControls.ButtonStyle, MinWidth = 110 };
+        homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
+        var toolbar = CreateToolbar();
+        var edgeBar = new EdgeBar(this, toolbar);
         var viewport = new Grid { ClipToBounds = true };
         viewport.PreviewMouseDown += (_, e) =>
         {
@@ -137,7 +150,12 @@ public sealed class MainWindow : Window
             if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left)
             {
                 e.Handled = true;
-                if (gesture is null)
+                if (edgeBar.IsMouseOver)
+                {
+                    e.Handled = false;
+                    ReturnToMap();
+                }
+                else if (gesture is null)
                 {
                     ReturnToMap();
                 }
@@ -192,28 +210,15 @@ public sealed class MainWindow : Window
                 e.Handled = true;
             }
         };
-        homeButton = new Button { MinWidth = 130, Padding = new Thickness(12, 4, 12, 4) };
-        homeButton.Click += (_, _) => ApplyNavigation(new ToggleHome());
-
-        viewport.Children.Add(new Viewbox
-        {
-            Stretch = Stretch.UniformToFill,
-            IsHitTestVisible = false,
-            Child = CreateLandscape()
-        });
         viewport.Children.Add(spaceView);
         viewport.Children.Add(windowPanels);
-        var toolbar = CreateToolbar();
         var zoomControls = CreateZoomControls();
-        viewport.Children.Add(toolbar);
         viewport.Children.Add(zoomControls);
-        windowPanels.OccludingControls = [toolbar, zoomControls];
-        var surface = new DockPanel();
-        var caption = CreateCaption();
-        DockPanel.SetDock(caption, Dock.Top);
-        surface.Children.Add(caption);
-        surface.Children.Add(viewport);
-        Content = surface;
+        viewport.Children.Add(returnShortcutStatus);
+        viewport.Children.Add(edgeBar);
+        windowPanels.OccludingControls = [toolbar, edgeBar.Grip, zoomControls, returnShortcutStatus];
+        toolbar.IsVisibleChanged += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, (Action)windowPanels.Render);
+        Content = viewport;
         RefreshSpace();
 
         minimap.CenterRequested += SelectMapPoint;
@@ -268,23 +273,9 @@ public sealed class MainWindow : Window
         };
     }
 
-    private DockPanel CreateCaption()
+    private StackPanel CreateAppButtons()
     {
-        var caption = new DockPanel { Height = 38, Background = SystemColors.ControlBrush };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
-        DockPanel.SetDock(buttons, Dock.Right);
-        WindowChrome.SetIsHitTestVisibleInChrome(buttons, true);
-        caption.Children.Add(buttons);
-        DockPanel.SetDock(returnShortcutStatus, Dock.Right);
-        caption.Children.Add(returnShortcutStatus);
-        caption.Children.Add(new TextBlock
-        {
-            Text = Title,
-            Foreground = SystemColors.ControlTextBrush,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(12, 0, 0, 0)
-        });
-
         AddButton("−", "Minimizar", () => SystemCommands.MinimizeWindow(this));
         var maximize = AddButton("", "", () =>
         {
@@ -300,11 +291,11 @@ public sealed class MainWindow : Window
         AddButton("×", "Cerrar", () => SystemCommands.CloseWindow(this));
         UpdateMaximize();
         StateChanged += (_, _) => UpdateMaximize();
-        return caption;
+        return buttons;
 
         Button AddButton(string glyph, string label, Action action)
         {
-            var button = new Button { Content = glyph, Width = 46, Height = 32, FontSize = 16, ToolTip = label };
+            var button = new Button { Content = glyph, Style = DeskControls.ButtonStyle, Width = 32, Height = 28, FontSize = 16, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(0), ToolTip = label };
             AutomationProperties.SetName(button, label);
             button.Click += (_, _) => action();
             buttons.Children.Add(button);
@@ -678,14 +669,18 @@ public sealed class MainWindow : Window
             Margin = new Thickness(0, 0, MinimapWindow.MapWidth + MinimapWindow.Inset + 8, MinimapWindow.Inset),
             Padding = new Thickness(5),
             CornerRadius = new CornerRadius(8),
-            Background = BrushFromRgb(24, 51, 65),
+            Background = DeskControls.Brush(VisualTokens.Colors.Slate),
             Child = row
         };
     }
 
     private static Button CreateZoomButton(string content, string name)
     {
-        var button = new Button { Content = content, Width = 36, Height = 32, FontSize = 16, ToolTip = name };
+        var button = new Button
+        {
+            Style = DeskControls.ButtonStyle, Content = content, Width = 36,
+            Height = VisualTokens.Size.Control, FontSize = 16, ToolTip = name
+        };
         AutomationProperties.SetName(button, name);
         return button;
     }
@@ -976,51 +971,46 @@ public sealed class MainWindow : Window
 
     private Border CreateToolbar()
     {
-        var selector = new ComboBox
-        {
-            ItemsSource = new[] { Programming, Games },
-            DisplayMemberPath = nameof(SpaceId.Value),
-            SelectedItem = session.ActiveSpaceId,
-            MinWidth = 142,
-            Margin = new Thickness(0, 0, 8, 0),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        AutomationProperties.SetName(selector, "Espacio");
-        selector.SelectionChanged += (_, _) =>
-        {
-            if (selector.SelectedItem is SpaceId space)
-            {
-                ApplyNavigation(new SwitchSpace(space));
-            }
-        };
-
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
-        controls.Children.Add(selector);
+        foreach (var space in session.Spaces.Keys)
+        {
+            var button = AddAction(space.Value, () => ApplyNavigation(new SwitchSpace(space)));
+            spaceButtons.Add(space, button);
+        }
+
+        homeButton.Margin = new Thickness(8, 0, 4, 0);
         controls.Children.Add(homeButton);
-        var folderButton = new Button
+        AddAction("Carpeta", () => ShellItems.Open(folders[session.ActiveSpaceId].Path), "Abrir carpeta del espacio");
+        AddAction("Añadir ventana", windowPanels.ShowPicker);
+        controls.Children.Add(CreateAppButtons());
+
+        Button AddAction(string label, Action action, string? tooltip = null)
         {
-            Content = "Abrir carpeta del espacio",
-            Margin = new Thickness(8, 0, 0, 0),
-            Padding = new Thickness(12, 4, 12, 4)
-        };
-        folderButton.Click += (_, _) => ShellItems.Open(folders[session.ActiveSpaceId].Path);
-        controls.Children.Add(folderButton);
-        var addWindow = new Button
-        {
-            Content = "Añadir ventana",
-            Margin = new Thickness(8, 0, 0, 0),
-            Padding = new Thickness(12, 4, 12, 4)
-        };
-        addWindow.Click += (_, _) => windowPanels.ShowPicker(addWindow);
-        controls.Children.Add(addWindow);
+            var button = new Button
+            {
+                Style = DeskControls.ButtonStyle, Content = label,
+                Margin = new Thickness(0, 0, 4, 0), ToolTip = tooltip
+            };
+            if (tooltip is not null)
+            {
+                AutomationProperties.SetName(button, tooltip);
+            }
+
+            button.Click += (_, _) => action();
+            controls.Children.Add(button);
+            return button;
+        }
+
         return new Border
         {
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(12),
-            Padding = new Thickness(6),
-            CornerRadius = new CornerRadius(8),
-            Background = BrushFromRgb(24, 51, 65),
+            Margin = new Thickness(8, 10, 8, 0),
+            Padding = new Thickness(5),
+            CornerRadius = new CornerRadius(VisualTokens.Radius.Island),
+            Background = DeskControls.Brush(VisualTokens.Colors.Slate),
+            BorderBrush = DeskControls.Brush(VisualTokens.Colors.Border),
+            BorderThickness = new Thickness(1),
             Child = controls
         };
     }
@@ -1054,6 +1044,12 @@ public sealed class MainWindow : Window
     private void RefreshSpace()
     {
         var navigation = session.Spaces[session.ActiveSpaceId];
+        foreach (var (space, button) in spaceButtons)
+        {
+            var selected = space == session.ActiveSpaceId;
+            button.Background = selected ? SelectedSpaceBrush : InactiveSpaceBrush;
+            AutomationProperties.SetItemStatus(button, selected ? "Espacio actual" : "");
+        }
         windowPanels.ShowSpace(session.ActiveSpaceId, navigation.Camera);
         spaceView.ShowSpace(session.ActiveSpaceId, navigation.Camera);
         var homeLabel = navigation.ReturnView.HasValue ? "Volver a mi vista" : "Inicio";
@@ -1061,49 +1057,4 @@ public sealed class MainWindow : Window
         AutomationProperties.SetName(homeButton, homeLabel);
     }
 
-    private static SurfaceCanvas CreateLandscape()
-    {
-        var landscape = new SurfaceCanvas
-        {
-            Width = InitialWidth,
-            Height = InitialHeight,
-            Background = new LinearGradientBrush(
-                Color.FromRgb(79, 116, 144), Color.FromRgb(236, 201, 163), 90)
-        };
-
-        var sun = new Ellipse { Width = 100, Height = 100, Fill = BrushFromRgb(255, 222, 174) };
-        SurfaceCanvas.SetLeft(sun, 752);
-        SurfaceCanvas.SetTop(sun, 125);
-        landscape.Children.Add(sun);
-
-        AddLayer(landscape, "M0,434 L0,312 158,232 241,277 386,168 498,257 563,221 735,352 893,244 1100,326 1100,434 Z",
-            BrushFromRgb(104, 131, 146));
-        AddLayer(landscape, "M0,449 L0,337 128,291 270,369 396,307 517,356 668,282 787,342 942,302 1100,365 1100,449 Z",
-            BrushFromRgb(66, 102, 118));
-        AddLayer(landscape, "M0,459 L0,387 145,362 246,398 411,382 550,426 722,388 887,414 1014,369 1100,382 1100,459 Z",
-            BrushFromRgb(41, 76, 88));
-
-        var lake = new Rectangle
-        {
-            Width = InitialWidth,
-            Height = 282,
-            Fill = new LinearGradientBrush(Color.FromRgb(125, 155, 157), Color.FromRgb(27, 65, 77), 90)
-        };
-        SurfaceCanvas.SetTop(lake, 438);
-        landscape.Children.Add(lake);
-
-        AddLayer(landscape, "M628,461 H903 L850,466 H661 Z M715,486 H981 L913,491 H753 Z M566,525 H766 L729,529 H587 Z",
-            new SolidColorBrush(Color.FromArgb(66, 255, 222, 174)));
-        AddLayer(landscape, "M0,612 Q160,623 306,679 Q448,708 585,720 H0 Z M1100,620 Q1000,643 934,688 L870,720 H1100 Z",
-            BrushFromRgb(18, 52, 63));
-        return landscape;
-    }
-
-    private static SolidColorBrush BrushFromRgb(byte red, byte green, byte blue) =>
-        new(Color.FromRgb(red, green, blue));
-
-    private static void AddLayer(SurfaceCanvas landscape, string outline, Brush fill)
-    {
-        landscape.Children.Add(new ShapePath { Data = System.Windows.Media.Geometry.Parse(outline), Fill = fill });
-    }
 }

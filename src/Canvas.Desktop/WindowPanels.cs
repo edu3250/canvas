@@ -13,7 +13,7 @@ namespace Canvas.Desktop;
 internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds) : System.Windows.Controls.Canvas, IDisposable
 {
     private const double TitleHeight = 28;
-    private static readonly Brush BackgroundFill = new SolidColorBrush(Color.FromRgb(24, 51, 65));
+    private static readonly Brush BackgroundFill = DeskControls.Brush(VisualTokens.Colors.Slate);
     private readonly WindowCatalog catalog = new();
     private readonly List<Panel> panels = [];
     private SpaceId space;
@@ -81,24 +81,16 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space)
         .Select(panel => new MinimapItem(panel.DisplayBounds, null, IsPanel: true)).ToArray();
 
-    public void ShowPicker(Button button)
+    public void ShowPicker()
     {
         RefreshWindows();
-        var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-        foreach (var window in catalog.List().Where(window => panels.All(panel => panel.Window.Identity != window.Identity)))
+        var candidates = catalog.List().Where(window => panels.All(panel => panel.Window.Identity != window.Identity))
+            .ToArray();
+        var picker = new WindowPicker(owner, candidates);
+        if (picker.ShowDialog() == true && picker.SelectedWindow is { } selected)
         {
-            var item = new MenuItem { Header = window.Title, ToolTip = window.Title, MaxWidth = 420 };
-            item.Click += (_, _) => Add(window);
-            menu.Items.Add(item);
+            Add(selected);
         }
-
-        if (menu.Items.Count == 0)
-        {
-            menu.Items.Add(new MenuItem { Header = "No hay ventanas disponibles", IsEnabled = false });
-        }
-
-        button.ContextMenu = menu;
-        menu.IsOpen = true;
     }
 
     private void Add(WindowCandidate selected)
@@ -333,7 +325,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     {
         var text = new TextBlock
         {
-            Foreground = Brushes.White,
+            Foreground = DeskControls.Brush(VisualTokens.Colors.Bone), FontFamily = Theme.Font,
             FontSize = 13,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(10, 0, 10, 0),
@@ -369,12 +361,12 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         {
             BorderBrush = BackgroundFill;
             BorderThickness = new Thickness(1);
-            Background = new SolidColorBrush(Color.FromRgb(35, 67, 84));
+            Background = DeskControls.Brush(VisualTokens.Colors.Raised);
         }
 
         public TextBlock Text { get; } = new()
         {
-            Foreground = Brushes.White,
+            Foreground = DeskControls.Brush(VisualTokens.Colors.Bone), FontFamily = Theme.Font,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap,
