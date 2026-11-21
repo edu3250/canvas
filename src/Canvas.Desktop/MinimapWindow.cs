@@ -1,6 +1,7 @@
 using Canvas.Domain;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -10,24 +11,62 @@ namespace Canvas.Desktop;
 
 internal sealed class MinimapWindow : Window
 {
-    public const double MapWidth = 184;
-    public const double MapHeight = 112;
-    public const double Inset = 12;
+    private const double MapWidth = 192;
+    private const double MapHeight = 114;
+    private const double IslandPadding = 8;
+    private const double Gap = 8;
+    public const double IslandWidth = MapWidth + 2 * IslandPadding;
+    public const double IslandHeight = MapHeight + Gap + VisualTokens.Size.Control + 2 * IslandPadding;
+    public const double Inset = 16;
 
     private readonly MapSurface surface = new();
+    private readonly Border island;
+    private readonly TextBlock zoomValue = new()
+    {
+        Text = "100 %", TextAlignment = TextAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center
+    };
+    private readonly Button zoomOut = CreateZoomButton("−", "Alejar", "Ctrl+-");
+    private readonly Button zoomIn = CreateZoomButton("+", "Acercar", "Ctrl++");
+    private readonly Button fitContent = CreateZoomButton("⛶", "Encuadrar el contenido", "Ctrl+0");
 
     public MinimapWindow()
     {
-        Title = "Minimapa";
-        Width = MapWidth;
-        Height = MapHeight;
+        Title = "Isla del mapa";
+        Width = IslandWidth;
+        Height = IslandHeight;
+        FontFamily = Theme.Font;
+        FontSize = VisualTokens.Type.Interface;
+        Foreground = DeskControls.Brush(VisualTokens.Colors.Bone);
+        Background = DeskControls.Brush(VisualTokens.Colors.Slate);
+        UseLayoutRounding = true;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.Manual;
         ShowActivated = false;
         ShowInTaskbar = false;
         Topmost = true;
-        Content = surface;
+        surface.Height = MapHeight;
+        var zoom = new Grid { Margin = new Thickness(0, Gap, 0, 0) };
+        AddZoomControl(zoomOut, new GridLength(36));
+        AddZoomControl(zoomValue, new GridLength(1, GridUnitType.Star));
+        AddZoomControl(zoomIn, new GridLength(36));
+        AddZoomControl(fitContent, new GridLength(36));
+        zoomOut.Click += (_, _) => ZoomRequested?.Invoke(-1);
+        zoomIn.Click += (_, _) => ZoomRequested?.Invoke(1);
+        fitContent.Click += (_, _) => FitRequested?.Invoke();
+        var contents = new StackPanel();
+        contents.Children.Add(surface);
+        contents.Children.Add(zoom);
+        island = new Border
+        {
+            CornerRadius = new CornerRadius(VisualTokens.Radius.Island),
+            Background = Background,
+            Padding = new Thickness(IslandPadding),
+            Child = contents
+        };
+        Content = island;
+
         AutomationProperties.SetName(surface, "Minimapa del espacio");
         surface.ToolTip = "Centrar el lienzo en este punto";
         surface.Cursor = Cursors.Hand;
@@ -40,12 +79,39 @@ internal sealed class MinimapWindow : Window
                 e.Handled = true;
             }
         };
+
+        void AddZoomControl(UIElement control, GridLength width)
+        {
+            Grid.SetColumn(control, zoom.ColumnDefinitions.Count);
+            zoom.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+            zoom.Children.Add(control);
+        }
     }
 
     public event Action<DomainPoint>? CenterRequested;
+    public event Action<double>? ZoomRequested;
+    public event Action? FitRequested;
 
-    public void UpdateMap(CanvasBounds viewport, IReadOnlyList<MinimapItem> items) =>
+    public void UpdateMap(CanvasBounds viewport, double zoom, IReadOnlyList<MinimapItem> items)
+    {
+        zoomValue.Text = zoom < 0.01 ? "<1 %" : $"{zoom * 100:0} %";
+        zoomOut.IsEnabled = zoom > CameraGestures.MinZoom;
+        zoomIn.IsEnabled = zoom < CameraGestures.MaxZoom;
+        fitContent.IsEnabled = items.Count != 0;
         surface.UpdateMap(viewport, items);
+    }
+
+    private static Button CreateZoomButton(string content, string name, string shortcut)
+    {
+        var button = new Button
+        {
+            Style = DeskControls.ButtonStyle, Content = content, Height = VisualTokens.Size.Control,
+            FontSize = 16, ToolTip = $"{name} ({shortcut})", Focusable = false
+        };
+        AutomationProperties.SetName(button, name);
+        AutomationProperties.SetAcceleratorKey(button, shortcut);
+        return button;
+    }
 
     public void EnsureTopmost()
     {
@@ -72,9 +138,15 @@ internal sealed class MinimapWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        var source = (HwndSource)PresentationSource.FromVisual(this);
+        var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
         NativePanelInput.PreventActivation(source.Handle);
         source.AddHook(PreventMouseActivation);
+        if (!SystemParameters.HighContrast && MapBackdrop.TryEnable(source.Handle))
+        {
+            source.CompositionTarget.BackgroundColor = Colors.Transparent;
+            Background = Brushes.Transparent;
+            island.Background = DeskControls.Brush(VisualTokens.Colors.Slate.WithAlpha(0.88));
+        }
     }
 
     private static IntPtr PreventMouseActivation(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -92,7 +164,7 @@ internal sealed class MinimapWindow : Window
 
     private sealed class MapSurface : FrameworkElement
     {
-        private static readonly Brush Background = DeskControls.Brush(VisualTokens.Colors.Slate);
+        private static readonly Brush Background = DeskControls.Brush(VisualTokens.Colors.Night);
         private static readonly Brush Marker = DeskControls.Brush(VisualTokens.Colors.Bone);
         private static readonly Brush ViewFill = DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
         private static readonly Pen ViewOutline = new(DeskControls.Brush(VisualTokens.DefaultLight.Color), 1);
@@ -115,7 +187,9 @@ internal sealed class MinimapWindow : Window
 
         protected override void OnRender(DrawingContext drawing)
         {
-            drawing.DrawRectangle(Background, Frame, new Rect(0.5, 0.5, RenderSize.Width - 1, RenderSize.Height - 1));
+            drawing.DrawRoundedRectangle(Background, Frame,
+                new Rect(0.5, 0.5, RenderSize.Width - 1, RenderSize.Height - 1),
+                VisualTokens.Radius.Control, VisualTokens.Radius.Control);
             if (projection is not { } map)
             {
                 return;
