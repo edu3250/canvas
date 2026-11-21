@@ -16,8 +16,8 @@ internal sealed class SpaceView : SurfaceCanvas
 {
     private const double TileSize = 88;
     private const double IconSize = 64;
-    private static readonly Brush SelectionFill = new SolidColorBrush(Color.FromArgb(85, 74, 156, 245));
-    private static readonly Brush SelectionBorder = new SolidColorBrush(Color.FromRgb(160, 212, 255));
+    private static readonly Brush SelectionFill = DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
+    private static readonly Brush SelectionBorder = DeskControls.Brush(VisualTokens.DefaultLight.Color);
     private readonly Dictionary<SpaceId, Dictionary<string, IconPlacement>> layouts;
     private readonly ShellItems shell;
     private readonly HashSet<string> selected = [];
@@ -368,8 +368,9 @@ internal sealed class SpaceView : SurfaceCanvas
     {
         private readonly TextBlock label = new()
         {
-            FontSize = 12,
-            Foreground = Brushes.White,
+            FontSize = VisualTokens.Type.Detail,
+            FontFamily = Theme.Font,
+            Foreground = DeskControls.Brush(VisualTokens.Colors.Bone),
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextAlignment = TextAlignment.Center
         };
@@ -387,7 +388,7 @@ internal sealed class SpaceView : SurfaceCanvas
                 Margin = new Thickness(2, 2, 2, 0),
                 Padding = new Thickness(3, 1, 3, 1),
                 CornerRadius = new CornerRadius(4),
-                Background = new SolidColorBrush(Color.FromRgb(24, 51, 65)),
+                Background = DeskControls.Brush(VisualTokens.Colors.Slate),
                 Child = label
             });
             Child = content;

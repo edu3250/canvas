@@ -92,11 +92,11 @@ internal sealed class MinimapWindow : Window
 
     private sealed class MapSurface : FrameworkElement
     {
-        private static readonly Brush Background = new SolidColorBrush(Color.FromRgb(24, 51, 65));
-        private static readonly Brush Marker = new SolidColorBrush(Color.FromRgb(225, 239, 248));
-        private static readonly Brush ViewFill = new SolidColorBrush(Color.FromArgb(45, 125, 202, 250));
-        private static readonly Pen ViewOutline = new(new SolidColorBrush(Color.FromRgb(147, 210, 250)), 1);
-        private static readonly Pen Frame = new(new SolidColorBrush(Color.FromRgb(94, 131, 152)), 1);
+        private static readonly Brush Background = DeskControls.Brush(VisualTokens.Colors.Slate);
+        private static readonly Brush Marker = DeskControls.Brush(VisualTokens.Colors.Bone);
+        private static readonly Brush ViewFill = DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
+        private static readonly Pen ViewOutline = new(DeskControls.Brush(VisualTokens.DefaultLight.Color), 1);
+        private static readonly Pen Frame = new(DeskControls.Brush(VisualTokens.Colors.Border), 1);
         private Camera? projection;
         private CanvasBounds viewport;
         private IReadOnlyList<MinimapItem> items = [];
