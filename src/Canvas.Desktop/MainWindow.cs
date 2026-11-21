@@ -446,7 +446,10 @@ public sealed class MainWindow : Window
         try
         {
             var start = ActiveCamera;
-            var bounds = panel.DisplayBounds;
+            NativeWindowPlacement.EnsureCurrent(panel.Instance);
+            var frame = placement.ReadNormalScreenBounds(identity.Handle)?.Visible ??
+                placement.Capture(identity.Handle).NormalPosition;
+            var bounds = windowPanels.GetActivationBounds(panel, frame);
             var target = fromMinimap
                 ? CameraGestures.CenterOn(bounds.Center, ViewportSize, 1)
                 : CameraGestures.ApproachPanel(start, bounds, ViewportSize);
@@ -549,6 +552,17 @@ public sealed class MainWindow : Window
         windowPanels.ActivePanel = null;
         edgeTimer.Stop();
 
+        var restoreFailed = false;
+        try
+        {
+            placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
+            restoreFailed = true;
+        }
+
         // The source stays available to DWM. Its original placement stays in the recovery journal.
         if (activateCanvas)
         {
@@ -563,15 +577,6 @@ public sealed class MainWindow : Window
             minimap.EnsureTopmost();
         }
 
-        try
-        {
-            placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
-        }
-        catch (Exception error) when (IsPanelError(error))
-        {
-            Trace.TraceWarning(error.ToString());
-        }
-
         if (restoreCamera)
         {
             ApplyNavigation(new SetCamera(mapCamera));
@@ -579,6 +584,11 @@ public sealed class MainWindow : Window
 
         windowPanels.Render();
         SyncMinimapWindow();
+        if (restoreFailed)
+        {
+            MessageBox.Show(this, "Windows dejó la ventana maximizada. Puedes restaurar su tamaño desde la propia ventana.",
+                Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void UpdateMapPriority()

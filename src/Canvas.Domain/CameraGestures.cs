@@ -16,9 +16,12 @@ public static class CameraGestures
         }
 
         var center = Geometry.WorldToView(panel.Center, start);
-        var left = Math.Clamp(center.X - panel.Width / 2, 0, Math.Max(0, viewport.X - panel.Width));
-        var top = Math.Clamp(center.Y - panel.Height / 2, 0, Math.Max(0, viewport.Y - panel.Height));
+        var left = FitAxis(center.X - panel.Width / 2, viewport.X - panel.Width);
+        var top = FitAxis(center.Y - panel.Height / 2, viewport.Y - panel.Height);
         return new Camera(new Point(panel.X - left, panel.Y - top), 1);
+
+        static double FitAxis(double offset, double spare) =>
+            Math.Clamp(offset, Math.Min(0, spare), Math.Max(0, spare));
     }
 
     public static Camera InterpolateAround(Camera start, Camera target, Point anchor, double progress)

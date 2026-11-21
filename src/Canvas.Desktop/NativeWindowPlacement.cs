@@ -111,18 +111,22 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
     public void RestoreMaximizedPanel(WindowIdentity identity, WindowInstance instance)
     {
-        if (!IsMaximized(identity.Handle) || !instance.IsCurrent())
+        if (!instance.IsCurrent() || !IsMaximized(identity.Handle))
         {
             return;
         }
 
-        var current = Capture(identity.Handle);
-        if (current.ShowCommand == 3)
+        // Let Windows use its current normal placement and preserve foreground ownership.
+        const int ShowNoActivate = 4;
+        ShowWindow((nint)identity.Handle, ShowNoActivate);
+        if (instance.IsCurrent() && IsMaximized(identity.Handle))
         {
-            EnsureCurrent(instance);
-            Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
+            throw new InvalidOperationException("Windows did not restore the maximized panel.");
         }
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(nint window, int command);
 
     public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
     {

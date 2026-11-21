@@ -50,7 +50,7 @@ public class CameraGesturesTests
 
     [Theory]
     [InlineData(400, 1550, 600)]
-    [InlineData(1200, 350, 0)]
+    [InlineData(1200, 350, -125)]
     public void PanelApproachMovesOnlyTheAxisThatNeedsRoom(double width, double x, double expectedLeft)
     {
         var start = new Camera(new Point(0, 0), 0.5);
@@ -58,5 +58,19 @@ public class CameraGesturesTests
         var target = CameraGestures.ApproachPanel(start, panel, new Point(1000, 600));
 
         Assert.Equal(new Point(expectedLeft, 200), Geometry.WorldToView(new Point(panel.X, panel.Y), target));
+    }
+
+    [Theory]
+    [InlineData(350, 180, -125, -110)]
+    [InlineData(800, 600, 0, 0)]
+    [InlineData(0, 0, -200, -200)]
+    public void OversizedPanelKeepsBothOffsetsWithinTheAreaItCanCover(
+        double x, double y, double expectedLeft, double expectedTop)
+    {
+        var start = new Camera(new Point(0, 0), 0.5);
+        var panel = new CanvasBounds(x, y, 1200, 800);
+        var target = CameraGestures.ApproachPanel(start, panel, new Point(1000, 600));
+
+        Assert.Equal(new Point(expectedLeft, expectedTop), Geometry.WorldToView(new Point(x, y), target));
     }
 }

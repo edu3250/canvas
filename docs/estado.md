@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** corregir el foco al volver desde maximizada y el encuadre de paneles grandes, probar la continuidad visual del paso 6 y revisar el [PR #46](https://github.com/edu3250/canvas/pull/46) en otra sesión. Tras fusionarlo se cierra el hito 09 y puede comenzar Mesa de luz.
+- **Siguiente paso:** probar el regreso desde maximizada con el atajo y el minimapa, incluido el primer clic, y revisar el [PR #46](https://github.com/edu3250/canvas/pull/46) en otra sesión. Tras fusionarlo se cierra el hito 09 y puede comenzar Mesa de luz.
 - **Definido:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Aplica el [sistema visual](sistema-visual/mesa-de-luz.html) a la app: orilla retráctil, paneles con asa y lengüeta, isla del mapa, luz e imagen por espacio. Se construye después de cerrar el 09.
 
 ## Qué funciona hoy
