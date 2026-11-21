@@ -40,6 +40,21 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         return PointToScreen(new WpfPoint(point.X, point.Y));
     }
 
+    public CanvasBounds GetActivationBounds(Panel panel, WindowRectangle frame)
+    {
+        if (panel.WorkingSize is not null)
+        {
+            return panel.Bounds;
+        }
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        return panel.Bounds with
+        {
+            Width = (frame.Right - (double)frame.Left) / dpi.DpiScaleX + 2,
+            Height = (frame.Bottom - (double)frame.Top) / dpi.DpiScaleY + TitleHeight + 2
+        };
+    }
+
     public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)
     {
         var dpi = VisualTreeHelper.GetDpi(this);

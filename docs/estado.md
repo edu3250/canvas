@@ -2,13 +2,12 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 20-11-2026.
+**Actualizado:** 21-11-2026.
 
 ## Ahora
 
-- **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** construir el paso 6 del hito 09, la continuidad visual acordada para la cámara y la activación de paneles. Con él se cierra el hito: su paso 5 pasó al hito 10.
-- **Definido:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Aplica el [sistema visual](sistema-visual/mesa-de-luz.html) a la app: orilla retráctil, paneles con asa y lengüeta, isla del mapa, luz e imagen por espacio. Se construye después de cerrar el 09.
+- **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
+- **Siguiente paso:** construir el paso 1 del [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md), con la base visual, la orilla retráctil y el diálogo «Añadir ventana».
 
 ## Qué funciona hoy
 
@@ -20,7 +19,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 | Activar una ventana real en el rectángulo de su panel con el vecino visible | `prototipos/panel-nativo` | Prototipo verificado con VS Code ([ensayo](inspeccion/ensayo-panel-nativo.md)) |
 | Salir al escritorio y volver al lienzo conservando ambos acomodos | prototipos | Verificado con ventanas propias y con VS Code ([fase 3](inspeccion/f03-cierre.md), [fase 4](inspeccion/f04-cierre.md)) |
 
-El lienzo abre maximizado e incluye control de zoom y minimapa de Inicio ([PR #40](https://github.com/edu3250/escritorio-canvas/pull/40)). El selector muestra ventanas abiertas como miniaturas DWM en paneles arrastrables ([PR #42](https://github.com/edu3250/escritorio-canvas/pull/42)). La rama del paso 4 permite trabajar en la ventana real dentro de su panel y volver al mapa.
+El lienzo abre maximizado e incluye control de zoom y minimapa de Inicio ([PR #40](https://github.com/edu3250/escritorio-canvas/pull/40)). El selector muestra ventanas abiertas como miniaturas DWM en paneles arrastrables ([PR #42](https://github.com/edu3250/escritorio-canvas/pull/42)). Se puede trabajar en la ventana real dentro de su panel y volver al mapa ([PR #43](https://github.com/edu3250/canvas/pull/43)).
 
 ## Riesgos abiertos
 
