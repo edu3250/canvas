@@ -1,6 +1,6 @@
 # Hito 10 · Mesa de luz
 
-**Estado:** en definición
+**Estado:** en curso
 
 ## Objetivo
 
@@ -42,7 +42,7 @@ Respuesta del usuario a la primera ronda: «sí a todas». A la segunda: «sí a
 
 ## Pasos
 
-- [ ] 1. Base visual: Geist y la paleta en toda la app, noche con retícula, orilla retráctil con el selector de espacio y los botones de la app, iconos de Inicio y diálogo «Añadir ventana». Fuera de la zona sensible · `src/Canvas.Desktop`
+- [x] 1. Base visual: Geist y la paleta en toda la app, noche con retícula, orilla retráctil con el selector de espacio y los botones de la app, iconos de Inicio y diálogo «Añadir ventana». Fuera de la zona sensible · `src/Canvas.Desktop`
 - [ ] 2. Isla del mapa: minimapa y zoom juntos, con vidrio o pizarra opaca. Fuera de la zona sensible · `src/Canvas.Desktop/MinimapWindow.cs`, `MainWindow.cs`
 - [ ] 3. Paneles: asa con icono y título y arrastre solo por ella, lengüeta visual, luz y halo del panel activo, media luz y relevo de paneles con el cambio de luz entre espacios. Fuera de la zona sensible · `src/Canvas.Desktop/WindowPanels.cs`, `SpaceView.cs`, `src/Canvas.Domain`, `tests/`
 - [ ] 4. **Zona sensible.** Acciones de la lengüeta: ✕ con `WM_CLOSE`, ⤢, plegar sin minimizar en Windows, «Quitar del lienzo» y aviso «minimizada» cuando la ventana se minimiza con su botón nativo (antes paso 5 del hito 09) · `src/Canvas.Desktop`, `tests/`
@@ -70,3 +70,4 @@ Ninguno.
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
 | 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en dos rondas (Q1–Q14) a partir de la maqueta de Mesa de luz y los tokens de `main`. Redacción del hito y traspaso del paso 5 del hito 09. | [#45](https://github.com/edu3250/canvas/pull/45) | Fusionar el hito, cerrar el 09 y construir el paso 1. |
+| 21-11-2026 | Construir | Codex · GPT-6 | Se aplicaron Geist, la paleta y la retícula, con orilla retráctil y un diálogo para añadir ventanas. Compilación limpia y 96 pruebas aprobadas. Fuera de pantalla se observó el encuadre de la orilla a 640 × 480 y el recorte de un título largo en el diálogo. | [#47](https://github.com/edu3250/canvas/pull/47) | Prueba de uso y autorización de fusión. Después, paso 2. |
