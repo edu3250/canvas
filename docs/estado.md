@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **En curso:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). El paso 1 aplica la base visual, la orilla retráctil y el diálogo «Añadir ventana» en el [PR #47](https://github.com/edu3250/canvas/pull/47).
-- **Siguiente paso:** construir el paso 2 del hito 10 en un PR propio: reunir el minimapa y el zoom en la isla del mapa, con vidrio cuando esté disponible y pizarra opaca como alternativa.
+- **Siguiente paso:** probar la isla del mapa y autorizar la fusión del [PR #48](https://github.com/edu3250/canvas/pull/48). Después, construir las asas y lengüetas del paso 3.
 
 ## Qué funciona hoy
 

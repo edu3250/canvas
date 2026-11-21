@@ -22,3 +22,4 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Luz del espacio (color que marca el panel activo) | `SpaceLight` |
 | Valores del sistema visual Mesa de luz | `VisualTokens` |
 | Orilla | `EdgeBar` |
+| Isla del mapa | `MinimapWindow` |
