@@ -47,6 +47,15 @@ internal sealed class MinimapWindow : Window
     public void UpdateMap(CanvasBounds viewport, IReadOnlyList<MinimapItem> items) =>
         surface.UpdateMap(viewport, items);
 
+    public void EnsureTopmost()
+    {
+        if (IsVisible && PresentationSource.FromVisual(this) is HwndSource source &&
+            !NativePanelInput.IsTopmost(source.Handle))
+        {
+            NativePanelInput.RaiseWindow(source.Handle, topmost: true);
+        }
+    }
+
     public void AnchorTo(FrameworkElement viewport)
     {
         if (PresentationSource.FromVisual(viewport)?.CompositionTarget is not { } target)

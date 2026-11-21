@@ -29,17 +29,24 @@ internal static class NativePanelInput
     private const int Topmost = 0x00000008;
     private const int NoActivateStyle = 0x08000000;
 
+    public static bool IsForeground(nint window) => GetForegroundWindow() == window;
+
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+
+    public static bool IsTopmost(nint window) => (GetWindowLong(window, ExtendedStyle) & Topmost) != 0;
+
     public static bool KeepCanvasBehind(nint canvas, nint application)
     {
         const uint NoSize = 0x0001, NoMove = 0x0002, NoActivate = 0x0010, NoOwnerZOrder = 0x0200;
-        var after = (GetWindowLong(application, ExtendedStyle) & Topmost) == 0 ? application : 0;
+        var after = IsTopmost(application) ? 0 : application;
         return SetWindowPos(canvas, after, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
     }
 
-    public static void RaiseCanvas(nint canvas)
+    public static void RaiseWindow(nint window, bool topmost = false)
     {
         const uint NoSize = 0x0001, NoMove = 0x0002, NoActivate = 0x0010, NoOwnerZOrder = 0x0200;
-        SetWindowPos(canvas, 0, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
+        SetWindowPos(window, topmost ? -1 : 0, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
     }
 
     public static void PreventActivation(nint window) =>

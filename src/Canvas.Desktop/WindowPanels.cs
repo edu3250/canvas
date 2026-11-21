@@ -25,6 +25,11 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
     public Panel? ActivePanel { get; set; }
 
+    public bool HasTopmostSource() => panels.Any(panel =>
+        NativePanelInput.IsTopmost((nint)panel.Window.Handle) &&
+        WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
+        !WindowCatalog.IsMinimized(panel.Window.Handle));
+
     public Panel? FindPanel(DomainPoint point) => panels.LastOrDefault(panel =>
         panel.Space == space && point.X >= panel.DisplayBounds.X && point.X <= panel.DisplayBounds.X + panel.DisplayBounds.Width &&
         point.Y >= panel.DisplayBounds.Y && point.Y <= panel.DisplayBounds.Y + panel.DisplayBounds.Height);

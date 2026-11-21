@@ -30,6 +30,7 @@ public sealed class MainWindow : Window
     private readonly NativeWindowPlacement placement;
     private readonly DispatcherTimer edgeTimer = new() { Interval = TimeSpan.FromMilliseconds(75) };
     private Camera mapCamera;
+    private WindowPanels.Panel? mapReturnSource;
     private nint windowHandle;
     private bool hotkeyRegistered;
     private readonly TextBlock returnShortcutStatus = new()
@@ -104,6 +105,7 @@ public sealed class MainWindow : Window
         spaceView = new SpaceView(shell, folders.Keys);
         windowPanels = new WindowPanels(this, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
         windowPanels.MapChanged += RefreshMap;
+        windowPanels.MapChanged += UpdateMapPriority;
         windowPanels.PreviewMouseWheel += ZoomSurface;
         windowPanels.ActivationRequested += ActivatePanel;
         previewTimer.Tick += (_, _) =>
@@ -116,6 +118,7 @@ public sealed class MainWindow : Window
             }
 
             windowPanels.RefreshWindows();
+            UpdateMapPriority();
         };
         edgeTimer.Tick += (_, _) =>
         {
@@ -152,8 +155,10 @@ public sealed class MainWindow : Window
             }
         };
         spaceView.PreviewMouseWheel += ZoomSurface;
+        Activated += (_, _) => UpdateMapPriority();
         Deactivated += (_, _) =>
         {
+            UpdateMapPriority();
             cancelActivation = true;
             windowPanels.CancelDrag();
             CancelGesture();
@@ -353,6 +358,7 @@ public sealed class MainWindow : Window
         {
             minimap.Show();
         }
+        minimap.EnsureTopmost();
     }
 
     private void RefreshMap()
@@ -458,6 +464,7 @@ public sealed class MainWindow : Window
             saved = true;
             windowPanels.SuspendPreview(panel);
             windowPanels.ActivePanel = panel;
+            UpdateMapPriority();
 
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
             placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y), panel.WorkingSize);
@@ -487,6 +494,7 @@ public sealed class MainWindow : Window
             ReleaseReturnShortcut();
             windowPanels.ActivePanel = null;
             var restored = !saved || RestorePanel(panel);
+            UpdateMapPriority();
             ApplyNavigation(new SetCamera(previous));
             MessageBox.Show(this, restored ? "No se pudo activar la ventana en su panel." :
                 "No se pudo devolver la ventana. Cierra Escritorio Canvas y ejecuta «Devolver ventanas».",
@@ -529,7 +537,7 @@ public sealed class MainWindow : Window
 
     private void ReturnToMap(bool activateCanvas = true, bool restoreCamera = true)
     {
-        if (windowPanels.ActivePanel is null)
+        if (windowPanels.ActivePanel is not { } panel)
         {
             return;
         }
@@ -543,8 +551,15 @@ public sealed class MainWindow : Window
         // The source stays available to DWM. Its original placement stays in the recovery journal.
         if (activateCanvas)
         {
-            NativePanelInput.RaiseCanvas(windowHandle);
+            mapReturnSource = panel;
+            NativePanelInput.RaiseWindow(windowHandle);
             Activate();
+        }
+        UpdateMapPriority();
+        if (activateCanvas && Topmost)
+        {
+            NativePanelInput.RaiseWindow(windowHandle, topmost: true);
+            minimap.EnsureTopmost();
         }
 
         if (restoreCamera)
@@ -554,6 +569,23 @@ public sealed class MainWindow : Window
 
         windowPanels.Render();
         SyncMinimapWindow();
+    }
+
+    private void UpdateMapPriority()
+    {
+        // Only the foreground map needs to compete with managed always-on-top sources.
+        var returningFromTopmostSource = mapReturnSource is { } source &&
+            NativePanelInput.IsForeground((nint)source.Window.Handle) &&
+            NativePanelInput.IsTopmost((nint)source.Window.Handle) &&
+            WindowCatalog.IsLive(source.Window.Identity, source.Instance);
+        if (!returningFromTopmostSource || windowPanels.ActivePanel is not null)
+        {
+            mapReturnSource = null;
+        }
+
+        Topmost = (IsActive || returningFromTopmostSource) && WindowState != WindowState.Minimized &&
+            windowPanels.ActivePanel is null && windowPanels.HasTopmostSource();
+        minimap.EnsureTopmost();
     }
 
     private void ReleaseReturnShortcut()
