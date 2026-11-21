@@ -78,22 +78,24 @@ internal sealed class WindowPicker : Window
             Foreground = DeskControls.Brush(VisualTokens.Colors.Night)
         };
         add.SetResourceReference(Control.BackgroundProperty, ThemeKeys.Light);
-        add.Click += (_, _) => Confirm();
+        add.Click += (_, _) => Confirm(options.SelectedItem as WindowCandidate);
         options.SelectionChanged += (_, _) => add.IsEnabled = options.SelectedItem is WindowCandidate;
         options.PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter)
             {
-                Confirm();
+                Confirm(options.SelectedItem as WindowCandidate);
                 e.Handled = true;
             }
         };
         options.MouseDoubleClick += (_, e) =>
         {
-            if (e.OriginalSource is DependencyObject source &&
-                ItemsControl.ContainerFromElement(options, source) is not null)
+            if (e.ChangedButton == MouseButton.Left &&
+                e.OriginalSource is DependencyObject source &&
+                ItemsControl.ContainerFromElement(options, source) is ListBoxItem row)
             {
-                Confirm();
+                Confirm(options.ItemContainerGenerator.ItemFromContainer(row) as WindowCandidate);
+                e.Handled = true;
             }
         };
         Loaded += (_, _) =>
@@ -140,9 +142,9 @@ internal sealed class WindowPicker : Window
         return new DataTemplate { VisualTree = title };
     }
 
-    private void Confirm()
+    private void Confirm(WindowCandidate? selected)
     {
-        if (options.SelectedItem is WindowCandidate selected)
+        if (selected is not null)
         {
             SelectedWindow = selected;
             DialogResult = true;

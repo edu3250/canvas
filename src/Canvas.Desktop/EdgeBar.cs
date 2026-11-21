@@ -18,7 +18,7 @@ internal sealed class EdgeBar : Grid
     public EdgeBar(Window owner, Border bar)
     {
         this.bar = bar;
-        HorizontalAlignment = HorizontalAlignment.Center;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
         VerticalAlignment = VerticalAlignment.Top;
 
         var light = new Border
@@ -36,7 +36,7 @@ internal sealed class EdgeBar : Grid
         grip = new Button
         {
             Style = DeskControls.ButtonStyle, Width = 120, Height = 20, MinHeight = 0,
-            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
             Padding = new Thickness(0), Content = marker,
             Background = System.Windows.Media.Brushes.Transparent,
             BorderThickness = new Thickness(0)
