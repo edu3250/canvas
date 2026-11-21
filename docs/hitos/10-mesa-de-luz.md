@@ -69,4 +69,4 @@ Ninguno.
 
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
-| 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en dos rondas (Q1–Q14) a partir de la maqueta de Mesa de luz y los tokens de `main`. Redacción del hito y traspaso del paso 5 del hito 09. | Pendiente | Fusionar el hito y construir el paso 1. |
+| 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | Entrevista en dos rondas (Q1–Q14) a partir de la maqueta de Mesa de luz y los tokens de `main`. Redacción del hito y traspaso del paso 5 del hito 09. | [#45](https://github.com/edu3250/canvas/pull/45) | Fusionar el hito, cerrar el 09 y construir el paso 1. |
