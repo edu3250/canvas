@@ -30,7 +30,9 @@ internal static class Program
                 return 0;
             }
 
-            var exitCode = new Application().Run(new MainWindow(recovery, placement));
+            var application = new Application();
+            application.Resources.MergedDictionaries.Add(Theme.CreateResources(VisualTokens.DefaultLight));
+            var exitCode = application.Run(new MainWindow(recovery, placement));
             return TryRestore(recovery, title) ? exitCode : 1;
         }
         catch (InvalidDataException error)
