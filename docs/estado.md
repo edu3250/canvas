@@ -7,7 +7,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** repetir el vídeo con Claude y Edge inicialmente minimizados. Verificar contenido en movimiento tras volver al mapa y devolución del estado minimizado al cerrar. Revisar el [PR #43](https://github.com/edu3250/escritorio-canvas/pull/43) antes del paso 5.
+- **Siguiente paso:** corregir el regreso al mapa desde una ventana siempre encima en el [PR #43](https://github.com/edu3250/canvas/pull/43). El usuario confirmó la prueba de uso. Reservar las mejoras de interacción inspiradas en Deska para otro PR.
 
 ## Qué funciona hoy
 
