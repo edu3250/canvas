@@ -107,6 +107,23 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
     [DllImport("user32.dll")]
     private static extern bool IsZoomed(nint window);
 
+    public bool IsMaximized(long handle) => IsZoomed((nint)handle);
+
+    public void RestoreMaximizedPanel(WindowIdentity identity, WindowInstance instance)
+    {
+        if (!IsMaximized(identity.Handle) || !instance.IsCurrent())
+        {
+            return;
+        }
+
+        var current = Capture(identity.Handle);
+        if (current.ShowCommand == 3)
+        {
+            EnsureCurrent(instance);
+            Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
+        }
+    }
+
     public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
     {
         EnsureCurrent(instance);

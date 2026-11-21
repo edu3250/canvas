@@ -446,10 +446,11 @@ public sealed class MainWindow : Window
         try
         {
             var start = ActiveCamera;
-            var target = start.Zoom == 1 && !fromMinimap
-                ? start
-                : CameraGestures.CenterOn(panel.Bounds.Center, ViewportSize, 1);
-            if (!await AnimateActivationAsync(start, target))
+            var bounds = panel.DisplayBounds;
+            var target = fromMinimap
+                ? CameraGestures.CenterOn(bounds.Center, ViewportSize, 1)
+                : CameraGestures.ApproachPanel(start, bounds, ViewportSize);
+            if (!await AnimateActivationAsync(start, target, bounds.Center))
             {
                 if (!closed)
                 {
@@ -462,7 +463,6 @@ public sealed class MainWindow : Window
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             recovery.SaveOriginal(identity.Handle, panel.Instance);
             saved = true;
-            windowPanels.SuspendPreview(panel);
             windowPanels.ActivePanel = panel;
             UpdateMapPriority();
 
@@ -482,6 +482,8 @@ public sealed class MainWindow : Window
             }
 
             mapCamera = previous;
+            windowPanels.SuspendPreview(panel);
+            UpdateActivePanelBounds(syncPosition: false);
             windowPanels.Render();
             minimap.Hide();
             hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
@@ -506,13 +508,12 @@ public sealed class MainWindow : Window
         }
     }
 
-    private async Task<bool> AnimateActivationAsync(Camera start, Camera target)
+    private async Task<bool> AnimateActivationAsync(Camera start, Camera target, DomainPoint anchor)
     {
         if (start != target && SystemParameters.ClientAreaAnimation)
         {
             var elapsed = Stopwatch.StartNew();
-            var time = 0d;
-            while (time < 1)
+            while (true)
             {
                 await Task.Delay(16);
                 if (closed || cancelActivation)
@@ -520,19 +521,19 @@ public sealed class MainWindow : Window
                     return false;
                 }
 
-                time = Math.Min(elapsed.Elapsed.TotalMilliseconds / ActivationDurationMs, 1);
+                var time = elapsed.Elapsed.TotalMilliseconds / ActivationDurationMs;
+                if (time >= 1)
+                {
+                    break;
+                }
+
                 var progress = time * time * (3 - 2 * time);
-                var position = new DomainPoint(
-                    Interpolate(start.Position.X, target.Position.X, progress),
-                    Interpolate(start.Position.Y, target.Position.Y, progress));
-                ApplyNavigation(new SetCamera(new Camera(position, Interpolate(start.Zoom, target.Zoom, progress))));
+                ApplyNavigation(new SetCamera(CameraGestures.InterpolateAround(start, target, anchor, progress)));
             }
         }
 
         ApplyNavigation(new SetCamera(target));
         return true;
-
-        static double Interpolate(double start, double end, double progress) => start + (end - start) * progress;
     }
 
     private void ReturnToMap(bool activateCanvas = true, bool restoreCamera = true)
@@ -560,6 +561,15 @@ public sealed class MainWindow : Window
         {
             NativePanelInput.RaiseWindow(windowHandle, topmost: true);
             minimap.EnsureTopmost();
+        }
+
+        try
+        {
+            placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
         }
 
         if (restoreCamera)
@@ -912,6 +922,11 @@ public sealed class MainWindow : Window
 
         if (windowPanels.ActivePanel is { } panel)
         {
+            if (placement.IsMaximized(panel.Window.Handle))
+            {
+                return;
+            }
+
             try
             {
                 var position = windowPanels.GetWindowOrigin(panel, camera);
