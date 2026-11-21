@@ -7,7 +7,8 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **En curso:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Las ventanas del usuario viven como paneles con miniatura en vivo, se trabaja en ellas en su panel y se vuelve al mapa con un minimapa.
-- **Siguiente paso:** construir en un PR separado la continuidad visual acordada para la cámara y la activación de paneles. El paso 4 recibió dictamen favorable tras la prueba interactiva del usuario.
+- **Siguiente paso:** construir el paso 6 del hito 09, la continuidad visual acordada para la cámara y la activación de paneles. Con él se cierra el hito: su paso 5 pasó al hito 10.
+- **Definido:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Aplica el [sistema visual](sistema-visual/mesa-de-luz.html) a la app: orilla retráctil, paneles con asa y lengüeta, isla del mapa, luz e imagen por espacio. Se construye después de cerrar el 09.
 
 ## Qué funciona hoy
 

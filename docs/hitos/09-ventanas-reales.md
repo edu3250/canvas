@@ -34,6 +34,7 @@ Entrevista del 20-11-2026. El diario de uso estaba vacío y el candidato salió 
 | Alineación y salto de cámara | «las ventanas se ven muy desalineadas con el contenido que vive dentro» y «al dar click a una ventana para activarla se hace un salto de camara» | La tarjeta sigue las proporciones de la miniatura. Un clic directo al 100 % conserva la cámara. Si cambia la vista para activar el panel, se anima con el ajuste de animación de Windows. |
 | Volver al mapa desde una ventana que estaba minimizada | «adelante» tras la propuesta de dejar la ventana abierta detrás del lienzo. | El regreso al mapa conserva la ventana fuente para DWM. La minimización nativa sigue siendo deliberada. El acomodo original queda en el registro hasta quitar el panel, cerrar Canvas o recuperar tras un fallo. |
 | Continuidad visual tras el paso 4 | «adelante» | En el siguiente PR, al activar directamente desde una vista alejada, acercar al 100 % alrededor del panel y desplazar solo lo necesario para trabajar. Al 100 % conservar la cámara. Mantener el borde visible durante el relevo. Maximizar mediante una acción explícita y recuperar el encuadre anterior al salir. Esta decisión ajusta P4 para la activación directa. |
+| Traspaso del paso 5 | «sí a todas», en la entrevista del [hito 10](10-mesa-de-luz.md) (Q2) | La barra del panel y el aviso de minimizada pasan al hito 10 como lengüeta de Mesa de luz. Este hito se cierra con la continuidad visual (paso 6). Contradice el alcance acordado aquí; manda la decisión del usuario en el chat. |
 
 ## Riesgos
 
@@ -50,18 +51,20 @@ Entrevista del 20-11-2026. El diario de uso estaba vacío y el candidato salió 
 - [x] 2. **Zona sensible.** Registro de acomodos originales en disco antes de mover nada, devolución al quitar, al cerrar y tras un cierre brusco, y acceso «Devolver ventanas» independiente. ADR del formato · `src/`, `tests/`, `docs/adr/`
 - [x] 3. **Zona sensible.** «Añadir ventana» con la lista de ventanas abiertas, paneles con miniatura DWM en vivo que se arrastran por el lienzo y colocación del panel nuevo · `src/Canvas.Desktop`, `src/Canvas.Domain`, `tests/`
 - [x] 4. **Zona sensible.** Activar la ventana en su panel con el acercamiento al 100 % y volver al mapa con el minimapa, Ctrl+Alt+Espacio o un clic fuera. El minimapa se oculta mientras se trabaja y reaparece en el borde inferior · `src/Canvas.Desktop`
-- [ ] 5. **Zona sensible.** Barra del panel (✕, ⤢, «Quitar del lienzo») y aviso de ventana minimizada · `src/Canvas.Desktop`
+- [ ] ~~5. **Zona sensible.** Barra del panel (✕, ⤢, «Quitar del lienzo») y aviso de ventana minimizada · `src/Canvas.Desktop`~~ Pasa al paso 4 del [hito 10](10-mesa-de-luz.md), que la construye como lengüeta de Mesa de luz.
+- [ ] 6. **Zona sensible.** Continuidad visual entre el mapa y el panel acordada tras el paso 4 · `src/Canvas.Desktop`
 
-Cada paso va en su propio PR. Los pasos 2–5 incluyen en el PR el ensayo con ventanas reales que hizo el usuario tras su «adelante».
+Cada paso va en su propio PR. Los pasos 2–6 incluyen en el PR el ensayo con ventanas reales que hizo el usuario tras su «adelante».
 
 ## Lo doy por bueno cuando
 
 Con VS Code, Chrome y Discord abiertos:
 
 1. Añado VS Code y Chrome a Programación y Discord a Juegos.
-2. Escribo en VS Code desde su panel, vuelvo al mapa con el minimapa y también con Ctrl+Alt+Espacio, y maximizo Chrome.
-3. Cierro una ventana con ✕ y quito otra del lienzo.
-4. Cierro Escritorio Canvas y todas las ventanas que quedan vuelven a donde estaban antes.
+2. Escribo en VS Code desde su panel y vuelvo al mapa con el minimapa y también con Ctrl+Alt+Espacio. Activo un panel desde una vista alejada y la cámara se acerca sin saltos.
+3. Cierro Escritorio Canvas y todas las ventanas que quedan vuelven a donde estaban antes.
+
+Cerrar con ✕, quitar del lienzo y maximizar pasaron a la prueba final del [hito 10](10-mesa-de-luz.md).
 
 ## Bloqueos
 
@@ -99,3 +102,4 @@ Falta confirmar la vista en vivo con Claude y vídeo real en Chrome. Con una ven
 | 20-11-2026 | Revisar | Codex · GPT-6 | Se registró la interacción aprobada para el PR posterior. Ensayo previsto con dos paneles vecinos y un tercero debajo: activar, panear al tercero, maximizar y volver al encuadre anterior. | [#43](https://github.com/edu3250/canvas/pull/43) | Construir corrige el caso siempre encima en #43. Tras revisarlo y fusionarlo, implementar la continuidad visual desde main. |
 | 20-11-2026 | Construir | Codex · GPT-6 | Se corrigió el regreso al mapa desde una ventana siempre encima. Se eleva el lienzo durante el regreso y la vista en primer plano, sin cambiar el estilo de la ventana externa. Pasaron 69 pruebas. Un ensayo Win32 con ventanas descartables comprobó el cambio del destino del clic en la zona cubierta. | [#43](https://github.com/edu3250/escritorio-canvas/pull/43) | Validar el ciclo completo de foco y devolución y revisar en otra sesión. |
 | 20-11-2026 | Revisar | Codex · GPT-6 | El usuario confirmó «ya realize la prueba interactiva pendiente y funciona». Revisión favorable del regreso desde ventanas siempre encima y de la integración con main. Compilación limpia y 89 pruebas aprobadas. | [#43](https://github.com/edu3250/canvas/pull/43) | Construir la continuidad visual acordada en un PR separado. |
+| 20-11-2026 | Definir | Claude Code · claude-opus-5-5 | En la entrevista del hito 10 el usuario aceptó traspasar el paso 5 a ese hito («sí a todas»). Se tachó el paso 5, se añadió el paso 6 de continuidad visual y se ajustó la prueba final. | [h10-definir](10-mesa-de-luz.md) | Construir el paso 6 y cerrar el hito. |
