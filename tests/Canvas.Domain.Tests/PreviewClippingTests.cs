@@ -8,6 +8,19 @@ public sealed class PreviewClippingTests
     private static readonly CanvasBounds Viewport = new(0, 0, 1000, 700);
     private static readonly CanvasBounds[] Controls = [new(350, 12, 300, 48), new(620, 646, 210, 42)];
 
+    [Theory]
+    [InlineData(1920, 1080, 960, 540)]
+    [InlineData(600, 1200, 360, 720)]
+    [InlineData(960, 720, 960, 720)]
+    public void FitsPreviewProportionallyAtThePanelOrigin(
+        double sourceWidth, double sourceHeight, double width, double height)
+    {
+        var area = new CanvasBounds(12, 38, 960, 720);
+
+        Assert.Equal(new CanvasBounds(12, 38, width, height),
+            PreviewClipping.Fit(area, new Point(sourceWidth, sourceHeight)));
+    }
+
     [Fact]
     public void LeavesBottomLeftPreviewIntactAtSameHeightAsZoomControls()
     {

@@ -22,19 +22,21 @@ internal sealed class WindowThumbnail : IDisposable
             ? new WindowThumbnail(destination, (nint)source, thumbnail)
             : null;
 
-    public bool Display(Rect area, Rect viewport, IReadOnlyList<CanvasBounds> controls)
+    public Canvas.Domain.Point? ReadSourceSize() =>
+        DwmQueryThumbnailSourceSize(handles[0], out var size) >= 0 && size.Width > 0 && size.Height > 0
+            ? new Canvas.Domain.Point(size.Width, size.Height)
+            : null;
+
+    public bool Display(Rect area, Rect viewport, IReadOnlyList<CanvasBounds> controls, Canvas.Domain.Point size)
     {
-        if (area.Width < 1 || area.Height < 1 || DwmQueryThumbnailSourceSize(handles[0], out var size) < 0 ||
-            size.Width <= 0 || size.Height <= 0)
+        if (area.Width < 1 || area.Height < 1)
         {
             Hide();
             return false;
         }
 
-        var scale = Math.Min(area.Width / size.Width, area.Height / size.Height);
-        var width = size.Width * scale;
-        var height = size.Height * scale;
-        var content = new CanvasBounds(area.X + (area.Width - width) / 2, area.Y + (area.Height - height) / 2, width, height);
+        var content = PreviewClipping.Fit(new CanvasBounds(area.X, area.Y, area.Width, area.Height), size);
+        var scale = content.Width / size.X;
         var visible = PreviewClipping.VisibleParts(content,
             new CanvasBounds(viewport.X, viewport.Y, viewport.Width, viewport.Height), controls);
         var used = 0;

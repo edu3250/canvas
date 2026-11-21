@@ -47,6 +47,15 @@ internal sealed class MinimapWindow : Window
     public void UpdateMap(CanvasBounds viewport, IReadOnlyList<MinimapItem> items) =>
         surface.UpdateMap(viewport, items);
 
+    public void EnsureTopmost()
+    {
+        if (IsVisible && PresentationSource.FromVisual(this) is HwndSource source &&
+            !NativePanelInput.IsTopmost(source.Handle))
+        {
+            NativePanelInput.RaiseWindow(source.Handle, topmost: true);
+        }
+    }
+
     public void AnchorTo(FrameworkElement viewport)
     {
         if (PresentationSource.FromVisual(viewport)?.CompositionTarget is not { } target)
@@ -63,7 +72,9 @@ internal sealed class MinimapWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        ((HwndSource)PresentationSource.FromVisual(this)).AddHook(PreventMouseActivation);
+        var source = (HwndSource)PresentationSource.FromVisual(this);
+        NativePanelInput.PreventActivation(source.Handle);
+        source.AddHook(PreventMouseActivation);
     }
 
     private static IntPtr PreventMouseActivation(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)

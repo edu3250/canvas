@@ -31,6 +31,26 @@ public sealed class WindowRecoveryTests : IDisposable
     }
 
     [Fact]
+    public void RepeatedActivationPreservesOriginalMinimizedPlacementUntilRecovery()
+    {
+        var original = windows.Placement with { ShowCommand = 2 };
+        windows.Placement = original;
+        using (var recovery = Open())
+        {
+            recovery.SaveOriginal(100);
+            windows.Placement = original with { ShowCommand = 1, NormalPosition = new WindowRectangle(30, 40, 680, 440) };
+            recovery.SaveOriginal(100);
+            Assert.Equal(1, windows.CaptureCount);
+            Assert.Equal(0, windows.RestoreCount);
+            Assert.Equal(1u, windows.Placement.ShowCommand);
+        }
+
+        using var reopened = Open();
+        Assert.Empty(reopened.RestoreAll());
+        Assert.Equal(original, windows.Placement);
+    }
+
+    [Fact]
     public void IndividualRestoreRetainsOtherWindows()
     {
         using var recovery = Open();
@@ -198,6 +218,21 @@ public sealed class WindowRecoveryTests : IDisposable
         Assert.Empty(windows.Markers);
     }
 
+
+    [Fact]
+    public void CannotSavePlacementForAReplacementUsingAStalePanel()
+    {
+        const long handle = 100;
+        using var panel = WindowInstance.Track(windows, windows.Identify(handle));
+        Assert.NotNull(panel);
+        windows.Markers.Clear();
+
+        using var recovery = Open();
+        Assert.Throws<InvalidOperationException>(() => recovery.SaveOriginal(handle, panel));
+        Assert.Equal(0, windows.CaptureCount);
+        Assert.Empty(windows.Markers);
+        Assert.False(File.Exists(Journal));
+    }
 
     private WindowRecovery Open() => new(Journal, windows);
 

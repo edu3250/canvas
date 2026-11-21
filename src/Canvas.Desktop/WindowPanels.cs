@@ -21,11 +21,50 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
     private Drag? drag;
 
     public event Action? MapChanged;
+    public event Action<Panel>? ActivationRequested;
+
+    public Panel? ActivePanel { get; set; }
+
+    public bool HasTopmostSource() => panels.Any(panel =>
+        NativePanelInput.IsTopmost((nint)panel.Window.Handle) &&
+        WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
+        !WindowCatalog.IsMinimized(panel.Window.Handle));
+
+    public Panel? FindPanel(DomainPoint point) => panels.LastOrDefault(panel =>
+        panel.Space == space && point.X >= panel.DisplayBounds.X && point.X <= panel.DisplayBounds.X + panel.DisplayBounds.Width &&
+        point.Y >= panel.DisplayBounds.Y && point.Y <= panel.DisplayBounds.Y + panel.DisplayBounds.Height);
+
+    public WpfPoint GetWindowOrigin(Panel panel, Camera targetCamera)
+    {
+        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X + 1, panel.Bounds.Y + TitleHeight + 1), targetCamera);
+        return PointToScreen(new WpfPoint(point.X, point.Y));
+    }
+
+    public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var width = (screenBounds.Right - (double)screenBounds.Left) / dpi.DpiScaleX / camera.Zoom;
+        var height = (screenBounds.Bottom - (double)screenBounds.Top) / dpi.DpiScaleY / camera.Zoom;
+        var bounds = panel.Bounds with { Width = width + 2, Height = height + TitleHeight + 2 };
+        if (syncPosition)
+        {
+            var topLeft = PointFromScreen(new WpfPoint(screenBounds.Left, screenBounds.Top));
+            var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X, topLeft.Y), camera);
+            bounds = bounds with { X = origin.X - 1, Y = origin.Y - TitleHeight - 1 };
+        }
+
+        if (width > 0 && height > 0 && bounds != panel.Bounds)
+        {
+            panel.Bounds = bounds;
+            Render();
+            MapChanged?.Invoke();
+        }
+    }
 
     public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
 
     public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space)
-        .Select(panel => new MinimapItem(panel.Bounds, null, IsPanel: true)).ToArray();
+        .Select(panel => new MinimapItem(panel.DisplayBounds, null, IsPanel: true)).ToArray();
 
     public void ShowPicker(Button button)
     {
@@ -68,8 +107,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         var height = (window.NormalBounds.Bottom - (double)window.NormalBounds.Top) / dpi.DpiScaleY + TitleHeight;
         var center = CanvasBounds.Viewport(camera, new DomainPoint(ActualWidth, ActualHeight)).Center;
         var desired = new CanvasBounds(center.X - width / 2, center.Y - height / 2, width, height);
-        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title), instance,
-            WindowThumbnail.Register(new WindowInteropHelper(owner).Handle, window.Handle));
+        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title), instance);
         panels.Add(panel);
         Children.Add(panel.Card);
         panel.Card.PreviewMouseLeftButtonDown += (_, e) => StartDrag(panel, e);
@@ -115,6 +153,12 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         Render();
     }
 
+    public void SuspendPreview(Panel panel)
+    {
+        panel.Thumbnail?.Dispose();
+        panel.Thumbnail = null;
+    }
+
     public void Render()
     {
         if (PresentationSource.FromVisual(this) is not HwndSource source || source.RootVisual is not Visual root)
@@ -133,6 +177,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             return new CanvasBounds(pixels.X, pixels.Y, pixels.Width, pixels.Height);
         }).ToArray();
 
+        var mapChanged = false;
         foreach (var panel in panels)
         {
             var shown = panel.Space == space && owner.WindowState != WindowState.Minimized;
@@ -144,6 +189,24 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             }
 
             var bounds = panel.Bounds;
+            var minimized = WindowCatalog.IsMinimized(panel.Window.Handle);
+            DomainPoint? size = null;
+            if (panel != ActivePanel && !minimized)
+            {
+                panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
+                size = panel.Thumbnail?.ReadSourceSize();
+                // Keep the work footprint after the source is restored to its desktop proportions.
+                if (panel.WorkingSize is null && size is { } resolution &&
+                    bounds.Width > 2 && bounds.Height > TitleHeight + 2)
+                {
+                    var body = PreviewClipping.Fit(
+                        new CanvasBounds(0, 0, bounds.Width - 2, bounds.Height - TitleHeight - 2), resolution);
+                    bounds = bounds with { Width = body.Width + 2, Height = body.Height + TitleHeight + 2 };
+                }
+            }
+
+            mapChanged |= bounds != panel.DisplayBounds;
+            panel.DisplayBounds = bounds;
             var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(bounds.X, bounds.Y), camera);
             SetLeft(panel.Card, point.X);
             SetTop(panel.Card, point.Y);
@@ -151,7 +214,14 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             panel.Card.Height = bounds.Height;
             panel.Card.RenderTransform = new ScaleTransform(camera.Zoom, camera.Zoom);
 
-            if (WindowCatalog.IsMinimized(panel.Window.Handle))
+            if (panel == ActivePanel)
+            {
+                panel.Thumbnail?.Hide();
+                panel.Card.Text.Text = "";
+                continue;
+            }
+
+            if (minimized)
             {
                 panel.Thumbnail?.Hide();
                 panel.Card.Text.Text = "Ventana minimizada";
@@ -160,7 +230,17 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
             var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
                 ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
-            panel.Card.Text.Text = panel.Thumbnail?.Display(area, clip, controls) == true ? "" : "Vista previa no disponible";
+            panel.Card.Text.Text = size is { } dimensions &&
+                panel.Thumbnail?.Display(area, clip, controls, dimensions) == true ? "" : "Vista previa no disponible";
+            if (size is null)
+            {
+                panel.Thumbnail?.Hide();
+            }
+        }
+
+        if (mapChanged)
+        {
+            MapChanged?.Invoke();
         }
     }
 
@@ -183,7 +263,20 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             return;
         }
 
-        var delta = e.GetPosition(this) - active.Pointer;
+        UpdateDrag(active, e.GetPosition(this));
+        e.Handled = true;
+    }
+
+    private void UpdateDrag(Drag active, WpfPoint pointer)
+    {
+        var delta = pointer - active.Pointer;
+        if (!active.HasMoved && Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        active.HasMoved = true;
         var desired = active.Original with
         {
             X = active.Original.X + delta.X / camera.Zoom,
@@ -192,16 +285,20 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         active.Panel.Bounds = PanelPlacement.FindFree(desired, Occupied(active.Panel));
         Render();
         MapChanged?.Invoke();
-        e.Handled = true;
     }
 
     private void FinishDrag(MouseButtonEventArgs e)
     {
         if (drag is { } active)
         {
+            UpdateDrag(active, e.GetPosition(this));
             drag = null;
             active.Panel.Card.ReleaseMouseCapture();
             e.Handled = true;
+            if (!active.HasMoved)
+            {
+                ActivationRequested?.Invoke(active.Panel);
+            }
         }
     }
 
@@ -251,7 +348,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         panels.Clear();
     }
 
-    private sealed class PanelCard : Border
+    internal sealed class PanelCard : Border
     {
         public PanelCard()
         {
@@ -270,16 +367,21 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         };
     }
 
-    private sealed record Drag(Panel Panel, WpfPoint Pointer, CanvasBounds Original);
+    private sealed record Drag(Panel Panel, WpfPoint Pointer, CanvasBounds Original)
+    {
+        public bool HasMoved { get; set; }
+    }
 
-    private sealed class Panel(WindowCandidate window, SpaceId space, CanvasBounds bounds,
-        PanelCard card, WindowInstance instance, WindowThumbnail? thumbnail) : IDisposable
+    internal sealed class Panel(WindowCandidate window, SpaceId space, CanvasBounds bounds,
+        PanelCard card, WindowInstance instance) : IDisposable
     {
         public WindowCandidate Window { get; } = window;
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
+        public CanvasBounds DisplayBounds { get; set; } = bounds;
+        public (int Width, int Height)? WorkingSize { get; set; }
         public PanelCard Card { get; } = card;
-        public WindowThumbnail? Thumbnail { get; } = thumbnail;
+        public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;
 
         public void Dispose()

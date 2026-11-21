@@ -16,7 +16,8 @@ internal static class Program
         try
         {
             var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            using var recovery = new WindowRecovery(WindowRecovery.GetPath(localData), new NativeWindowPlacement());
+            var placement = new NativeWindowPlacement();
+            using var recovery = new WindowRecovery(WindowRecovery.GetPath(localData), placement);
             if (!TryRestore(recovery, title))
             {
                 return 1;
@@ -31,7 +32,7 @@ internal static class Program
 
             var application = new Application();
             application.Resources.MergedDictionaries.Add(Theme.CreateResources(VisualTokens.DefaultLight));
-            var exitCode = application.Run(new MainWindow());
+            var exitCode = application.Run(new MainWindow(recovery, placement));
             return TryRestore(recovery, title) ? exitCode : 1;
         }
         catch (InvalidDataException error)

@@ -18,5 +18,6 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Minimapa | `Minimap` |
 | Registro de devolución | `WindowRecovery` |
 | Instancia de ventana | `WindowInstance` |
+| Marco del lienzo | `CanvasFrame` |
 | Luz del espacio (color que marca el panel activo) | `SpaceLight` |
 | Valores del sistema visual Mesa de luz | `VisualTokens` |

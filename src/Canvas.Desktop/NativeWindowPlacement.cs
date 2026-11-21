@@ -90,6 +90,81 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
+    public (WindowRectangle Visible, (int Width, int Height) Size)? ReadNormalScreenBounds(long handle)
+    {
+        var window = (nint)handle;
+        return !IsIconic(window) && !IsZoomed(window) && GetWindowRect(window, out var bounds)
+            ? (VisibleFrame(window, bounds), (bounds.Right - bounds.Left, bounds.Bottom - bounds.Top))
+            : null;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(nint window, out WindowRectangle bounds);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(nint window);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsZoomed(nint window);
+
+    public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
+    {
+        EnsureCurrent(instance);
+        var current = Capture(identity.Handle);
+        if (current.ShowCommand != 1)
+        {
+            EnsureCurrent(instance);
+            Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
+        }
+
+        Reposition(identity, instance, x, y, size);
+    }
+
+    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size = null)
+    {
+        EnsureCurrent(instance);
+        var window = (nint)identity.Handle;
+        if (!GetWindowRect(window, out var full))
+        {
+            throw new Win32Exception();
+        }
+
+        var visible = VisibleFrame(window, full);
+        const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
+        var flags = NoZOrder | NoActivate;
+        if (size is null)
+        {
+            flags |= NoSize;
+        }
+
+        if (!SetWindowPos(window, 0, x - (visible.Left - full.Left), y - (visible.Top - full.Top),
+            size?.Width ?? 0, size?.Height ?? 0, flags))
+        {
+            throw new Win32Exception();
+        }
+    }
+
+    private static WindowRectangle VisibleFrame(nint window, WindowRectangle fallback)
+    {
+        const uint ExtendedFrameBounds = 9;
+        return DwmGetWindowAttribute(window, ExtendedFrameBounds, out var frame, Marshal.SizeOf<WindowRectangle>()) >= 0 &&
+            frame.Right > frame.Left && frame.Bottom > frame.Top ? frame : fallback;
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(nint window, uint attribute, out WindowRectangle bounds, int size);
+
+    public static void EnsureCurrent(WindowInstance instance)
+    {
+        if (!instance.IsCurrent())
+        {
+            throw new InvalidOperationException("The window is no longer available.");
+        }
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+
     private static string MarkerName(Guid marker) => MarkerPrefix + marker.ToString("N");
 
     private static int GetCurrentSessionId()
