@@ -1,0 +1,710 @@
+<title>Mesa de luz</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&display=swap">
+<style>
+/* Mesa de luz: el lienzo es una mesa en penumbra; la ventana con la que trabajas está encendida con la luz de su espacio. */
+@property --luz { syntax: '<color>'; inherits: true; initial-value: #7CD6E8; }
+:root {
+  color-scheme: dark;
+  --noche: #141826;
+  --pizarra: #1E2233;
+  --relieve: #2A2F44;
+  --borde: #363C55;
+  --hueso: #E8E4D8;
+  --ceniza: #9A9EB2;
+  --tenue: #6A6F86;
+  --peligro: #FF6B6B;
+  --aviso: #F5C46B;
+  --codigo: #B7A6FF;
+  --luz: #7CD6E8;
+  --luz-suave: color-mix(in oklab, var(--luz) 16%, transparent);
+  --luz-halo: color-mix(in oklab, var(--luz) 30%, transparent);
+  --font: 'Geist','Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --r-panel: 10px; --r-isla: 12px; --r-ctl: 7px;
+  --t-espacio: 420ms; --t-panel: 220ms; --t-orilla: 180ms; --t-menu: 140ms;
+  --curva: cubic-bezier(.2, .7, .2, 1);
+  transition: --luz var(--t-espacio) var(--curva);
+}
+* { box-sizing: border-box; }
+body { background: var(--noche); color: var(--hueso); font-family: var(--font); font-size: 14px; line-height: 1.5; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--luz); outline-offset: 2px; }
+
+.page { max-width: 1240px; margin: 0 auto; padding-block: 48px 96px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 72px; }
+.intro { display: grid; gap: 12px; max-width: 62ch; }
+.marca { font-size: clamp(44px, 8vw, 88px); font-weight: 600; letter-spacing: -0.045em; line-height: .95; margin: 0; color: var(--hueso); }
+.marca span { color: var(--luz); }
+.lead { color: var(--ceniza); font-size: 16px; margin: 0; text-wrap: pretty; }
+section { display: grid; gap: 24px; }
+h2 { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.sec-head { display: grid; gap: 8px; max-width: 64ch; }
+.sec-head p { margin: 0; color: var(--ceniza); }
+.nota { color: var(--tenue); font-size: 12px; margin: 0; }
+
+/* Controles del sistema */
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: var(--r-ctl); border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background var(--t-menu), color var(--t-menu), border-color var(--t-menu), transform 80ms; }
+.btn:active { transform: translateY(1px); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-luz { background: var(--luz); color: var(--noche); }
+.btn-luz:hover { background: color-mix(in oklab, var(--luz) 86%, white); }
+.btn-sec { background: var(--relieve); border-color: var(--borde); color: var(--hueso); }
+.btn-sec:hover { background: color-mix(in oklab, var(--relieve) 80%, var(--hueso)); }
+.btn-fan { color: var(--ceniza); }
+.btn-fan:hover { color: var(--hueso); background: var(--relieve); }
+.btn-pel { color: var(--peligro); }
+.btn-pel:hover { background: color-mix(in oklab, var(--peligro) 14%, transparent); }
+.btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
+.ico { width: 28px; height: 28px; padding: 0; justify-content: center; }
+.ico svg { width: 14px; height: 14px; }
+
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 9px; background: var(--noche); border: 1px solid var(--borde); }
+.seg button { height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--ceniza); font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background var(--t-menu), color var(--t-menu); }
+.seg button:hover { color: var(--hueso); }
+.seg button[aria-pressed="true"] { background: var(--relieve); color: var(--hueso); }
+.seg .punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
+.seg button[aria-pressed="true"] .punto { background: var(--luz); opacity: 1; }
+
+.campo { height: 32px; width: 100%; max-width: 280px; padding: 0 12px 0 34px; border-radius: var(--r-ctl); border: 1px solid var(--borde); background: var(--pizarra) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%239A9EB2' stroke-width='1.6'%3E%3Ccircle cx='7' cy='7' r='4.5'/%3E%3Cpath d='m10.5 10.5 3 3'/%3E%3C/svg%3E") no-repeat 11px center; color: var(--hueso); font: inherit; font-size: 13px; transition: border-color var(--t-menu), box-shadow var(--t-menu); }
+.campo::placeholder { color: var(--tenue); }
+.campo:focus { outline: none; border-color: var(--luz); box-shadow: 0 0 0 3px var(--luz-suave); }
+.interruptor { position: relative; width: 34px; height: 20px; border-radius: 10px; border: 0; background: var(--relieve); cursor: pointer; transition: background var(--t-menu); flex: none; }
+.interruptor::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ceniza); transition: transform var(--t-panel) var(--curva), background var(--t-menu); }
+.interruptor[aria-checked="true"] { background: var(--luz); }
+.interruptor[aria-checked="true"]::after { transform: translateX(14px); background: var(--noche); }
+.fila { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.mesa { background: var(--pizarra); border-radius: var(--r-isla); padding: 24px; display: grid; gap: 20px; min-width: 0; }
+.rejilla { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.etq { font-size: 12px; color: var(--ceniza); }
+
+/* Mockup de la aplicación */
+.demo-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+.demo-bar .fila { gap: 8px; }
+.stage { position: relative; width: 100%; border-radius: 14px; overflow: hidden; background: var(--noche); outline: 1px solid var(--borde); }
+.app { position: absolute; top: 0; left: 0; width: 1280px; height: 760px; transform-origin: 0 0; overflow: hidden; background: var(--noche); --luz-suave: color-mix(in oklab, var(--luz) 16%, transparent); --luz-halo: color-mix(in oklab, var(--luz) 30%, transparent); }
+.fondo { position: absolute; inset: 0; opacity: 0; transition: opacity 300ms; background: #1C2032 url("fondo-ejemplo.jpg") center 40% / cover no-repeat; }
+.velo { position: absolute; inset: 0; background: color-mix(in oklab, var(--noche) 42%, transparent); opacity: 0; transition: opacity 300ms; }
+.puntos { position: absolute; inset: 0; background-image: radial-gradient(color-mix(in oklab, var(--hueso) 9%, transparent) 1px, transparent 1.2px); background-size: 24px 24px; transition: opacity 300ms; }
+.app.con-imagen .fondo, .app.con-imagen .velo { opacity: 1; }
+.app.con-imagen .puntos { opacity: 0; }
+
+.mundo { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform 320ms var(--curva), opacity 200ms var(--curva), filter 200ms; }
+.mundo.saliendo { opacity: 0; transform: scale(.985); filter: blur(2px); }
+
+
+/* Inicio */
+.inicio { position: absolute; left: 44px; top: 110px; display: grid; grid-template-columns: repeat(2, 84px); gap: 10px 8px; }
+.icono { display: grid; justify-items: center; gap: 6px; padding: 8px 4px 6px; border-radius: 10px; border: 1px solid transparent; background: transparent; cursor: pointer; transition: background var(--t-menu), border-color var(--t-menu); }
+.icono:hover { background: color-mix(in oklab, var(--hueso) 6%, transparent); }
+.icono[aria-pressed="true"] { background: var(--luz-suave); border-color: var(--luz-halo); }
+.glifo { width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; background: var(--relieve); color: var(--hueso); font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+.glifo.c { background: transparent; border: 1.5px solid var(--borde); color: var(--ceniza); }
+.icono span:last-child { font-size: 11px; color: var(--hueso); max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Panel: asa izquierda, controles a la derecha, cuerpo sin barra de título */
+.panel { position: absolute; transition: left 320ms var(--curva), top 320ms var(--curva), width 320ms var(--curva), height 320ms var(--curva), opacity 220ms; }
+.panel.fuera { opacity: 0; pointer-events: none; }
+.asa, .ctl { position: absolute; top: -30px; height: 30px; display: flex; align-items: center; background: var(--pizarra); border-radius: 8px 8px 0 0; }
+.asa { left: 0; max-width: calc(100% - 140px); gap: 8px; padding: 0 12px 0 8px; cursor: grab; }
+.asa .g { width: 18px; height: 18px; border-radius: 5px; background: var(--relieve); display: grid; place-items: center; font-size: 10px; font-weight: 700; flex: none; transition: background var(--t-panel), color var(--t-panel); }
+.asa b { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.asa i { font-style: normal; font-size: 12px; color: var(--ceniza); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asa .chip { font-size: 11px; color: var(--aviso); background: color-mix(in oklab, var(--aviso) 14%, transparent); padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.ctl { right: 0; padding: 0 3px; gap: 1px; opacity: .0; transition: opacity var(--t-menu); }
+.panel:hover .ctl, .panel.activo .ctl, .panel:focus-within .ctl, .panel.min .ctl { opacity: 1; }
+.ctl button { width: 30px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: var(--ceniza); display: grid; place-items: center; cursor: pointer; transition: background var(--t-menu), color var(--t-menu); }
+.ctl button:hover { background: var(--relieve); color: var(--hueso); }
+.ctl button.x:hover { background: var(--peligro); color: var(--noche); }
+.ctl svg { width: 12px; height: 12px; }
+.cuerpo { position: absolute; inset: 0; border-radius: 0 var(--r-panel) var(--r-panel) var(--r-panel); overflow: hidden; background: #0F121C; box-shadow: 0 0 0 1px var(--borde); filter: brightness(.62) saturate(.7); transition: filter var(--t-panel), box-shadow var(--t-panel), height 220ms var(--curva); cursor: pointer; }
+.panel:hover .cuerpo { filter: brightness(.78) saturate(.85); }
+.borde-luz { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--luz); transform: scaleX(0); transform-origin: left; transition: transform var(--t-panel) var(--curva); z-index: 2; }
+.panel.activo .cuerpo { filter: none; box-shadow: 0 0 0 1px var(--luz-halo), 0 24px 70px -18px var(--luz-halo), 0 0 120px -30px var(--luz-suave); cursor: default; }
+.panel.activo .borde-luz { transform: scaleX(1); }
+.panel.activo .asa .g { background: var(--luz); color: var(--noche); }
+.panel.min .cuerpo { height: 0; box-shadow: none; }
+.panel.min .asa { border-radius: 8px; }
+.panel.min .ctl { border-radius: 8px; }
+
+/* Contenido simulado de las aplicaciones nativas */
+.code { padding: 18px 20px; font: 12.5px/1.75 Consolas, 'Cascadia Code', monospace; color: #C9CBD6; white-space: pre; }
+.code .k { color: var(--codigo); } .code .t { color: #7FD7C4; } .code .c { color: #5C6178; } .code .n { color: #6A6F86; display: inline-block; width: 26px; }
+.web { height: 100%; display: grid; grid-template-rows: 34px 1fr; }
+.web .barra { background: #191C29; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+.web .url { flex: 1; height: 20px; border-radius: 6px; background: #232739; font-size: 11px; color: var(--ceniza); display: flex; align-items: center; padding: 0 8px; }
+.web .pag { padding: 16px; display: grid; gap: 10px; align-content: start; }
+.web h4 { margin: 0; font-size: 15px; font-weight: 600; color: var(--hueso); }
+.l { height: 7px; border-radius: 4px; background: #262A3C; }
+.ok { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; color: #7FD7A0; }
+.notas { padding: 16px; font-size: 12.5px; color: #C9CBD6; display: grid; gap: 8px; }
+.notas strong { color: var(--hueso); font-size: 14px; }
+.chat { padding: 14px; display: grid; gap: 14px; }
+.msg { display: grid; grid-template-columns: 30px 1fr; gap: 10px; font-size: 12.5px; color: #C9CBD6; }
+.msg .av { width: 30px; height: 30px; border-radius: 50%; }
+.msg b { color: var(--hueso); font-weight: 600; margin-right: 6px; }
+.biblio { padding: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.biblio div { aspect-ratio: 3/4; border-radius: 6px; }
+.musica { padding: 16px; display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; font-size: 12px; color: var(--ceniza); }
+.musica .cov { width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #6B4E8E, #E0809A); }
+.musica b { display: block; color: var(--hueso); font-size: 14px; }
+.prog { height: 4px; border-radius: 2px; background: #262A3C; margin-top: 10px; position: relative; overflow: hidden; }
+.prog::after { content: ""; position: absolute; inset: 0 62% 0 0; background: #C9CBD6; }
+
+/* Orilla superior: una franja que se abre al acercar el cursor */
+.zona-orilla { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 760px; height: 26px; z-index: 20; }
+.orilla { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 21; display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: var(--r-isla); background: color-mix(in oklab, var(--pizarra) 88%, transparent); backdrop-filter: blur(18px) saturate(1.2); box-shadow: 0 0 0 1px var(--borde), 0 12px 40px -12px rgba(0,0,0,.6); transition: opacity var(--t-orilla) var(--curva), transform var(--t-orilla) var(--curva); }
+.orilla .div { width: 1px; height: 20px; background: var(--borde); margin: 0 2px; }
+.orilla-cerrada { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; border-radius: 2px; background: var(--relieve); z-index: 19; overflow: hidden; transition: opacity var(--t-orilla); }
+.orilla-cerrada::after { content: ""; position: absolute; inset: 0 44px; background: var(--luz); border-radius: 2px; }
+.app:not(.orilla-abierta) .orilla { opacity: 0; transform: translate(-50%, -12px); pointer-events: none; }
+.app.orilla-abierta .orilla-cerrada { opacity: 0; }
+
+/* Isla del mapa: minimapa y zoom */
+.isla-mapa { position: absolute; right: 16px; bottom: 16px; z-index: 15; padding: 8px; border-radius: var(--r-isla); background: color-mix(in oklab, var(--pizarra) 88%, transparent); backdrop-filter: blur(18px); box-shadow: 0 0 0 1px var(--borde); display: grid; gap: 8px; }
+.mini { position: relative; width: 192px; height: 114px; border-radius: 7px; background: var(--noche); overflow: hidden; cursor: pointer; }
+.mini i { position: absolute; border-radius: 2px; background: var(--relieve); transition: all 320ms var(--curva); }
+.mini i.on { background: var(--luz); }
+.mini i.ini { background: transparent; border: 1px dashed var(--tenue); }
+.mini .vista { position: absolute; border: 1px solid var(--hueso); border-radius: 3px; transition: all 320ms var(--curva); opacity: .7; }
+.zoom { display: flex; align-items: center; justify-content: space-between; }
+.zoom output { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--hueso); min-width: 48px; text-align: center; }
+
+/* Menú y aviso */
+.menu { position: absolute; z-index: 30; min-width: 200px; padding: 5px; border-radius: 10px; background: var(--relieve); box-shadow: 0 0 0 1px var(--borde), 0 16px 40px -10px rgba(0,0,0,.7); display: grid; transform-origin: top right; animation: menu var(--t-menu) var(--curva); }
+.menu button { display: flex; justify-content: space-between; align-items: center; gap: 16px; height: 30px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; text-align: left; cursor: pointer; }
+.menu button:hover { background: color-mix(in oklab, var(--hueso) 8%, transparent); }
+.menu button kbd { font: inherit; font-size: 11px; color: var(--tenue); }
+.menu .pel { color: var(--peligro); }
+.menu hr { border: 0; height: 1px; background: var(--borde); margin: 4px 2px; }
+@keyframes menu { from { opacity: 0; transform: scale(.96); } }
+.aviso { position: absolute; left: 50%; bottom: 20px; z-index: 25; transform: translate(-50%, 0); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 10px; background: var(--relieve); box-shadow: 0 0 0 1px var(--borde), 0 16px 40px -10px rgba(0,0,0,.7); font-size: 13px; transition: opacity 200ms, transform 200ms var(--curva); }
+.aviso[hidden] { display: flex !important; opacity: 0; transform: translate(-50%, 12px); pointer-events: none; }
+.aviso .d { width: 8px; height: 8px; border-radius: 50%; background: var(--luz); }
+
+/* Hoja del sistema */
+.muestras { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.muestra { display: grid; gap: 8px; }
+.muestra .sw { height: 64px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.muestra b { font-size: 13px; font-weight: 600; }
+.muestra code, td code { font: 12px Consolas, monospace; color: var(--ceniza); }
+.muestra p { margin: 0; font-size: 12px; color: var(--ceniza); }
+.luces { display: flex; flex-wrap: wrap; gap: 10px; }
+.luz-btn { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 999px; border: 1px solid var(--borde); background: var(--noche); cursor: pointer; font-size: 13px; transition: border-color var(--t-menu); }
+.luz-btn span { width: 26px; height: 26px; border-radius: 50%; }
+.luz-btn[aria-pressed="true"] { border-color: var(--hueso); }
+.tipos { display: grid; gap: 0; }
+.tipo { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; align-items: baseline; padding: 16px 0; border-top: 1px solid var(--borde); }
+.tipo:first-child { border-top: 0; }
+.tipo .m { font-size: 12px; color: var(--ceniza); }
+.tipo .m code { display: block; font: 11px Consolas, monospace; color: var(--tenue); margin-top: 2px; }
+.tipo .s { min-width: 0; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 10px 12px 10px 0; border-top: 1px solid var(--borde); vertical-align: top; }
+th { font-weight: 500; color: var(--ceniza); font-size: 12px; border-top: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla { overflow-x: auto; }
+.estados { display: grid; gap: 56px 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); padding-top: 34px; }
+.estados .panel { position: relative; height: 170px; }
+.estados .panel.min { height: 0; margin-bottom: -10px; }
+.mov { display: grid; gap: 12px; }
+.mov .escena { height: 96px; border-radius: 10px; background: var(--noche); position: relative; overflow: hidden; display: grid; place-items: center; }
+.mov .bar { width: 70%; height: 46px; border-radius: 8px; background: var(--relieve); position: relative; overflow: hidden; }
+.mov .bar::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--luz); transform: scaleX(0); transform-origin: left; }
+.mov .bar.on::before { transform: scaleX(1); transition: transform var(--t-panel) var(--curva); }
+.mov .men { width: 60%; height: 52px; border-radius: 8px; background: var(--relieve); box-shadow: 0 0 0 1px var(--borde); transform-origin: top right; }
+.mov .men.on { animation: menu var(--t-menu) var(--curva); }
+.mov .ori { width: 60%; height: 34px; border-radius: 10px; background: var(--pizarra); box-shadow: 0 0 0 1px var(--borde); transition: opacity var(--t-orilla) var(--curva), transform var(--t-orilla) var(--curva); }
+.mov .ori.off { opacity: 0; transform: translateY(-14px); }
+.mov .esp { width: 40px; height: 40px; border-radius: 50%; background: var(--luz); box-shadow: 0 0 40px 8px var(--luz-halo); }
+.mov .mn { width: 60%; height: 50px; border-radius: 8px; background: var(--relieve); transition: height 220ms var(--curva); }
+.mov .mn.on { height: 8px; }
+.principios { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.principios div { display: grid; gap: 6px; align-content: start; }
+.principios p { margin: 0; color: var(--ceniza); }
+
+@media (max-width: 640px) {
+  .tipo { grid-template-columns: 1fr; gap: 6px; }
+  h2 { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 1ms !important; animation: none !important; }
+  :root { transition: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-min" viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-max" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-rest" viewBox="0 0 12 12"><rect x="2" y="4" width="6" height="6" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 2.2h4a1.3 1.3 0 0 1 1.3 1.3v4" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 12 12"><path d="m3 3 6 6M9 3 3 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 12 12"><circle cx="2.5" cy="6" r="1" fill="currentColor"/><circle cx="6" cy="6" r="1" fill="currentColor"/><circle cx="9.5" cy="6" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-casa" viewBox="0 0 16 16"><path d="M2.5 7.5 8 3l5.5 4.5V13a.5.5 0 0 1-.5.5H10V10H6v3.5H3a.5.5 0 0 1-.5-.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-carpeta" viewBox="0 0 16 16"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l1.5 1.5h4.5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-buscar" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-encuadre" viewBox="0 0 12 12"><path d="M2 4.5V2h2.5M7.5 2H10v2.5M10 7.5V10H7.5M4.5 10H2V7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+  <symbol id="i-ajustes" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6 5 5M11 11l1.4 1.4M3.6 12.4 5 11M11 5l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="page">
+  <header class="intro">
+    <h1 class="marca">Mesa de <span>luz</span></h1>
+    <p class="lead">El sistema visual de Escritorio Canvas. El lienzo es una mesa en penumbra y tus ventanas son placas sobre ella: la que usas está encendida con la luz de su espacio y las demás esperan a media luz.</p>
+  </header>
+
+  <section aria-labelledby="t-app">
+    <div class="sec-head">
+      <h2 id="t-app">La aplicación</h2>
+      <p>Prueba el boceto: acerca el cursor al borde superior para abrir la orilla, cambia de espacio, haz clic en un panel para encenderlo y usa sus botones de minimizar, ampliar y cerrar.</p>
+    </div>
+    <div class="demo-bar">
+      <div class="fila">
+        <span class="etq">Fondo</span>
+        <div class="seg" role="group" aria-label="Fondo del espacio">
+          <button id="f-no" aria-pressed="false">Sin imagen</button>
+          <button id="f-si" aria-pressed="true">Imagen del usuario</button>
+        </div>
+      </div>
+      <div class="fila">
+        <span class="etq">Orilla</span>
+        <div class="seg" role="group" aria-label="Comportamiento de la orilla">
+          <button id="o-auto" aria-pressed="true">Se retira</button>
+          <button id="o-fija" aria-pressed="false">Siempre visible</button>
+        </div>
+        <button class="btn btn-fan btn-sm" id="reset">Restablecer boceto</button>
+      </div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="app con-imagen" id="app">
+        <div class="fondo"></div><div class="velo"></div><div class="puntos"></div>
+        <div class="mundo" id="mundo"></div>
+        <div class="zona-orilla" id="zonaOrilla"></div>
+        <div class="orilla-cerrada" aria-hidden="true"></div>
+        <nav class="orilla" id="orilla" aria-label="Orilla">
+          <div class="seg" role="group" aria-label="Espacio">
+            <button data-esp="prog" aria-pressed="true"><span class="punto"></span>Programación</button>
+            <button data-esp="juegos" aria-pressed="false"><span class="punto"></span>Juegos</button>
+          </div>
+          <span class="div"></span>
+          <button class="btn btn-fan btn-sm" id="btnInicio"><svg><use href="#i-casa"/></svg>Inicio</button>
+          <button class="btn btn-sec btn-sm" id="btnAnadir"><svg><use href="#i-plus"/></svg>Añadir ventana</button>
+          <span class="div"></span>
+          <button class="btn btn-fan ico" aria-label="Abrir carpeta del espacio" title="Abrir carpeta del espacio"><svg><use href="#i-carpeta"/></svg></button>
+          <button class="btn btn-fan ico" aria-label="Buscar" title="Buscar"><svg><use href="#i-buscar"/></svg></button>
+          <button class="btn btn-fan ico" aria-label="Ajustes" title="Ajustes"><svg><use href="#i-ajustes"/></svg></button>
+        </nav>
+        <div class="isla-mapa">
+          <div class="mini" id="mini" title="Minimapa"></div>
+          <div class="zoom">
+            <button class="btn btn-fan ico" id="zMenos" aria-label="Alejar"><svg viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <output id="zVal">100 %</output>
+            <button class="btn btn-fan ico" id="zMas" aria-label="Acercar"><svg><use href="#i-plus"/></svg></button>
+            <button class="btn btn-fan ico" id="zEnc" aria-label="Encuadrar todos los paneles" title="Encuadrar todos los paneles"><svg viewBox="0 0 12 12"><use href="#i-encuadre"/></svg></button>
+          </div>
+        </div>
+        <div class="aviso" id="aviso" hidden role="status"><span class="d"></span><span id="avisoTxt"></span><button class="btn btn-fan btn-sm" id="avisoOk">Entendido</button></div>
+      </div>
+    </div>
+    <p class="nota">Las ventanas son las aplicaciones reales del usuario; su contenido aquí es una ilustración. La barra de tareas de Windows se mantiene visible debajo, como se acordó para el lienzo maximizado.</p>
+  </section>
+
+  <section aria-labelledby="t-princ">
+    <div class="sec-head"><h2 id="t-princ">Tres reglas</h2></div>
+    <div class="principios">
+      <div><h3>La luz marca el foco</h3><p>Solo un panel está encendido. La luz de su espacio dibuja su canto superior y su halo; el resto queda a media luz. Nada más en la pantalla usa la luz como decoración.</p></div>
+      <div><h3>Los controles se retiran</h3><p>Con el cursor en el lienzo solo ves tus ventanas. La orilla aparece al acercarte al borde superior y la isla del mapa se queda pequeña en su esquina.</p></div>
+      <div><h3>El fondo es del usuario</h3><p>El sistema no depende de la imagen. Sin imagen, la mesa es noche con una retícula de puntos; con imagen, un velo de noche la oscurece para que la luz se siga leyendo.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-color">
+    <div class="sec-head">
+      <h2 id="t-color">Color</h2>
+      <p>Una base de azules tinta, nunca negro puro, y un texto blanco hueso, cálido. El acento no es de la marca: cada espacio tiene su luz, elegida de una paleta probada para leerse sobre la noche.</p>
+    </div>
+    <div class="muestras">
+      <div class="muestra"><div class="sw" style="background:#141826"></div><b>Noche</b><code>#141826</code><p>Lienzo y fondo de la app</p></div>
+      <div class="muestra"><div class="sw" style="background:#1E2233"></div><b>Pizarra</b><code>#1E2233</code><p>Asas, orilla, islas</p></div>
+      <div class="muestra"><div class="sw" style="background:#2A2F44"></div><b>Relieve</b><code>#2A2F44</code><p>Hover, menús, botón secundario</p></div>
+      <div class="muestra"><div class="sw" style="background:#363C55"></div><b>Borde</b><code>#363C55</code><p>Líneas y contornos</p></div>
+      <div class="muestra"><div class="sw" style="background:#E8E4D8"></div><b>Hueso</b><code>#E8E4D8</code><p>Texto principal</p></div>
+      <div class="muestra"><div class="sw" style="background:#9A9EB2"></div><b>Ceniza</b><code>#9A9EB2</code><p>Texto secundario</p></div>
+      <div class="muestra"><div class="sw" style="background:#FF6B6B"></div><b>Peligro</b><code>#FF6B6B</code><p>Cerrar, acciones destructivas</p></div>
+      <div class="muestra"><div class="sw" style="background:#F5C46B"></div><b>Aviso</b><code>#F5C46B</code><p>Ventana minimizada, atajo ocupado</p></div>
+    </div>
+    <div class="mesa">
+      <div class="fila" style="justify-content:space-between">
+        <h3>Luces de espacio</h3>
+        <span class="etq">Elige una para el espacio activo del boceto</span>
+      </div>
+      <div class="luces" id="luces"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-tipo">
+    <div class="sec-head">
+      <h2 id="t-tipo">Tipografía</h2>
+      <p>Una sola familia, Geist: una sans neutra y precisa, pensada para interfaces. Los títulos se cierran con espaciado negativo; la interfaz va a 13 px con espaciado normal. Las cifras son tabulares para que el zoom no baile.</p>
+    </div>
+    <div class="mesa tipos">
+      <div class="tipo"><div class="m">Pantalla<code>48 · 600 · espaciado −4 %</code></div><div class="s" style="font-size:48px;font-weight:600;letter-spacing:-0.04em;line-height:1">Programación</div></div>
+      <div class="tipo"><div class="m">Título<code>30 · 600 · espaciado −3 %</code></div><div class="s" style="font-size:30px;font-weight:600;letter-spacing:-0.03em;line-height:1.1">Añadir ventana al espacio</div></div>
+      <div class="tipo"><div class="m">Encabezado<code>19 · 600</code></div><div class="s" style="font-size:19px;font-weight:600">Ventanas abiertas en Windows</div></div>
+      <div class="tipo"><div class="m">Texto<code>14 · 400 · interlínea 1,5</code></div><div class="s" style="font-size:14px;max-width:60ch">Elige qué ventana pasa a Programación. Conserva su tamaño y se coloca en el hueco libre más cercano al centro de la vista.</div></div>
+      <div class="tipo"><div class="m">Interfaz<code>13 · 500</code></div><div class="s" style="font-size:13px;font-weight:500">Quitar del lienzo</div></div>
+      <div class="tipo"><div class="m">Detalle<code>12 · 400 · ceniza</code></div><div class="s" style="font-size:12px;color:var(--ceniza)">Space.cs — Escritorio Canvas</div></div>
+      <div class="tipo"><div class="m">Cifras<code>12 · tabulares</code></div><div class="s" style="font-size:12px;font-variant-numeric:tabular-nums">64 % · 100 % · 125 %</div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-ctl">
+    <div class="sec-head">
+      <h2 id="t-ctl">Botones y controles</h2>
+      <p>El botón de luz es la acción principal de una vista y aparece una vez. El resto son secundarios o fantasmas. Tres alturas: 28 px en la orilla y las asas, 32 px por defecto y 40 px en diálogos.</p>
+    </div>
+    <div class="rejilla">
+      <div class="mesa">
+        <h3>Variantes</h3>
+        <div class="fila">
+          <button class="btn btn-luz">Añadir al espacio</button>
+          <button class="btn btn-sec">Cancelar</button>
+        </div>
+        <div class="fila">
+          <button class="btn btn-fan"><svg><use href="#i-casa"/></svg>Inicio</button>
+          <button class="btn btn-pel">Cerrar ventana</button>
+        </div>
+        <p class="nota">Pasa el cursor y usa Tab para ver los estados.</p>
+      </div>
+      <div class="mesa">
+        <h3>Tamaños</h3>
+        <div class="fila">
+          <button class="btn btn-sec btn-sm">Orilla 28</button>
+          <button class="btn btn-sec">Normal 32</button>
+          <button class="btn btn-sec btn-lg">Diálogo 40</button>
+        </div>
+        <div class="fila">
+          <button class="btn btn-fan ico" aria-label="Abrir carpeta del espacio"><svg><use href="#i-carpeta"/></svg></button>
+          <button class="btn btn-fan ico" aria-label="Buscar"><svg><use href="#i-buscar"/></svg></button>
+          <button class="btn btn-fan ico" aria-label="Ajustes"><svg><use href="#i-ajustes"/></svg></button>
+        </div>
+      </div>
+      <div class="mesa">
+        <h3>Selección y campos</h3>
+        <div class="seg" role="group" aria-label="Ejemplo de selector">
+          <button aria-pressed="true"><span class="punto"></span>Programación</button>
+          <button aria-pressed="false"><span class="punto"></span>Juegos</button>
+        </div>
+        <input class="campo" id="campo-demo" type="search" placeholder="Buscar ventana o aplicación">
+        <div class="fila"><button class="interruptor" role="switch" aria-checked="true" aria-label="Volver al mapa con Ctrl+Alt+Espacio" id="sw1"></button><span style="font-size:13px">Volver al mapa con Ctrl+Alt+Espacio</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-panel">
+    <div class="sec-head">
+      <h2 id="t-panel">Panel de ventana</h2>
+      <p>Sin barra de título completa. A la izquierda, el asa con el icono, el nombre de la app y el documento; por ella se arrastra. A la derecha, los controles, que aparecen al pasar el cursor o con el panel encendido. Entre ambos queda libre el canto, donde se enciende la luz.</p>
+    </div>
+    <div class="estados" id="estados"></div>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Control</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>Más opciones</td><td>Ampliar a pantalla, quitar del lienzo (la ventana vuelve a Windows sin cerrarse) y cerrar ventana.</td></tr>
+          <tr><td>Minimizar</td><td>Pliega el panel a su asa con el aviso «minimizada». Un clic en el asa lo restaura.</td></tr>
+          <tr><td>Ampliar</td><td>La ventana ocupa la pantalla mientras trabajas. Al volver al mapa recupera su tamaño de panel.</td></tr>
+          <tr><td>Cerrar</td><td>Envía la misma orden que la ✕ de la aplicación. Si la app pide guardar, se enciende su panel y decides ahí.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-mov">
+    <div class="sec-head">
+      <h2 id="t-mov">Movimiento</h2>
+      <p>Solo una animación ocurre sin que la pidas: el cambio de luz al cambiar de espacio. Todo lo demás responde a un gesto y dura menos de un cuarto de segundo. Con la reducción de movimiento activada en Windows, los cambios son instantáneos.</p>
+    </div>
+    <div class="rejilla">
+      <div class="mesa mov"><h3>Cambiar de espacio</h3><div class="escena"><div class="esp"></div></div><button class="btn btn-sec btn-sm" data-mov="esp">Reproducir</button></div>
+      <div class="mesa mov"><h3>Encender un panel</h3><div class="escena"><div class="bar" id="mBar"></div></div><button class="btn btn-sec btn-sm" data-mov="bar">Reproducir</button></div>
+      <div class="mesa mov"><h3>Abrir la orilla</h3><div class="escena"><div class="ori" id="mOri"></div></div><button class="btn btn-sec btn-sm" data-mov="ori">Reproducir</button></div>
+      <div class="mesa mov"><h3>Abrir un menú</h3><div class="escena"><div class="men" id="mMen"></div></div><button class="btn btn-sec btn-sm" data-mov="men">Reproducir</button></div>
+      <div class="mesa mov"><h3>Minimizar</h3><div class="escena"><div class="mn" id="mMn"></div></div><button class="btn btn-sec btn-sm" data-mov="mn">Reproducir</button></div>
+    </div>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Token</th><th>Duración</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td><code>espacio</code></td><td class="num">420 ms</td><td>Cambio de luz y relevo de paneles entre espacios</td></tr>
+          <tr><td><code>panel</code></td><td class="num">220 ms</td><td>Encender un panel, minimizar, mover a pantalla completa</td></tr>
+          <tr><td><code>orilla</code></td><td class="num">180 ms</td><td>Abrir y retirar la orilla</td></tr>
+          <tr><td><code>menu</code></td><td class="num">140 ms</td><td>Menús, hover, cambios de color</td></tr>
+          <tr><td><code>curva</code></td><td class="num">0,2 0,7 0,2 1</td><td>Una sola curva de salida suave para todo</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-form">
+    <div class="sec-head">
+      <h2 id="t-form">Forma y espacio</h2>
+      <p>El radio crece con el tamaño del objeto, así se distingue lo que flota de lo que se pulsa. El espaciado sigue una escala de 4 px.</p>
+    </div>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Elemento</th><th>Radio</th><th>Superficie</th></tr></thead>
+        <tbody>
+          <tr><td>Islas: orilla, mapa</td><td class="num">12 px</td><td>Pizarra al 88 % con desenfoque. Es el único vidrio del sistema.</td></tr>
+          <tr><td>Panel</td><td class="num">10 px</td><td>Sin sombra en reposo; halo de luz cuando está encendido</td></tr>
+          <tr><td>Asa y controles del panel</td><td class="num">8 px arriba</td><td>Pizarra opaca, pegada al canto</td></tr>
+          <tr><td>Botones y campos</td><td class="num">7 px</td><td>Relieve o transparente</td></tr>
+          <tr><td>Espaciado</td><td class="num">4 · 8 · 12 · 16 · 24 · 32 · 48</td><td>Separación entre grupos con gap, nunca márgenes sueltos</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const LUCES = [
+    ['Glaciar', '#7CD6E8'], ['Brasa', '#FF7A9C'], ['Lima', '#C4E27A'],
+    ['Lavanda', '#B7A6FF'], ['Miel', '#F5C46B'], ['Menta', '#6FE3B5']
+  ];
+  const ESPACIOS = {
+    prog: { nombre: 'Programación', luz: '#7CD6E8',
+      inicio: [['VS', 'VS Code'], ['U', 'Unity'], ['B', 'Blender'], ['O', 'Obsidian'], ['>_', 'Terminal'], ['', 'Proyectos', 'c']],
+      paneles: [
+        { id: 'code', g: '{}', app: 'VS Code', doc: 'Space.cs — Escritorio Canvas', x: 290, y: 108, w: 560, h: 372, tipo: 'code' },
+        { id: 'web', g: 'N', app: 'Navegador', doc: 'Pull request #42', x: 900, y: 150, w: 330, h: 300, tipo: 'web' },
+        { id: 'notas', g: 'O', app: 'Obsidian', doc: 'diario.md', x: 330, y: 540, w: 330, h: 150, tipo: 'notas' }
+      ] },
+    juegos: { nombre: 'Juegos', luz: '#FF7A9C',
+      inicio: [['S', 'Steam'], ['D', 'Discord'], ['♪', 'Spotify'], ['', 'Capturas', 'c']],
+      paneles: [
+        { id: 'chat', g: 'D', app: 'Discord', doc: '#partidas', x: 300, y: 120, w: 380, h: 330, tipo: 'chat' },
+        { id: 'lib', g: 'S', app: 'Steam', doc: 'Biblioteca', x: 730, y: 150, w: 470, h: 300, tipo: 'biblio' },
+        { id: 'mus', g: '♪', app: 'Spotify', doc: 'Reproduciendo', x: 300, y: 520, w: 380, h: 110, tipo: 'musica' }
+      ] }
+  };
+  const W = 1280, H = 760, ZOOMS = [0.5, 0.64, 0.8, 1, 1.25];
+  const $ = (s, r = document) => r.querySelector(s);
+  const app = $('#app'), mundo = $('#mundo'), stage = $('#stage'), root = document.documentElement;
+  let st;
+
+  function nuevoEstado() {
+    st = { esp: 'prog', activo: { prog: 'code', juegos: 'chat' }, z: 1, sel: null, ext: {} };
+    for (const k in ESPACIOS) for (const p of ESPACIOS[k].paneles) st.ext[p.id] = { min: false, max: false, fuera: false };
+  }
+
+  const contenido = {
+    code: () => `<div class="code"><span class="n">1</span><span class="k">namespace</span> Canvas.Domain;
+<span class="n">2</span>
+<span class="n">3</span><span class="k">public readonly record struct</span> <span class="t">SpaceId</span>(<span class="k">string</span> Value);
+<span class="n">4</span>
+<span class="n">5</span><span class="k">public sealed class</span> <span class="t">SessionState</span>
+<span class="n">6</span>{
+<span class="n">7</span>    <span class="k">public</span> <span class="t">SpaceId</span> ActiveSpaceId { <span class="k">get</span>; }
+<span class="n">8</span>    <span class="k">public</span> <span class="t">IReadOnlyDictionary</span>&lt;<span class="t">SpaceId</span>, <span class="t">SpaceNavigation</span>&gt; Spaces { <span class="k">get</span>; }
+<span class="n">9</span>
+<span class="n">10</span>    <span class="c">// La cámara debe tener un zoom positivo.</span>
+<span class="n">11</span>    <span class="k">private static void</span> ValidateCamera(<span class="t">Camera</span> camera)
+<span class="n">12</span>    {
+<span class="n">13</span>        <span class="k">if</span> (camera.Zoom &lt;= 0) <span class="k">throw new</span> <span class="t">ArgumentOutOfRangeException</span>();
+<span class="n">14</span>    }
+<span class="n">15</span>}</div>`,
+    web: () => `<div class="web"><div class="barra"><span class="url">github.com/edu3250/escritorio-canvas/pull/42</span></div><div class="pag"><h4>Recortar las miniaturas por control</h4><span class="ok">● Todas las comprobaciones pasaron</span><div class="l" style="width:90%"></div><div class="l" style="width:76%"></div><div class="l" style="width:84%"></div><div class="l" style="width:50%"></div></div></div>`,
+    notas: () => `<div class="notas"><strong>Diario de uso</strong><span>20-11 · El minimapa tapa la esquina cuando trabajo en Unity a pantalla completa.</span><span style="color:#6A6F86">Quiero volver al mapa sin buscar el atajo.</span></div>`,
+    chat: () => `<div class="chat">${[['#7FD7C4', 'Lucía', '¿Jugamos a las 9?'], ['#B7A6FF', 'Marco', 'Dale, abro el servidor.'], ['#F5C46B', 'Tú', 'Entro en cuanto termine el PR.']].map(m => `<div class="msg"><span class="av" style="background:${m[0]}"></span><div><b>${m[1]}</b>${m[2]}</div></div>`).join('')}</div>`,
+    biblio: () => `<div class="biblio">${['#3E5C76', '#7A4E6E', '#4E7A5C', '#8A6A3E', '#5C4E8A', '#3E7A7A', '#7A3E4E', '#5C6A3E'].map(c => `<div style="background:${c}"></div>`).join('')}</div>`,
+    musica: () => `<div class="musica"><span class="cov"></span><div><b>Lluvia en la ciudad</b>Lista para concentrarse<div class="prog"></div></div></div>`
+  };
+
+  const svg = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+  function panelHTML(p, opts = {}) {
+    const e = opts.estado || st.ext[p.id];
+    const activo = opts.activo ?? (st.activo[st.esp] === p.id && !e.min);
+    const cls = ['panel', activo ? 'activo' : '', e.min ? 'min' : '', e.fuera ? 'fuera' : ''].join(' ');
+    const pos = opts.estatico ? '' : `style="left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px"`;
+    return `<div class="${cls}" data-id="${p.id}" ${pos}>
+      <div class="asa"><span class="g">${p.g}</span><b>${p.app}</b><i>${p.doc}</i>${e.min ? '<span class="chip">minimizada</span>' : ''}</div>
+      <div class="ctl">
+        <button data-act="mas" aria-label="Más opciones de ${p.app}">${svg('i-mas')}</button>
+        <button data-act="min" aria-label="Minimizar ${p.app}">${svg('i-min')}</button>
+        <button data-act="max" aria-label="${e.max ? 'Restaurar' : 'Ampliar'} ${p.app}">${svg(e.max ? 'i-rest' : 'i-max')}</button>
+        <button data-act="cerrar" class="x" aria-label="Cerrar ${p.app}">${svg('i-x')}</button>
+      </div>
+      <div class="cuerpo" tabindex="${opts.estatico ? -1 : 0}" aria-label="Panel de ${p.app}"><span class="borde-luz"></span>${contenido[p.tipo]()}</div>
+    </div>`;
+  }
+
+  function geom(p) {
+    if (st.ext[p.id].max) return { x: 24, y: 70, w: W - 48, h: H - 70 - 24 };
+    return p;
+  }
+
+  function render() {
+    const E = ESPACIOS[st.esp];
+    const hayMax = E.paneles.some(p => st.ext[p.id].max && !st.ext[p.id].fuera);
+    mundo.innerHTML = `<div class="inicio" style="${hayMax ? 'opacity:0' : ''}">${E.inicio.map((i, n) => `<button class="icono" data-ico="${n}" aria-pressed="${st.sel === n}"><span class="glifo ${i[2] || ''}">${i[2] ? svg('i-carpeta').replace('<svg', '<svg style="width:20px;height:20px"') : i[0]}</span><span>${i[1]}</span></button>`).join('')}</div>` +
+      E.paneles.map(p => {
+        const g = geom(p), e = st.ext[p.id];
+        const oculto = hayMax && !e.max;
+        return panelHTML({ ...p, ...g }, { estado: { ...e, fuera: e.fuera || oculto } });
+      }).join('');
+    mundo.style.transform = `scale(${st.z})`;
+    $('#zVal').textContent = Math.round(st.z * 100) + ' %';
+    app.querySelectorAll('[data-esp]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.esp === st.esp)));
+    mini();
+    marcarLuces();
+  }
+
+  function mini() {
+    const E = ESPACIOS[st.esp], k = 192 / W, m = $('#mini');
+    let h = `<i class="ini" style="left:${44 * k}px;top:${110 * k}px;width:${176 * k}px;height:${260 * k}px"></i>`;
+    for (const p of E.paneles) {
+      const e = st.ext[p.id]; if (e.fuera) continue;
+      const g = geom(p);
+      h += `<i class="${st.activo[st.esp] === p.id && !e.min ? 'on' : ''}" style="left:${g.x * k}px;top:${g.y * k}px;width:${g.w * k}px;height:${(e.min ? 4 / k : g.h) * k}px"></i>`;
+    }
+    const vw = W / st.z, vh = H / st.z;
+    h += `<span class="vista" style="left:${(W - vw) / 2 * k}px;top:${(H - vh) / 2 * k}px;width:${vw * k}px;height:${vh * k}px"></span>`;
+    m.innerHTML = h;
+  }
+
+  function ponerLuz(c) { root.style.setProperty('--luz', c); }
+
+  function cambiarEspacio(k) {
+    if (k === st.esp) return;
+    mundo.classList.add('saliendo');
+    ponerLuz(ESPACIOS[k].luz);
+    setTimeout(() => { st.esp = k; st.sel = null; render(); requestAnimationFrame(() => mundo.classList.remove('saliendo')); }, 180);
+  }
+
+  let avisoT;
+  function aviso(t) {
+    $('#avisoTxt').textContent = t; $('#aviso').hidden = false;
+    clearTimeout(avisoT); avisoT = setTimeout(() => $('#aviso').hidden = true, 4200);
+  }
+
+  function cerrarMenu() { const m = app.querySelector('.menu'); if (m) m.remove(); }
+  function abrirMenu(id, boton) {
+    cerrarMenu();
+    const p = ESPACIOS[st.esp].paneles.find(x => x.id === id);
+    const r = boton.getBoundingClientRect(), ra = app.getBoundingClientRect(), s = ra.width / W;
+    const m = document.createElement('div');
+    m.className = 'menu'; m.setAttribute('role', 'menu');
+    m.innerHTML = `<button role="menuitem" data-m="max">${st.ext[id].max ? 'Restaurar tamaño de panel' : 'Ampliar a pantalla'}</button>
+      <button role="menuitem" data-m="quitar">Quitar del lienzo</button><hr>
+      <button role="menuitem" data-m="cerrar" class="pel">Cerrar ventana <kbd>Alt+F4</kbd></button>`;
+    m.style.right = (W - (r.right - ra.left) / s) + 'px';
+    m.style.top = ((r.bottom - ra.top) / s + 6) + 'px';
+    m.dataset.id = id;
+    app.appendChild(m);
+    m.querySelector('button').focus();
+    m.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-m]'); if (!b) return;
+      cerrarMenu(); accion(b.dataset.m === 'quitar' ? 'quitar' : b.dataset.m, id, p);
+    });
+  }
+
+  function accion(act, id, p) {
+    const e = st.ext[id];
+    if (act === 'min') { e.min = !e.min; e.max = false; if (e.min && st.activo[st.esp] === id) st.activo[st.esp] = null; }
+    else if (act === 'max') { e.max = !e.max; e.min = false; st.activo[st.esp] = id; if (e.max) st.z = 1; }
+    else if (act === 'cerrar') { e.fuera = true; e.max = false; aviso(`${p.app} se cerró.`); }
+    else if (act === 'quitar') { e.fuera = true; e.max = false; aviso(`${p.app} volvió al escritorio de Windows.`); }
+    render();
+  }
+
+  mundo.addEventListener('click', ev => {
+    const ico = ev.target.closest('[data-ico]');
+    if (ico) { const n = +ico.dataset.ico; st.sel = st.sel === n ? null : n; render(); return; }
+    const panel = ev.target.closest('.panel'); if (!panel) { if (st.activo[st.esp]) { st.activo[st.esp] = null; render(); } return; }
+    const id = panel.dataset.id, p = ESPACIOS[st.esp].paneles.find(x => x.id === id);
+    const b = ev.target.closest('[data-act]');
+    if (b) { ev.stopPropagation(); if (b.dataset.act === 'mas') abrirMenu(id, b); else accion(b.dataset.act, id, p); return; }
+    if (st.ext[id].min) { st.ext[id].min = false; }
+    st.activo[st.esp] = id; render();
+  });
+  mundo.addEventListener('keydown', ev => {
+    if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList.contains('cuerpo')) { ev.preventDefault(); ev.target.click(); }
+  });
+  document.addEventListener('click', ev => { if (!ev.target.closest('.menu') && !ev.target.closest('[data-act="mas"]')) cerrarMenu(); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrarMenu(); });
+
+  app.querySelectorAll('[data-esp]').forEach(b => b.addEventListener('click', () => cambiarEspacio(b.dataset.esp)));
+  $('#btnInicio').addEventListener('click', () => { st.z = 1; ESPACIOS[st.esp].paneles.forEach(p => st.ext[p.id].max = false); st.activo[st.esp] = null; render(); });
+  $('#btnAnadir').addEventListener('click', () => aviso('Aquí se abre la lista de ventanas abiertas en Windows.'));
+  $('#avisoOk').addEventListener('click', () => $('#aviso').hidden = true);
+  $('#zMenos').addEventListener('click', () => { const i = ZOOMS.findIndex(z => z >= st.z - 1e-6); st.z = ZOOMS[Math.max(0, i - 1)]; render(); });
+  $('#zMas').addEventListener('click', () => { const i = ZOOMS.findIndex(z => z > st.z + 1e-6); st.z = ZOOMS[i < 0 ? ZOOMS.length - 1 : i]; render(); });
+  $('#zEnc').addEventListener('click', () => { st.z = 1; render(); });
+
+  // Orilla: se abre al acercar el cursor al borde y se retira al alejarlo
+  let fija = false, cierreT;
+  const abrir = () => { clearTimeout(cierreT); app.classList.add('orilla-abierta'); };
+  const cerrar = () => { if (fija) return; cierreT = setTimeout(() => { if (!$('#orilla').matches(':focus-within')) app.classList.remove('orilla-abierta'); }, 260); };
+  $('#zonaOrilla').addEventListener('mouseenter', abrir);
+  $('#orilla').addEventListener('mouseenter', abrir);
+  $('#orilla').addEventListener('mouseleave', cerrar);
+  $('#zonaOrilla').addEventListener('mouseleave', cerrar);
+  $('#orilla').addEventListener('focusin', abrir);
+  $('#orilla').addEventListener('focusout', cerrar);
+  function modoOrilla(v) {
+    fija = v; $('#o-fija').setAttribute('aria-pressed', String(v)); $('#o-auto').setAttribute('aria-pressed', String(!v));
+    app.classList.toggle('orilla-abierta', v);
+  }
+  $('#o-fija').addEventListener('click', () => modoOrilla(true));
+  $('#o-auto').addEventListener('click', () => modoOrilla(false));
+  function modoFondo(v) {
+    app.classList.toggle('con-imagen', v);
+    $('#f-si').setAttribute('aria-pressed', String(v)); $('#f-no').setAttribute('aria-pressed', String(!v));
+  }
+  $('#f-si').addEventListener('click', () => modoFondo(true));
+  $('#f-no').addEventListener('click', () => modoFondo(false));
+  $('#reset').addEventListener('click', () => {
+    ESPACIOS.prog.luz = '#7CD6E8'; ESPACIOS.juegos.luz = '#FF7A9C';
+    nuevoEstado(); ponerLuz(ESPACIOS.prog.luz); cerrarMenu(); render();
+  });
+
+  // Luces
+  const luces = $('#luces');
+  luces.innerHTML = LUCES.map(([n, c]) => `<button class="luz-btn" data-c="${c}" aria-pressed="false"><span style="background:${c}"></span>${n}</button>`).join('');
+  luces.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-c]'); if (!b) return;
+    ESPACIOS[st.esp].luz = b.dataset.c; ponerLuz(b.dataset.c); marcarLuces();
+  });
+  function marcarLuces() {
+    luces.querySelectorAll('[data-c]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c.toLowerCase() === ESPACIOS[st.esp].luz.toLowerCase())));
+  }
+
+  // Estados del panel en la hoja
+  const P = ESPACIOS.prog.paneles;
+  $('#estados').innerHTML =
+    `<div style="display:grid;gap:10px"><span class="etq">Encendido</span>${panelHTML(P[0], { estatico: true, activo: true, estado: { min: false, max: false, fuera: false } })}</div>` +
+    `<div style="display:grid;gap:10px"><span class="etq">En reposo, a media luz</span>${panelHTML(P[1], { estatico: true, activo: false, estado: { min: false, max: false, fuera: false } })}</div>` +
+    `<div style="display:grid;gap:10px;align-content:start"><span class="etq">Minimizado</span><div style="height:34px"></div>${panelHTML(P[2], { estatico: true, activo: false, estado: { min: true, max: false, fuera: false } })}</div>`;
+  $('#estados').querySelectorAll('.panel').forEach(el => el.style.height = el.classList.contains('min') ? '0px' : '170px');
+
+  // Demos de movimiento
+  document.querySelectorAll('[data-mov]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.mov;
+    if (k === 'esp') { const actual = getComputedStyle(root).getPropertyValue('--luz').trim(); const otra = ESPACIOS[st.esp === 'prog' ? 'juegos' : 'prog'].luz; ponerLuz(otra); setTimeout(() => ponerLuz(ESPACIOS[st.esp].luz), 900); return; }
+    const el = { bar: $('#mBar'), ori: $('#mOri'), men: $('#mMen'), mn: $('#mMn') }[k];
+    if (k === 'ori') { el.classList.add('off'); setTimeout(() => el.classList.remove('off'), 500); return; }
+    if (k === 'mn') { el.classList.toggle('on'); return; }
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  }));
+  $('#sw1').addEventListener('click', e => e.currentTarget.setAttribute('aria-checked', String(e.currentTarget.getAttribute('aria-checked') !== 'true')));
+
+  // Escala del boceto
+  function ajustar() { const s = stage.clientWidth / W; app.style.transform = `scale(${s})`; stage.style.height = (H * s) + 'px'; }
+  new ResizeObserver(ajustar).observe(stage);
+
+  nuevoEstado(); render(); ajustar();
+})();
+</script>
