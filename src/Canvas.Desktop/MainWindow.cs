@@ -618,6 +618,7 @@ public sealed class MainWindow : Window
             recovery.SaveOriginal(identity.Handle, panel.Instance);
             saved = true;
             mapCamera = previous;
+            panel.LastNativeSize = null;
             windowPanels.ActivePanel = panel;
             UpdateMapPriority();
 

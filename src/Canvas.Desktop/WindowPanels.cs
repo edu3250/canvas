@@ -77,9 +77,22 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)
     {
         var dpi = VisualTreeHelper.GetDpi(this);
-        var width = (screenBounds.Right - (double)screenBounds.Left) / dpi.DpiScaleX / camera.Zoom;
-        var height = (screenBounds.Bottom - (double)screenBounds.Top) / dpi.DpiScaleY / camera.Zoom;
-        var bounds = panel.Bounds with { Width = width + 2, Height = height + TitleHeight + 2 };
+        var width = screenBounds.Right - screenBounds.Left;
+        var height = screenBounds.Bottom - screenBounds.Top;
+        if (width <= 0 || height <= 0) return;
+
+        var bounds = panel.Bounds;
+        // The first measurement can reflect the application's enforced minimum.
+        // Only subsequent native size changes should resize the panel on the canvas.
+        var lastSize = panel.LastNativeSize;
+        if (lastSize is { } previous)
+        {
+            if (width != previous.Width)
+                bounds = bounds with { Width = width / dpi.DpiScaleX / camera.Zoom + 2 };
+            if (height != previous.Height)
+                bounds = bounds with { Height = height / dpi.DpiScaleY / camera.Zoom + TitleHeight + 2 };
+        }
+        panel.LastNativeSize = (width, height);
         if (syncPosition)
         {
             var topLeft = PointFromScreen(new WpfPoint(screenBounds.Left, screenBounds.Top));
@@ -87,7 +100,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             bounds = bounds with { X = origin.X - 1, Y = origin.Y - TitleHeight - 1 };
         }
 
-        if (width > 0 && height > 0 && bounds != panel.Bounds)
+        if (bounds != panel.Bounds || lastSize != (width, height))
         {
             panel.Bounds = bounds;
             Render();
@@ -294,6 +307,15 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             }
 
             var bounds = panel.Bounds;
+            if (panel == ActivePanel && panel.LastNativeSize is { } nativeSize)
+            {
+                var dpi = VisualTreeHelper.GetDpi(this);
+                bounds = bounds with
+                {
+                    Width = nativeSize.Width / dpi.DpiScaleX / camera.Zoom + 2,
+                    Height = nativeSize.Height / dpi.DpiScaleY / camera.Zoom + TitleHeight + 2
+                };
+            }
             var minimized = WindowCatalog.IsMinimized(panel.Window.Handle);
             var compact = minimized || panel.IsFolded;
             DomainPoint? size = null;
@@ -450,6 +472,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
         public CanvasBounds DisplayBounds { get; set; } = bounds;
+        public (int Width, int Height)? LastNativeSize { get; set; }
         public PanelCard Card { get; } = card;
         public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;
