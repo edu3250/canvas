@@ -25,11 +25,10 @@ internal sealed class EmbeddingHost : Form
         StartPosition = FormStartPosition.Manual;
         Bounds = Screen.PrimaryScreen!.Bounds;
         var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 48 };
-        var open = new Button { Text = "Abrir " + kind, AutoSize = true };
         var exit = new Button { Text = "Terminar ensayo", AutoSize = true };
-        open.Click += (_, _) => Guard(() =>
+        Shown += (_, _) => Guard(() =>
         {
-            open.Enabled = false;
+            LayoutSlot();
             elapsed.Start();
             process = run.LaunchEmbeddingCandidate(kind);
             status.Text = "Esperando la ventana del perfil de prueba…";
@@ -46,7 +45,9 @@ internal sealed class EmbeddingHost : Form
             poll.Start();
         });
         exit.Click += (_, _) => Close();
-        bar.Controls.AddRange([open, another, exit, status]);
+        another.BackColor = exit.BackColor = SystemColors.Control;
+        another.ForeColor = exit.ForeColor = SystemColors.ControlText;
+        bar.Controls.AddRange([another, exit, status]);
         Controls.AddRange([slot, secondSlot, bar]);
         ClientSizeChanged += (_, _) => Guard(LayoutSlot);
         poll.Tick += (_, _) => Guard(FindCandidate);
@@ -59,7 +60,6 @@ internal sealed class EmbeddingHost : Form
                 catch (Exception error) { Failed = true; run.Log("Error al devolver: " + error.Message); }
             }
         };
-        Shown += (_, _) => LayoutSlot();
     }
 
     private void LayoutSlot()
