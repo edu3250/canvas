@@ -16,7 +16,7 @@ internal static class Program
         }
         if (args is ["embed-check"])
             return EmbeddedPanel.Check();
-        if (args is ["embed", "control" or "code" or "chrome"] or ["overlay", "chrome"] or
+        if (args is ["embed", "control" or "code" or "chrome"] or ["overlay", "chrome" or "code"] or
             ["embed" or "overlay", "chrome", "--check-input"])
         {
             var trial = new Run(args[0] + "-" + args[1]);
