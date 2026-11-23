@@ -155,17 +155,17 @@ public sealed class MainWindow : Window
             }
 
             if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left &&
-                !windowPanels.IsPointerOverControls)
+                !windowPanels.IsPointerOverPanel)
             {
                 e.Handled = true;
                 if (edgeBar.IsMouseOver)
                 {
                     e.Handled = false;
-                    ReturnToMap();
+                    ReturnToMap(restoreCamera: false);
                 }
                 else if (gesture is null)
                 {
-                    ReturnToMap();
+                    ReturnToMap(restoreCamera: false);
                 }
             }
         };
@@ -348,8 +348,7 @@ public sealed class MainWindow : Window
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
             placement.ReadNormalScreenBounds(panel.Window.Handle) is { } bounds)
         {
-            panel.WorkingSize = bounds.Size;
-            windowPanels.SyncActiveBounds(panel, bounds.Visible, syncPosition);
+            windowPanels.SyncActiveBounds(panel, bounds, syncPosition);
         }
     }
 
@@ -590,7 +589,7 @@ public sealed class MainWindow : Window
             return;
         }
 
-        var previous = windowPanels.ActivePanel is null ? ActiveCamera : mapCamera;
+        var previous = ActiveCamera;
         ReturnToMap(restoreCamera: false);
 
         CancelGesture();
@@ -603,10 +602,9 @@ public sealed class MainWindow : Window
             var start = ActiveCamera;
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var bounds = panel.Bounds;
-            var target = fromMinimap
-                ? CameraGestures.CenterOn(bounds.Center, ViewportSize, 1)
-                : CameraGestures.ApproachPanel(start, bounds, ViewportSize);
-            if (!await AnimateActivationAsync(start, target, bounds.Center) || panel.Space != session.ActiveSpaceId)
+            if (fromMinimap && (!await AnimateActivationAsync(start,
+                CameraGestures.CenterOn(bounds.Center, ViewportSize, 1), bounds.Center) ||
+                panel.Space != session.ActiveSpaceId))
             {
                 if (!closed && panel.Space == session.ActiveSpaceId)
                 {
@@ -624,7 +622,7 @@ public sealed class MainWindow : Window
             UpdateMapPriority();
 
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
-            placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y), panel.WorkingSize);
+            placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y), windowPanels.GetVisiblePixelSize(panel, ActiveCamera));
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
             if (WindowState == WindowState.Maximized)

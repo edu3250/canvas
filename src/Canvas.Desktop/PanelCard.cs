@@ -35,7 +35,6 @@ internal sealed class PanelCard : Border
     public event Action? MaximizeRequested;
     public event Action? CloseRequested;
     public event Action? RemoveRequested;
-    public bool IsPointerOverControls => tongue.IsMouseOver;
 
     public PanelCard(string title)
     {

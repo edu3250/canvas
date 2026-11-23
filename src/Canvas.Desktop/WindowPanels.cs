@@ -44,7 +44,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     public event Action<Panel>? RemoveRequested;
 
     public Panel? ActivePanel { get; set; }
-    public bool IsPointerOverControls => panels.Any(panel => panel.Card.IsPointerOverControls);
+    public bool IsPointerOverPanel => panels.Any(panel => panel.Card.IsMouseOver);
     public bool Contains(Panel panel) => panels.Contains(panel);
     public Panel[] GetUnavailablePanels(bool includePendingClose = false) => panels
         .Where(panel => panel.CloseRequest?.Accepted == true ||
@@ -65,6 +65,13 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     {
         var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X + 1, panel.Bounds.Y + TitleHeight + 1), targetCamera);
         return PointToScreen(new WpfPoint(point.X, point.Y));
+    }
+
+    public (int Width, int Height) GetVisiblePixelSize(Panel panel, Camera targetCamera)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        return (Math.Max(1, (int)Math.Round((panel.Bounds.Width - 2) * targetCamera.Zoom * dpi.DpiScaleX)),
+            Math.Max(1, (int)Math.Round((panel.Bounds.Height - TitleHeight - 2) * targetCamera.Zoom * dpi.DpiScaleY)));
     }
 
     public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)
@@ -121,16 +128,11 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             return;
         }
 
-        var dpi = VisualTreeHelper.GetDpi(this);
         var width = Math.Clamp(ActualWidth, 3, 1060);
         var height = Math.Clamp(ActualHeight, TitleHeight + 3, 810);
         var center = CanvasBounds.Viewport(camera, new DomainPoint(ActualWidth, ActualHeight)).Center;
         var desired = new CanvasBounds(center.X - width / 2, center.Y - height / 2, width, height);
-        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), new PanelCard(window.Title), instance)
-        {
-            WorkingSize = ((int)Math.Round((width - 2) * dpi.DpiScaleX),
-                (int)Math.Round((height - TitleHeight - 2) * dpi.DpiScaleY))
-        };
+        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), new PanelCard(window.Title), instance);
         panels.Add(panel);
         Children.Add(panel.Card);
         panel.Card.Handle.PreviewMouseLeftButtonDown += (_, e) => StartDrag(panel, e);
@@ -448,7 +450,6 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         public SpaceId Space { get; } = space;
         public CanvasBounds Bounds { get; set; } = bounds;
         public CanvasBounds DisplayBounds { get; set; } = bounds;
-        public (int Width, int Height)? WorkingSize { get; set; }
         public PanelCard Card { get; } = card;
         public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;

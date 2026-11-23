@@ -115,11 +115,11 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
-    public (WindowRectangle Visible, (int Width, int Height) Size)? ReadNormalScreenBounds(long handle)
+    public WindowRectangle? ReadNormalScreenBounds(long handle)
     {
         var window = (nint)handle;
         return !IsIconic(window) && !IsZoomed(window) && GetWindowRect(window, out var bounds)
-            ? (VisibleFrame(window, bounds), (bounds.Right - bounds.Left, bounds.Bottom - bounds.Top))
+            ? VisibleFrame(window, bounds)
             : null;
     }
 
@@ -198,7 +198,8 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
 
         if (!SetWindowPos(window, 0, x - (visible.Left - full.Left), y - (visible.Top - full.Top),
-            size?.Width ?? 0, size?.Height ?? 0, flags))
+            size is { } w ? w.Width + (full.Right - visible.Right) + (visible.Left - full.Left) : 0,
+            size is { } h ? h.Height + (full.Bottom - visible.Bottom) + (visible.Top - full.Top) : 0, flags))
         {
             throw new Win32Exception();
         }
