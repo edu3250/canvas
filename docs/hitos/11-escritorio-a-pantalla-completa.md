@@ -41,9 +41,12 @@ Abro Chrome con Canvas minimizado y puedo escribir en su panel. Una segunda vent
 
 La elección de arquitectura depende del prototipo. El mecanismo de incorporación debe respetar el foco también cuando el origen de una ventana resulte ambiguo.
 
+Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio aparecer fuera del panel y no pudo escribir. La comprobación del clic y la lectura del foco reprodujeron el fallo, incluso al intentar dar foco al alojar la ventana. La superposición queda como candidata para la comparación visual.
+
 ## Registro de sesiones
 
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
 | 23-11-2026 | Definir | Codex · GPT-6 | Se acordaron el recorrido, la política de foco y el ensayo de apertura. | [#51](https://github.com/edu3250/canvas/pull/51) | Validar el prototipo y elegir arquitectura. |
 | 23-11-2026 | Construir | Codex · GPT-6 | Preparado el ensayo de alojamiento para Chrome y VS Code. Release compiló sin advertencias. La comprobación con ventanas ocultas verificó padre, estilo, tamaño y separación. | [#52](https://github.com/edu3250/canvas/pull/52) | Ensayo visible con perfiles descartables tras el «adelante». Evaluar destello, escritura y diálogos. |
+| 23-11-2026 | Construir | Codex · GPT-6 | En Windows, Chrome superpuesto recibió `canvas42` tras un solo clic en dos ejecuciones. La página confirmó el texto exacto. Como hija, el clic alcanzó Chrome y el foco quedó fuera. Se cerraron los procesos de prueba y se eliminaron sus temporales. | [#52](https://github.com/edu3250/canvas/pull/52), `6bdbe43` | Observar la apertura superpuesta con el usuario y contrastar con VS Code y sus diálogos antes de decidir. |
