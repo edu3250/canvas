@@ -857,7 +857,7 @@ public sealed class MainWindow : Window
         var fullscreenMapInFront = WindowState == WindowState.Maximized && windowHandle != 0 &&
             NativePanelInput.IsForeground(windowHandle);
         var projectedInFront = windowPanels.ProjectActive && windowPanels.ActivePanel is { } projected &&
-            NativePanelInput.IsForeground((nint)projected.Window.Handle) &&
+            (NativePanelInput.IsForeground(windowHandle) || NativePanelInput.IsForeground((nint)projected.Window.Handle)) &&
             !NativeCanvasFrame.HasFullscreenClient((nint)projected.Window.Handle);
         Topmost = WindowState != WindowState.Minimized && (projectedInFront || windowPanels.ActivePanel is null &&
             (fullscreenMapInFront || ((IsActive || returningFromTopmostSource) && windowPanels.HasTopmostSource())));
@@ -1072,7 +1072,7 @@ public sealed class MainWindow : Window
         }
 
         spaceView.Focus();
-        if (kind == GestureKind.Pan && windowPanels.ActivePanel is { } panel &&
+        if (kind == GestureKind.Pan && !windowPanels.ProjectActive && windowPanels.ActivePanel is { } panel &&
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
         {
             NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle);
@@ -1157,6 +1157,7 @@ public sealed class MainWindow : Window
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) && !WindowCatalog.IsMinimized(panel.Window.Handle))
         {
             NativePanelInput.SetForegroundWindow((nint)panel.Window.Handle);
+            UpdateMapPriority();
         }
 
         if (active.Kind == GestureKind.Icons && !active.HasMoved && spaceView.FindIcon(spaceView.InputHitTest(e.GetPosition(spaceView))!) == active.Icon)
