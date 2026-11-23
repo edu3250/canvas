@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 internal sealed class ScaledTrial : Form
 {
@@ -13,7 +13,7 @@ internal sealed class ScaledTrial : Form
     private string status = "Haz clic en el campo y escribe.";
     private static readonly double[] scales = [0.3, 1, 3];
 
-    internal ScaledTrial(Run run, nint browser, int pid)
+    internal ScaledTrial(Run run, nint browser, int pid, bool checkInput)
     {
         this.run = run;
         this.browser = browser;
@@ -25,6 +25,7 @@ internal sealed class ScaledTrial : Form
         BackColor = Color.FromArgb(22, 26, 34);
         ForeColor = Color.White;
         DoubleBuffered = true;
+        SetStyle(ControlStyles.Selectable, false);
         Shown += (_, _) =>
         {
             try
@@ -37,6 +38,7 @@ internal sealed class ScaledTrial : Form
                 Native.SetForegroundWindow(browser);
                 Project();
                 watch.Start();
+                if (checkInput) _ = VerifyInput();
             }
             catch (Exception error) { run.Log(error.Message); Close(); Failed = true; }
         };
@@ -73,11 +75,29 @@ internal sealed class ScaledTrial : Form
 
     internal bool Failed { get; private set; }
 
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var parameters = base.CreateParams;
+            parameters.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
+            return parameters;
+        }
+    }
+
     protected override void WndProc(ref Message message)
     {
         if (message.Msg == 0x21 && Native.GetForegroundWindow() == browser)
         {
             message.Result = 3; // MA_NOACTIVATE: preserve the caret in Chrome.
+            return;
+        }
+        // A normal WinForms mouse-down focuses the form even after MA_NOACTIVATE.
+        if (message.Msg == 0x0201) return;
+        if (message.Msg == 0x0202)
+        {
+            long packed = message.LParam.ToInt64();
+            HandleClick(new Point((short)packed, (short)(packed >> 16)));
             return;
         }
         base.WndProc(ref message);
@@ -133,37 +153,110 @@ internal sealed class ScaledTrial : Form
         TextRenderer.DrawText(e.Graphics, status, Font, new Point(392,20), ForeColor);
     }
 
-    protected override void OnMouseDown(MouseEventArgs e)
+    private void HandleClick(Point point)
     {
-        base.OnMouseDown(e);
-        if (e.Button != MouseButtons.Left) return;
+        run.Log($"Clic del panel {point.X}, {point.Y}.");
         for (int i=0; i<4; i++)
         {
-            if (!new Rectangle(8+i*94,8,88,38).Contains(e.Location)) continue;
+            if (!new Rectangle(8+i*94,8,88,38).Contains(point)) continue;
             if (i==3) { run.Log("Salida con el botón Terminar."); Close(); }
             else if (FocusBrowser()) { zoom=scales[i]; Project(); }
             return;
         }
-        if (!destination.Contains(e.Location) || !FocusBrowser()) return;
-        var pos = ToSource(e.Location, destination, source);
-        var target = browser;
-        while (true)
-        {
-            var child = ChildWindowFromPointEx(target, pos, 7);
-            if (child==0 || child==target) break;
-            if (Native.Pid(child)!=pid) return;
-            MapWindowPoints(target, child, ref pos, 1);
-            target = child;
-        }
-        var coords = (nint)((pos.X & 0xffff) | ((pos.Y & 0xffff)<<16));
-        if (Native.GetAncestor(target,2)!=browser || !run.IsOurs(browser,pid)) return;
-        bool sent = PostMessageW(target,0x201,1,coords) && PostMessageW(target,0x202,0,coords);
-        status = sent ? "Clic enviado. Comprueba el cursor y escribe en Chrome." : "Windows rechazó el clic.";
-        Invalidate();
+        if (!destination.Contains(point) || !FocusBrowser()) return;
+        var pos = ToSource(point, destination, source);
+        BeginInvoke(new Action(() => ForwardClick(pos)));
     }
 
+    private async void ForwardClick(Point pos)
+    {
+        if (!run.IsOurs(browser, pid) || Native.GetForegroundWindow() != browser) return;
+        Capture = false;
+        if (!ClientToScreen(browser, ref pos)) return;
+        var local = PointToClient(pos);
+        var previous = Cursor.Position;
+        using var aperture = new Region(ClientRectangle);
+        aperture.Exclude(new Rectangle(local.X - 2, local.Y - 2, 5, 5));
+        Region = aperture;
+        try
+        {
+            bool CanClick() => Native.GetForegroundWindow() == browser && run.IsOurs(browser, pid) &&
+                Native.GetAncestor(Native.WindowFromPoint(pos), 2) == browser;
+            if (!CanClick())
+            {
+                status = "El punto de Chrome está cubierto. Vuelve a hacer clic.";
+                run.Log("Clic omitido: destino nativo no disponible.");
+                return;
+            }
+            Cursor.Position = pos;
+            if (Cursor.Position != pos || !CanClick()) { run.Log("El cursor o su destino cambió."); return; }
+            run.Log("Destino nativo verificado.");
+            Native.mouse_event(2, 0, 0, 0, 0);
+            Native.mouse_event(4, 0, 0, 0, 0);
+            await Task.Delay(100);
+            status = "Escribe en el campo de Chrome.";
+        }
+        finally
+        {
+            if (Cursor.Position == pos) Cursor.Position = previous;
+            if (!IsDisposed) { Region = null; Invalidate(); }
+        }
+    }
+
+    private async Task VerifyInput()
+    {
+        try
+        {
+            await Task.Delay(900);
+            async Task ClickPanel(Point point)
+            {
+                if (!run.IsOurs(browser, pid) || Native.GetForegroundWindow() != browser)
+                    throw new InvalidOperationException("El ensayo perdió el primer plano.");
+                var screen = PointToScreen(point);
+                var previous = Cursor.Position;
+                Cursor.Position = screen;
+                try
+                {
+                    await Task.Delay(80);
+                    if (Native.WindowFromPoint(screen) != Handle || Cursor.Position != screen ||
+                        Native.GetForegroundWindow() != browser || !run.IsOurs(browser, pid))
+                        throw new InvalidOperationException("El panel no está disponible para el clic de prueba.");
+                    Native.mouse_event(2, 0, 0, 0, 0);
+                    await Task.Delay(50);
+                    Native.mouse_event(4, 0, 0, 0, 0);
+                    await Task.Delay(500);
+                }
+                finally { if (Cursor.Position == screen) Cursor.Position = previous; }
+            }
+            void Type(string keys)
+            {
+                if (!run.IsOurs(browser,pid) || Native.GetForegroundWindow()!=browser ||
+                    !Native.Title(browser).Contains(" FIELD", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Campo sin confirmar: foco navegador={Native.GetForegroundWindow()==browser}; identidad={run.IsOurs(browser,pid)}; campo={Native.Title(browser).Contains(" FIELD")}.");
+                SendKeys.SendWait(keys);
+            }
+            Point Center() => new(destination.Left+destination.Width/2, destination.Top+destination.Height/2);
+            await ClickPanel(Center());
+            Type("canvas2{LEFT}");
+            await ClickPanel(new Point(42, 24));
+            if (zoom != 0.3) throw new InvalidOperationException("No se seleccionó 30 %.");
+            Type("4");
+            await Task.Delay(500);
+            if (!Native.Title(browser).Contains("INPUT-OK")) throw new InvalidOperationException("Fallo de inserción al 30 %.");
+            await ClickPanel(new Point(235, 24));
+            if (zoom != 3) throw new InvalidOperationException("No se seleccionó 300 %.");
+            await ClickPanel(Center());
+            Type("x");
+            await Task.Delay(500);
+            if (!Native.Title(browser).Contains("SCALE-OK")) throw new InvalidOperationException("Fallo de inserción al 300 %.");
+            run.Log("El campo confirmó canvas42 al 30 % y canvas42x después del clic al 300 %.");
+        }
+        catch (Exception error) { Failed = true; run.Log(error.Message); }
+        finally { if (!IsDisposed) Close(); }
+    }
     private bool FocusBrowser()
     {
+        run.Log($"Clic válido={run.IsOurs(browser,pid)}; foco navegador={Native.GetForegroundWindow()==browser}; foco panel={Native.GetForegroundWindow()==Handle}.");
         if (!run.IsOurs(browser, pid)) return false;
         if (Native.GetForegroundWindow() == browser) return true;
         if (Native.GetForegroundWindow() == Handle)
@@ -187,7 +280,5 @@ internal sealed class ScaledTrial : Form
 
     [DllImport("user32")] private static extern bool GetClientRect(nint window, out Native.Rect rect);
     [DllImport("user32")] private static extern bool IsWindow(nint window);
-    [DllImport("user32")] private static extern nint ChildWindowFromPointEx(nint window, Point point, uint flags);
-    [DllImport("user32")] private static extern int MapWindowPoints(nint from, nint to, ref Point point, uint count);
-    [DllImport("user32")] private static extern bool PostMessageW(nint window, uint msg, nuint wParam, nint lParam);
+    [DllImport("user32")] private static extern bool ClientToScreen(nint window, ref Point point);
 }

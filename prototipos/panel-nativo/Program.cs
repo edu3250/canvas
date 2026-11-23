@@ -15,14 +15,14 @@ internal static class Program
             return 0;
         }
         if (args is ["scale-check"]) return ScaledTrial.CheckProjection();
-        if (args is ["scale", "chrome"])
+        if (args is ["scale", "chrome"] or ["scale", "chrome", "--check-input"])
         {
             var runScale = new Run("scale-chrome");
             try
             {
                 var browser = runScale.LaunchEmbeddingCandidate("chrome");
                 var window = runScale.WaitWindow(browser);
-                using var view = new ScaledTrial(runScale, window, browser.Id);
+                using var view = new ScaledTrial(runScale, window, browser.Id, args.Length == 3);
                 Application.Run(view);
                 if (view.Failed) return 1;
             }
@@ -155,9 +155,11 @@ internal sealed class Run : IDisposable
             <p><a target="_blank" href="{{title}}">Abrir otra página de prueba</a></p>
             <script>
             const entry = document.querySelector('textarea');
+            entry.addEventListener('focus', () => document.title = '{{title}} FIELD');
+            entry.addEventListener('blur', () => document.title = '{{title}}');
             entry.addEventListener('input', () => {
                 document.querySelector('output').textContent = 'Chrome recibió la escritura.';
-                document.title = '{{title}} ' + (entry.value === 'canvas42' ? 'INPUT-OK' : 'INPUT');
+                document.title = '{{title}} FIELD ' + (entry.value === 'canvas42' ? 'INPUT-OK' : entry.value === 'canvas42x' ? 'SCALE-OK' : 'INPUT');
             });
             </script></html>
             """);
