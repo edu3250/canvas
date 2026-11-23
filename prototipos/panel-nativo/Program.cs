@@ -14,6 +14,39 @@ internal static class Program
             Application.Run(new Fixture(kind, path));
             return 0;
         }
+        if (args is ["scale-check"]) return ScaledTrial.CheckProjection();
+        if (args is ["scale", "chrome"] or ["scale", "chrome", "--check-input"])
+        {
+            var runScale = new Run("scale-chrome");
+            try
+            {
+                var browser = runScale.LaunchEmbeddingCandidate("chrome");
+                var window = runScale.WaitWindow(browser);
+                using var view = new ScaledTrial(runScale, window, browser.Id, args.Length == 3);
+                Application.Run(view);
+                if (view.Failed) return 1;
+            }
+            catch (Exception error) { runScale.Log(error.Message); return 1; }
+            finally { runScale.Dispose(); }
+            return runScale.Clean ? 0 : 1;
+        }
+        if (args is ["embed-check"])
+            return EmbeddedPanel.Check();
+        if (args is ["embed", "control" or "code" or "chrome"] or ["overlay", "chrome" or "code"] or
+            ["embed" or "overlay", "chrome", "--check-input"])
+        {
+            var trial = new Run(args[0] + "-" + args[1]);
+            bool hostFailed;
+            try
+            {
+                using var host = new EmbeddingHost(trial, args[1], args.Length == 3, args[0] == "overlay");
+                Application.Run(host);
+                hostFailed = host.Failed;
+            }
+            finally { trial.Dispose(); }
+
+            return trial.Clean && !hostFailed ? 0 : 1;
+        }
         bool layout = args is ["layout"] or ["layout-code"];
         if (!layout && (args.Length == 0 || args[0] is not ("control" or "code") ||
             args.Skip(1).Any(option => option != "--auto")))
@@ -104,6 +137,40 @@ internal sealed class Run : IDisposable
         Log($"B HWND=0x{Neighbor:X} PID={NeighborPid} documento={Path.GetFileName(neighborDocument)}");
     }
 
+    internal Process LaunchEmbeddingCandidate(string kind)
+    {
+        File.WriteAllText(Document, "Documento descartable del ensayo.");
+        if (kind == "control")
+            return Launch(Document, Environment.ProcessPath!, "--fixture", "editor", Document);
+        if (kind == "code")
+            return LaunchCode(Document, "A");
+
+        var page = Path.ChangeExtension(Document, ".html");
+        var title = Path.GetFileName(page);
+        File.WriteAllText(page, $$"""
+            <!doctype html><html lang="es"><meta charset="utf-8"><title>{{title}}</title>
+            <style>body{font:20px system-ui;margin:4vh 5vw}textarea{box-sizing:border-box;width:100%;height:65vh;font:inherit;padding:1em}</style>
+            <h1>Prueba de escritura</h1><label for="entry">Haz un clic en el campo y escribe.</label>
+            <textarea id="entry" placeholder="Escribe aquí"></textarea><output id="result"></output>
+            <p><a target="_blank" href="{{title}}">Abrir otra página de prueba</a></p>
+            <script>
+            const entry = document.querySelector('textarea');
+            entry.addEventListener('focus', () => document.title = '{{title}} FIELD');
+            entry.addEventListener('blur', () => document.title = '{{title}}');
+            entry.addEventListener('input', () => {
+                document.querySelector('output').textContent = 'Chrome recibió la escritura.';
+                document.title = '{{title}} FIELD ' + (entry.value === 'canvas42' ? 'INPUT-OK' : entry.value === 'canvas42x' ? 'SCALE-OK' : 'INPUT');
+            });
+            </script></html>
+            """);
+        var exe = Environment.GetEnvironmentVariable("PANEL_CHROME_EXE");
+        exe ??= new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86,
+            Environment.SpecialFolder.LocalApplicationData }.Select(folder => Path.Combine(
+                Environment.GetFolderPath(folder), "Google", "Chrome", "Application", "chrome.exe")).FirstOrDefault(File.Exists);
+        if (exe is null) throw new FileNotFoundException("Chrome no está instalado en una ruta conocida.");
+        return Launch(page, exe, "--user-data-dir=" + Path.Combine(temp, "chrome-profile"),
+            "--no-first-run", "--no-default-browser-check", "--new-window", new Uri(page).AbsoluteUri);
+    }
     Process LaunchCode(string document, string subject)
     {
         var exe = Environment.GetEnvironmentVariable("PANEL_CODE_EXE");
@@ -124,7 +191,7 @@ internal sealed class Run : IDisposable
             "--disable-extensions", "--new-window", "--skip-welcome", "--skip-release-notes", document);
     }
 
-    nint WaitWindow(Process process)
+    internal nint WaitWindow(Process process)
     {
         var elapsed = Stopwatch.StartNew();
         while (elapsed.Elapsed < TimeSpan.FromSeconds(35) && !process.HasExited)
