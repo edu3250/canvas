@@ -80,13 +80,15 @@ public sealed class MainWindow : Window
         Foreground = DeskControls.Brush(VisualTokens.Colors.Bone);
         Background = DeskControls.NightGrid();
         UseLayoutRounding = true;
-        WindowChrome.SetWindowChrome(this, new WindowChrome
+        var restoredChrome = new WindowChrome
         {
             CaptionHeight = 0,
             ResizeBorderThickness = SystemParameters.WindowResizeBorderThickness,
             GlassFrameThickness = new Thickness(0),
             UseAeroCaptionButtons = false
-        });
+        };
+        StateChanged += (_, _) => WindowChrome.SetWindowChrome(this,
+            WindowState == WindowState.Normal ? restoredChrome : null);
         WindowState = WindowState.Maximized;
 
         Resources.MergedDictionaries.Add(spaceTheme);
@@ -357,6 +359,12 @@ public sealed class MainWindow : Window
             return;
         }
 
+        if (WindowState == WindowState.Minimized)
+        {
+            minimap.Hide();
+            return;
+        }
+
         minimap.AnchorTo(spaceView);
         UpdateMinimapVisibility();
     }
@@ -408,7 +416,7 @@ public sealed class MainWindow : Window
     {
         if (message == NativeCanvasFrame.GetMinMaxInfo)
         {
-            NativeCanvasFrame.MaximizeToWorkArea(hwnd, lParam);
+            handled = NativeCanvasFrame.MaximizeToMonitor(hwnd, lParam);
         }
 
         const int EnterSizeMove = 0x0231;
@@ -581,9 +589,7 @@ public sealed class MainWindow : Window
         {
             var start = ActiveCamera;
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
-            var frame = placement.ReadNormalScreenBounds(identity.Handle)?.Visible ??
-                placement.Capture(identity.Handle).NormalPosition;
-            var bounds = windowPanels.GetActivationBounds(panel, frame);
+            var bounds = panel.Bounds;
             var target = fromMinimap
                 ? CameraGestures.CenterOn(bounds.Center, ViewportSize, 1)
                 : CameraGestures.ApproachPanel(start, bounds, ViewportSize);

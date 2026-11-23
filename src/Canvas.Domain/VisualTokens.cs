@@ -95,7 +95,7 @@ public static class VisualTokens
     /// <summary>Opacity of a light used as a halo or outline around the active panel.</summary>
     public const double LightHaloOpacity = 0.30;
     /// <summary>Brightness multiplier of panels at rest, so the active one stands out.</summary>
-    public const double RestingPanelBrightness = 0.62;
+    public const double RestingPanelBrightness = 0.90;
 
     public static readonly ReadOnlyCollection<SpaceLight> SpaceLights = new(
     [
