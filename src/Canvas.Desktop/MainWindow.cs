@@ -122,6 +122,7 @@ public sealed class MainWindow : Window
         windowPanels.MapChanged += UpdateMapPriority;
         windowPanels.PreviewMouseWheel += ZoomSurface;
         windowPanels.ActivationRequested += ActivatePanel;
+        windowPanels.PanelMoved += AlignDraggedWindow;
         windowPanels.FoldRequested += TogglePanelFold;
         windowPanels.MaximizeRequested += MaximizePanel;
         windowPanels.CloseRequested += ClosePanel;
@@ -429,7 +430,7 @@ public sealed class MainWindow : Window
     private nint HandleWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
         const int MouseActivate = 0x21, LeftDown = 0x201, LeftUp = 0x202, MouseWheel = 0x20A;
-        if (message is MouseActivate or LeftDown or LeftUp or MouseWheel && windowPanels.ProjectActive &&
+        if (message is MouseActivate or LeftDown or LeftUp or MouseWheel && !windowPanels.IsDragging && windowPanels.ProjectActive &&
             windowPanels.ActivePanel is { } panel && NativePanelInput.TryGetPointer(out var pointer))
         {
             var target = ProjectedTarget(panel, pointer);
@@ -710,7 +711,7 @@ public sealed class MainWindow : Window
             }
 
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
-            if (!NativePanelInput.KeepCanvasBehind(windowHandle, application))
+            if (!windowPanels.ProjectActive && !NativePanelInput.KeepCanvasBehind(windowHandle, application))
             {
                 throw new Win32Exception();
             }
@@ -1187,6 +1188,28 @@ public sealed class MainWindow : Window
         if (active.Kind == GestureKind.Pan)
         {
             PanTo(active.Camera);
+        }
+    }
+
+    private void AlignDraggedWindow(WindowPanels.Panel panel)
+    {
+        if (windowPanels.ActivePanel != panel || !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)) return;
+        if (windowPanels.ProjectActive)
+        {
+            UpdateMapPriority();
+            if (Topmost) NativePanelInput.RaiseWindow(windowHandle, topmost: true);
+            return;
+        }
+
+        try
+        {
+            var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
+            placement.Reposition(panel.Window.Identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
+            ReturnToMap(restoreCamera: false);
         }
     }
 

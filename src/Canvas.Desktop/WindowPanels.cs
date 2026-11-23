@@ -37,6 +37,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     }
 
     public event Action? MapChanged;
+    public event Action<Panel>? PanelMoved;
+    public bool IsDragging => drag is not null;
     public event Action<Panel>? ActivationRequested;
     public event Action<Panel>? FoldRequested;
     public event Action<Panel>? MaximizeRequested;
@@ -409,7 +411,10 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             X = active.Original.X + delta.X / camera.Zoom,
             Y = active.Original.Y + delta.Y / camera.Zoom
         };
-        active.Panel.Bounds = PanelPlacement.FindFree(desired, Occupied(active.Panel));
+        var bounds = PanelPlacement.FindFree(desired, Occupied(active.Panel));
+        if (bounds == active.Panel.Bounds) return;
+        active.Panel.Bounds = bounds;
+        PanelMoved?.Invoke(active.Panel);
         Render();
         MapChanged?.Invoke();
     }
@@ -443,6 +448,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         {
             drag = null;
             active.Panel.Bounds = active.Original;
+            if (active.HasMoved) PanelMoved?.Invoke(active.Panel);
             active.Panel.Card.Handle.ReleaseMouseCapture();
             Render();
             MapChanged?.Invoke();
