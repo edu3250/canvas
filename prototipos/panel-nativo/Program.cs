@@ -14,6 +14,22 @@ internal static class Program
             Application.Run(new Fixture(kind, path));
             return 0;
         }
+        if (args is ["scale-check"]) return ScaledTrial.CheckProjection();
+        if (args is ["scale", "chrome"])
+        {
+            var runScale = new Run("scale-chrome");
+            try
+            {
+                var browser = runScale.LaunchEmbeddingCandidate("chrome");
+                var window = runScale.WaitWindow(browser);
+                using var view = new ScaledTrial(runScale, window, browser.Id);
+                Application.Run(view);
+                if (view.Failed) return 1;
+            }
+            catch (Exception error) { runScale.Log(error.Message); return 1; }
+            finally { runScale.Dispose(); }
+            return runScale.Clean ? 0 : 1;
+        }
         if (args is ["embed-check"])
             return EmbeddedPanel.Check();
         if (args is ["embed", "control" or "code" or "chrome"] or ["overlay", "chrome" or "code"] or
@@ -173,7 +189,7 @@ internal sealed class Run : IDisposable
             "--disable-extensions", "--new-window", "--skip-welcome", "--skip-release-notes", document);
     }
 
-    nint WaitWindow(Process process)
+    internal nint WaitWindow(Process process)
     {
         var elapsed = Stopwatch.StartNew();
         while (elapsed.Elapsed < TimeSpan.FromSeconds(35) && !process.HasExited)
