@@ -7,8 +7,8 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
-- **En curso:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). El paso 1 aplica la base visual, la orilla retráctil y el diálogo «Añadir ventana» en el [PR #47](https://github.com/edu3250/canvas/pull/47).
-- **Siguiente paso:** construir las asas y lengüetas del paso 3. El usuario validó la isla del mapa del [PR #48](https://github.com/edu3250/canvas/pull/48).
+- **En curso:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Los pasos 1 a 3 están completos. El asa, la lengüeta visual y la iluminación de los paneles se incorporaron en el [PR #49](https://github.com/edu3250/canvas/pull/49).
+- **Siguiente paso:** construir las acciones de la lengüeta en el paso 4: quitar del lienzo, plegar, maximizar y cerrar.
 
 ## Qué funciona hoy
 

@@ -48,10 +48,10 @@ internal sealed class ShellItems : IDisposable
         }, DispatcherPriority.Normal).Task;
 
     public Task<(BitmapSource? Image, BitmapSource? Overlay)> ReadImageAsync(
-        string path, int pixels, CancellationToken cancellation) =>
-        dispatcher.InvokeAsync(() => ReadImage(path, pixels), DispatcherPriority.Background, cancellation).Task;
+        string path, int pixels, CancellationToken cancellation, bool iconOnly = false) =>
+        dispatcher.InvokeAsync(() => ReadImage(path, pixels, iconOnly), DispatcherPriority.Background, cancellation).Task;
 
-    private static (BitmapSource?, BitmapSource?) ReadImage(string path, int pixels)
+    private static (BitmapSource?, BitmapSource?) ReadImage(string path, int pixels, bool iconOnly)
     {
         var iid = typeof(IShellItemImageFactory).GUID;
         if (SHCreateItemFromParsingName(path, IntPtr.Zero, in iid, out var factory) < 0)
@@ -66,7 +66,7 @@ internal sealed class ShellItems : IDisposable
                 extension.Equals(".url", StringComparison.OrdinalIgnoreCase);
             const int BiggerSizeOk = 1;
             const int IconOnly = 4;
-            var flags = BiggerSizeOk | (isShortcut ? IconOnly : 0);
+            var flags = BiggerSizeOk | (isShortcut || iconOnly ? IconOnly : 0);
             if (factory.GetImage(new NativeSize(pixels, pixels), flags, out var bitmap) < 0)
             {
                 return default;

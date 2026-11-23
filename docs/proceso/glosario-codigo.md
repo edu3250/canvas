@@ -23,3 +23,5 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Valores del sistema visual Mesa de luz | `VisualTokens` |
 | Orilla | `EdgeBar` |
 | Isla del mapa | `MinimapWindow` |
+| Asa del panel | `PanelCard.Handle` |
+| Lengüeta de controles | `PanelCard.tongue` |

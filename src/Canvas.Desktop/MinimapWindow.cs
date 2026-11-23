@@ -19,7 +19,7 @@ internal sealed class MinimapWindow : Window
     public const double IslandHeight = MapHeight + Gap + VisualTokens.Size.Control + 2 * IslandPadding;
     public const double Inset = 16;
 
-    private readonly MapSurface surface = new();
+    private readonly MapSurface surface;
     private readonly Border island;
     private readonly TextBlock zoomValue = new()
     {
@@ -30,8 +30,9 @@ internal sealed class MinimapWindow : Window
     private readonly Button zoomIn = CreateZoomButton("+", "Acercar", "Ctrl++");
     private readonly Button fitContent = CreateZoomButton("⛶", "Encuadrar el contenido", "Ctrl+0");
 
-    public MinimapWindow()
+    public MinimapWindow(Brush lightFill, Brush lightOutline)
     {
+        surface = new MapSurface(lightFill, lightOutline);
         Title = "Isla del mapa";
         Width = IslandWidth;
         Height = IslandHeight;
@@ -162,12 +163,11 @@ internal sealed class MinimapWindow : Window
         return IntPtr.Zero;
     }
 
-    private sealed class MapSurface : FrameworkElement
+    private sealed class MapSurface(Brush viewFill, Brush lightOutline) : FrameworkElement
     {
         private static readonly Brush Background = DeskControls.Brush(VisualTokens.Colors.Night);
         private static readonly Brush Marker = DeskControls.Brush(VisualTokens.Colors.Bone);
-        private static readonly Brush ViewFill = DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
-        private static readonly Pen ViewOutline = new(DeskControls.Brush(VisualTokens.DefaultLight.Color), 1);
+        private readonly Pen viewOutline = new(lightOutline, 1);
         private static readonly Pen Frame = new(DeskControls.Brush(VisualTokens.Colors.Border), 1);
         private Camera? projection;
         private CanvasBounds viewport;
@@ -195,13 +195,13 @@ internal sealed class MinimapWindow : Window
                 return;
             }
 
-            drawing.DrawRectangle(ViewFill, ViewOutline, Project(viewport, map));
+            drawing.DrawRectangle(viewFill, viewOutline, Project(viewport, map));
             foreach (var item in items)
             {
                 var bounds = Project(item.Bounds, map);
                 if (item.IsPanel)
                 {
-                    drawing.DrawRectangle(ViewFill, ViewOutline, bounds);
+                    drawing.DrawRectangle(viewFill, viewOutline, bounds);
                 }
                 else if (item.Image is { } image && bounds.Width >= 8)
                 {
