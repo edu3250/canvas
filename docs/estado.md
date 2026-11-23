@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
-- **Siguiente paso:** validar en Windows la pantalla completa, el tamaño inicial, el brillo de las miniaturas y la ocultación del minimapa del [PR #53](https://github.com/edu3250/canvas/pull/53). En el [hito 11](hitos/11-escritorio-a-pantalla-completa.md) se eligió la ventana nativa superpuesta tras probar Chrome y VS Code.
+- **Siguiente paso:** repetir Alt+Tab después de corregir el minimapa y confirmar el brillo de las miniaturas del [PR #53](https://github.com/edu3250/canvas/pull/53). En el [hito 11](hitos/11-escritorio-a-pantalla-completa.md) se eligió la ventana nativa superpuesta tras probar Chrome y VS Code.
 
 ## Qué funciona hoy
 
