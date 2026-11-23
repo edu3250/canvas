@@ -238,6 +238,7 @@ public sealed class MainWindow : Window
         {
             windowHandle = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(windowHandle).AddHook(HandleWindowMessage);
+            UpdateShellFullscreen();
         };
         ContentRendered += (_, _) =>
         {
@@ -249,6 +250,7 @@ public sealed class MainWindow : Window
         };
         StateChanged += (_, _) =>
         {
+            UpdateShellFullscreen();
             cancelActivation = true;
             ReturnToMap(activateCanvas: false);
             SyncMinimapWindow();
@@ -1190,9 +1192,28 @@ public sealed class MainWindow : Window
 
     private void ZoomFromPanel(DomainPoint cursor, int delta)
     {
+        if (windowPanels.ActivePanel is not { } panel ||
+            !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
+            !NativePanelInput.TryReturnForeground(windowHandle, (nint)panel.Window.Handle))
+        {
+            return;
+        }
         var camera = ActiveCamera;
         ReturnToMap(restoreCamera: false);
         ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(camera, cursor, delta / 120.0)));
+    }
+
+    private void UpdateShellFullscreen()
+    {
+        if (windowHandle == 0) return;
+        try
+        {
+            ShellFullscreen.Set(windowHandle, WindowState == WindowState.Maximized);
+        }
+        catch (InvalidOperationException error)
+        {
+            Trace.TraceWarning(error.ToString());
+        }
     }
 
     private Border CreateToolbar()

@@ -31,6 +31,37 @@ internal static class NativePanelInput
 
     public static bool IsForeground(nint window) => GetForegroundWindow() == window;
 
+    public static bool TryReturnForeground(nint canvas, nint panel)
+    {
+        if (IsForeground(canvas)) return true;
+        if (!IsForeground(panel)) return false;
+        if (SetForegroundWindow(canvas) && IsForeground(canvas)) return true;
+        if (!IsForeground(panel)) return false;
+
+        var caller = GetCurrentThreadId();
+        var source = GetWindowThreadProcessId(panel, out _);
+        // Probe the panel's UI thread before temporarily sharing its input queue.
+        const uint AbortIfHung = 0x0002;
+        if (source == 0 || source == caller ||
+            SendMessageTimeoutW(panel, 0, 0, 0, AbortIfHung, 100, out _) == 0 ||
+            !AttachThreadInput(caller, source, true)) return false;
+        try
+        {
+            return IsForeground(canvas) || (IsForeground(panel) &&
+                SetForegroundWindow(canvas) && IsForeground(canvas));
+        }
+        finally
+        {
+            AttachThreadInput(caller, source, false);
+        }
+    }
+
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
+    [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint caller, uint source, bool attach);
+    [DllImport("user32.dll")] private static extern nint SendMessageTimeoutW(nint window, uint message,
+        nuint wParam, nint lParam, uint flags, uint timeout, out nuint result);
+
     [DllImport("user32.dll")]
     private static extern nint GetForegroundWindow();
 
