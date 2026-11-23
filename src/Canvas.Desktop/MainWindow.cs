@@ -51,7 +51,7 @@ public sealed class MainWindow : Window
     private readonly DispatcherTimer previewTimer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly Button homeButton;
     private readonly Dictionary<SpaceId, Button> spaceButtons = [];
-    private readonly MinimapWindow minimap = new();
+    private readonly MinimapWindow minimap;
     private readonly ShellItems shell = new();
     private readonly Dictionary<SpaceId, SpaceFolderMonitor> folders;
     private readonly string layoutPath;
@@ -107,7 +107,10 @@ public sealed class MainWindow : Window
             System.Diagnostics.Trace.TraceWarning("El archivo de posiciones no se pudo leer; los iconos se acomodan de nuevo.");
         }
 
-        spaceView = new SpaceView(shell, folders.Keys);
+        var lightOutline = (Brush)spaceTheme[ThemeKeys.Light];
+        var lightFill = (Brush)spaceTheme[ThemeKeys.LightWash];
+        minimap = new MinimapWindow(lightFill, lightOutline);
+        spaceView = new SpaceView(shell, folders.Keys, lightFill, lightOutline);
         windowPanels = new WindowPanels(this, shell, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
         windowPanels.MapChanged += RefreshMap;
         windowPanels.MapChanged += UpdateMapPriority;
@@ -408,7 +411,7 @@ public sealed class MainWindow : Window
 
     private async Task ActivatePanelAsync(WindowPanels.Panel panel, bool fromMinimap)
     {
-        if (activationPending)
+        if (activationPending || panel.Space != session.ActiveSpaceId)
         {
             return;
         }
@@ -441,9 +444,9 @@ public sealed class MainWindow : Window
             var target = fromMinimap
                 ? CameraGestures.CenterOn(bounds.Center, ViewportSize, 1)
                 : CameraGestures.ApproachPanel(start, bounds, ViewportSize);
-            if (!await AnimateActivationAsync(start, target, bounds.Center))
+            if (!await AnimateActivationAsync(start, target, bounds.Center) || panel.Space != session.ActiveSpaceId)
             {
-                if (!closed)
+                if (!closed && panel.Space == session.ActiveSpaceId)
                 {
                     ApplyNavigation(new SetCamera(previous));
                 }
@@ -1022,7 +1025,13 @@ public sealed class MainWindow : Window
 
     private void ApplyNavigation(NavigationCommand command)
     {
-        if (command is ToggleHome || command is SwitchSpace change && change.Target != session.ActiveSpaceId)
+        var switchingSpace = command is SwitchSpace change && change.Target != session.ActiveSpaceId;
+        if (switchingSpace)
+        {
+            cancelActivation = true;
+        }
+
+        if (command is ToggleHome || switchingSpace)
         {
             CancelGesture();
             previousClick = null;

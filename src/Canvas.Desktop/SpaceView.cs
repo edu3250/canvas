@@ -16,15 +16,13 @@ internal sealed class SpaceView : SurfaceCanvas
 {
     private const double TileSize = 88;
     private const double IconSize = 64;
-    private static readonly Brush SelectionFill = DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
-    private static readonly Brush SelectionBorder = DeskControls.Brush(VisualTokens.DefaultLight.Color);
+    private readonly Brush selectionFill;
+    private readonly Brush selectionOutline;
     private readonly Dictionary<SpaceId, Dictionary<string, IconPlacement>> layouts;
     private readonly ShellItems shell;
     private readonly HashSet<string> selected = [];
     private readonly Border marquee = new()
     {
-        Background = SelectionFill,
-        BorderBrush = SelectionBorder,
         BorderThickness = new Thickness(1),
         IsHitTestVisible = false,
         Visibility = Visibility.Collapsed
@@ -33,9 +31,11 @@ internal sealed class SpaceView : SurfaceCanvas
     private Camera camera;
     private DomainPoint previewOffset;
 
-    public SpaceView(ShellItems shell, IEnumerable<SpaceId> spaces)
+    public SpaceView(ShellItems shell, IEnumerable<SpaceId> spaces, Brush selectionFill, Brush selectionOutline)
     {
         this.shell = shell;
+        this.selectionFill = marquee.Background = selectionFill;
+        this.selectionOutline = marquee.BorderBrush = selectionOutline;
         Background = Brushes.Transparent;
         ClipToBounds = true;
         Focusable = true;
@@ -272,8 +272,8 @@ internal sealed class SpaceView : SurfaceCanvas
             SetLeft(placement.Tile, projected.X);
             SetTop(placement.Tile, projected.Y);
             placement.Tile.RenderTransform = scale;
-            placement.Tile.Background = isSelected ? SelectionFill : Brushes.Transparent;
-            placement.Tile.BorderBrush = isSelected ? SelectionBorder : Brushes.Transparent;
+            placement.Tile.Background = isSelected ? selectionFill : Brushes.Transparent;
+            placement.Tile.BorderBrush = isSelected ? selectionOutline : Brushes.Transparent;
 
             if (projected.X < ActualWidth && projected.Y < ActualHeight &&
                 projected.X + tileSize > 0 && projected.Y + tileSize > 0)

@@ -63,7 +63,7 @@ internal sealed class PanelCard : Border
         AddControl("□", "Maximizar");
         AddControl("×", "Cerrar ventana");
         tongue = new Border { Background = Slate, CornerRadius = TabRadius, Child = controls };
-        var tabs = new Grid();
+        var tabs = new Grid { Background = Brushes.Transparent };
         tabs.ColumnDefinitions.Add(new ColumnDefinition());
         tabs.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 126 });
         tabs.Children.Add(Handle);

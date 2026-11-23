@@ -11,7 +11,7 @@ internal sealed class WindowThumbnail : IDisposable
     private readonly nint source;
     private readonly List<nint> handles;
     private int visibleCount;
-    private byte opacity;
+    private byte? opacity;
 
     private WindowThumbnail(nint destination, nint source, nint initial)
     {
@@ -94,11 +94,13 @@ internal sealed class WindowThumbnail : IDisposable
         }
 
         var properties = new ThumbnailProperties { Flags = OpacityFlag, Opacity = value };
+        var updated = true;
         for (var index = 0; index < visibleCount; index++)
         {
-            DwmUpdateThumbnailProperties(handles[index], in properties);
+            updated &= DwmUpdateThumbnailProperties(handles[index], in properties) >= 0;
         }
-        opacity = value;
+
+        opacity = updated ? value : null;
     }
 
     public void Hide()
