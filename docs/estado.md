@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
-- **Siguiente paso:** validar el brillo al 96 % y que Chrome conserve Ctrl+rueda con F11. Ya se confirmó el alejamiento desde el panel con la barra cubierta. Quedan estas comprobaciones, antes de la revisión independiente. El usuario ya validó la barra de tareas y la ocultación del minimapa con Alt+Tab en la prueba del [PR #53](https://github.com/edu3250/canvas/pull/53). En el [hito 11](hitos/11-escritorio-a-pantalla-completa.md) se eligió la ventana nativa superpuesta tras probar Chrome y VS Code.
+- **Siguiente paso:** validar que un clic directo cambia el foco conservando el encuadre entre ventanas al mismo zoom, antes de la revisión independiente del [PR #53](https://github.com/edu3250/canvas/pull/53). El usuario ya confirmó la excepción de F11 y el brillo al 96 %.
 
 ## Qué funciona hoy
 

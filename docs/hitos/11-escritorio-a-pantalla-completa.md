@@ -18,6 +18,7 @@ Abrir una aplicación y empezar a escribir en el espacio actual de Canvas, inclu
 | Controles | «Los mismos controles de Canvas en todo momento» | Un único juego de controles por ventana. Verificar las pestañas y menús propios de Chrome y VS Code antes de elegir arquitectura. |
 | Apariencia | «demasiado oscuras», «me gusta el tamaño de la captura 3» | Atenuación discreta y tamaño inicial uniforme. Probar 96 % y aproximadamente 1060 × 810 a la escala de la captura, ajustando al espacio disponible. Son valores de prueba. |
 | Ajuste de brillo | «coloca el brillo al 96% para probar» | Validar la nueva intensidad en las miniaturas inactivas. |
+| Cambio de ventana | «la camara no deberia de alejarse de la ventana aunque la ventana no este activa» | El clic directo conserva posición y zoom del lienzo; el minimapa mantiene su navegación explícita. |
 | Navegación | «el minimapa inferior no debe de verse en la pantalla si la aplicacion esta minimizada», «control + desplazamiento de la rueda del mouse siempre te deja alejar el lienzor de la ventana (salvo pantalla completa)» | Al minimizar Canvas desaparece la isla. Ctrl+rueda sobre el contenido aleja el lienzo y conserva el zoom de la aplicación, salvo en pantalla completa. |
 | Apertura y alojamiento | «podria funcionar», «okay vamos a ello» | Juzgar la primera aparición en un prototipo. Comparar ventana superpuesta y ventana hija. Observar el destello con arranque en frío y segunda ventana. |
 | Arquitectura elegida | «Usar la ventana nativa superpuesta y avanzar con Canvas a pantalla completa» | Canvas sitúa la ventana nativa sobre su panel al trabajar en ella. |
@@ -30,7 +31,7 @@ Zona sensible. Probar foco, diálogos, escalado, devolución y cierre con proces
 ## Pasos
 
 - [x] 1. Comparar el alojamiento y la apertura con Chrome y VS Code; decidir con el usuario a partir del ensayo · `prototipos/`.
-- [ ] 2. Abrir Canvas a pantalla completa, ajustar tamaño inicial y luz en reposo, retirar la isla al minimizar · `src/Canvas.Desktop`.
+- [x] 2. Abrir Canvas a pantalla completa, ajustar tamaño inicial y luz en reposo, retirar la isla al minimizar · `src/Canvas.Desktop`.
 - [ ] 3. Incorporar las ventanas nuevas, distinguir apertura voluntaria de aparición en segundo plano y validar un clic y Ctrl+rueda sobre la aplicación real · `src/Canvas.Desktop`, `tests/`.
 - [ ] 4. Unificar controles y diferenciar ventana normal, maximizada con margen y pantalla completa · `src/Canvas.Desktop`.
 - [ ] 5. Verificar cierre a bandeja diferido, cancelación y salida con una aplicación bloqueada, conservando recuperación · `src/`, `tests/`.
@@ -63,3 +64,4 @@ Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio ap
 | 23-11-2026 | Construir | Codex · GPT-6 | Al alejar, el usuario vio la ventana real encima del mapa y la barra de tareas visible. Ahora el gesto comprueba el primer plano de Canvas antes de retirar la ventana activa y cambiar la cámara. El lienzo maximizado también se identifica ante el Shell como pantalla completa. Release y 99 pruebas locales correctas. | [#53](https://github.com/edu3250/canvas/pull/53), 52752e9 | Repetir el gesto con la ventana activa y comprobar la escala y la barra. |
 | 23-11-2026 | Construir | Codex · GPT-6 | El usuario volvió a observar la barra al alejar con la rueda. El mapa maximizado ahora toma prioridad en el orden de ventanas mientras tiene el primer plano y reafirma la marca de pantalla completa al volver del panel. Release y 99 pruebas locales correctas. | [#53](https://github.com/edu3250/canvas/pull/53), 8321efa | Pendiente comprobar visualmente el borde inferior al alejar y la salida con Alt+Tab. |
 | 23-11-2026 | Construir | Codex · GPT-6 | El usuario confirmó el último ensayo de alejamiento desde el panel con la barra cubierta («funciona bien»). La CI de GitHub pasó en 8321efa. | [#53](https://github.com/edu3250/canvas/pull/53) | Confirmar brillo al 96 % y rueda con F11 antes de revisión independiente. |
+| 23-11-2026 | Construir | Codex · GPT-6 | Usuario confirmó F11 y brillo al 96 %. Se compararon las grabaciones de Canvas y Deska y se eliminó el retorno intermedio y el ajuste al 100 % al seleccionar un panel directamente. Debug y Release compilaron y pasaron 99 pruebas. | [#53](https://github.com/edu3250/canvas/pull/53) | Validar el encuadre al alternar entre dos ventanas con el lienzo alejado. |
