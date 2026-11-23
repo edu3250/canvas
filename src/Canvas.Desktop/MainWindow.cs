@@ -111,7 +111,8 @@ public sealed class MainWindow : Window
         var lightFill = (Brush)spaceTheme[ThemeKeys.LightWash];
         minimap = new MinimapWindow(lightFill, lightOutline);
         spaceView = new SpaceView(shell, folders.Keys, lightFill, lightOutline);
-        windowPanels = new WindowPanels(this, shell, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
+        windowPanels = new WindowPanels(this, shell, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray(),
+            TryReleaseUnavailablePanel);
         windowPanels.MapChanged += RefreshMap;
         windowPanels.MapChanged += UpdateMapPriority;
         windowPanels.PreviewMouseWheel += ZoomSurface;
@@ -120,12 +121,11 @@ public sealed class MainWindow : Window
         windowPanels.MaximizeRequested += MaximizePanel;
         windowPanels.CloseRequested += ClosePanel;
         windowPanels.RemoveRequested += RemovePanel;
-        windowPanels.WindowUnavailable += ReleaseUnavailablePanel;
         previewTimer.Tick += (_, _) =>
         {
             if (windowPanels.ActivePanel is { } panel &&
-                (!WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
-                    WindowCatalog.IsMinimized(panel.Window.Handle)))
+                panel.CloseRequest is not { Completed: false } &&
+                WindowCatalog.IsMinimized(panel.Window.Handle))
             {
                 ReturnToMap();
             }
@@ -266,6 +266,21 @@ public sealed class MainWindow : Window
             _ = RefreshFoldersAsync();
         };
         folderTimer.Tick += (_, _) => _ = RefreshFoldersAsync();
+        Closing += (_, e) =>
+        {
+            var released = true;
+            foreach (var panel in windowPanels.GetUnavailablePanels(includePendingClose: true))
+            {
+                released &= TryReleaseUnavailablePanel(panel);
+            }
+
+            if (!released)
+            {
+                e.Cancel = true;
+                MessageBox.Show(this, "Queda un cierre de ventana por confirmar o registrar. Espera un momento y vuelve a cerrar Canvas.",
+                    Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
         Closed += (_, _) =>
         {
             closed = true;
@@ -273,10 +288,6 @@ public sealed class MainWindow : Window
             previewTimer.Stop();
             edgeTimer.Stop();
             ReleaseReturnShortcut();
-            foreach (var panel in windowPanels.GetUnavailablePanels())
-            {
-                ReleaseUnavailablePanel(panel);
-            }
             windowPanels.Dispose();
             shell.Dispose();
             if (!readingFolders)
@@ -420,7 +431,8 @@ public sealed class MainWindow : Window
     private async void ActivatePanel(WindowPanels.Panel panel) => await ActivatePanelAsync(panel, fromMinimap: false);
 
     private bool CanUsePanel(WindowPanels.Panel panel) =>
-        !closed && !activationPending && panel.Space == session.ActiveSpaceId && windowPanels.Contains(panel);
+        !closed && !activationPending && !panel.WaitingForRemoval && panel.CloseRequest?.Accepted != true &&
+        panel.Space == session.ActiveSpaceId && windowPanels.Contains(panel);
 
     private void TogglePanelFold(WindowPanels.Panel panel)
     {
@@ -451,7 +463,7 @@ public sealed class MainWindow : Window
     private async void ClosePanel(WindowPanels.Panel panel) =>
         await UseActivePanelAsync(panel, () =>
         {
-            if (panel.ClosePosted && !WindowCatalog.IsEnabled(panel.Window.Handle))
+            if (panel.CloseRequest is { Completed: false } or { Accepted: true })
             {
                 return;
             }
@@ -463,8 +475,7 @@ public sealed class MainWindow : Window
                 throw new InvalidOperationException("Windows denied foreground activation.");
             }
 
-            placement.RequestClose(panel.Window.Identity, panel.Instance);
-            panel.ClosePosted = true;
+            panel.CloseRequest = placement.RequestClose(panel.Window.Identity, panel.Instance);
         }, "No se pudo solicitar el cierre de la ventana.");
 
     private async Task UseActivePanelAsync(WindowPanels.Panel panel, Action action, string errorMessage)
@@ -514,24 +525,30 @@ public sealed class MainWindow : Window
         }
     }
 
-    private void ReleaseUnavailablePanel(WindowPanels.Panel panel)
+    private bool TryReleaseUnavailablePanel(WindowPanels.Panel panel)
     {
-        if (!closed && windowPanels.ActivePanel == panel)
+        try
         {
-            ReturnToMap();
-        }
-
-        if (panel.ClosePosted)
-        {
-            try
+            if (panel.CloseRequest is { Completed: false } && panel.Instance.IsCurrent())
             {
-                // A window that accepted Close may hide instead of destroying its handle.
+                return false;
+            }
+
+            if (windowPanels.ActivePanel == panel)
+            {
+                ReturnToMap();
+            }
+
+            if (panel.CloseRequest is { Accepted: true })
+            {
                 recovery.ForgetWindow(panel.Window.Identity);
             }
-            catch (Exception error) when (IsPanelError(error))
-            {
-                Trace.TraceWarning(error.ToString());
-            }
+            return true;
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
+            return false;
         }
     }
 
@@ -674,7 +691,7 @@ public sealed class MainWindow : Window
         var restoreFailed = false;
         try
         {
-            if (WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
+            if (panel.CloseRequest?.Accepted != true && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
             {
                 placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
             }

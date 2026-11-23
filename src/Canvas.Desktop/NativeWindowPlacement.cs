@@ -117,18 +117,11 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         Restore(identity.Handle, current with { ShowCommand = 3, Flags = 0 });
     }
 
-    public void RequestClose(WindowIdentity identity, WindowInstance instance)
+    public PendingWindowClose RequestClose(WindowIdentity identity, WindowInstance instance)
     {
         EnsureCurrent(instance);
-        const uint CloseMessage = 0x0010;
-        if (!PostMessageW((nint)identity.Handle, CloseMessage, 0, 0))
-        {
-            throw new Win32Exception();
-        }
+        return PendingWindowClose.Send(identity.Handle);
     }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool PostMessageW(nint window, uint message, nint wParam, nint lParam);
 
     public void RestoreMaximizedPanel(WindowIdentity identity, WindowInstance instance)
     {

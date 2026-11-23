@@ -93,6 +93,34 @@ public sealed class WindowRecoveryTests : IDisposable
         Assert.Equal(1, windows.RestoreCount);
     }
 
+    [Fact]
+    public void ForgetCanRetryAfterWriteFailureWithoutRestoringTheWindow()
+    {
+        using (var recovery = Open())
+        {
+            recovery.SaveOriginal(100);
+            recovery.SaveOriginal(200);
+            var identity = windows.Identify(100)!;
+            var original = File.ReadAllText(Journal);
+            var blockedPath = Directory.CreateDirectory(Journal + ".tmp");
+
+            var failure = Record.Exception(() => recovery.ForgetWindow(identity));
+            Assert.True(failure is IOException or UnauthorizedAccessException);
+            Assert.Equal(original, File.ReadAllText(Journal));
+            Assert.Equal([100L, 200L], windows.Markers.Keys);
+
+            blockedPath.Delete();
+            recovery.ForgetWindow(identity);
+
+            Assert.Equal([200L], windows.Markers.Keys);
+            Assert.Equal(0, windows.RestoreCount);
+        }
+
+        using var reopened = Open();
+        Assert.Empty(reopened.RestoreAll());
+        Assert.Equal(1, windows.RestoreCount);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

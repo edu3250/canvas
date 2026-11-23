@@ -20,6 +20,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     private readonly Window owner;
     private readonly ShellItems shell;
     private readonly Func<CanvasBounds[]> iconBounds;
+    private readonly Func<Panel, bool> releaseUnavailable;
     private readonly WindowCatalog catalog = new();
     private readonly List<Panel> panels = [];
     private SpaceId space;
@@ -27,11 +28,12 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     private Drag? drag;
     private bool disposed;
 
-    public WindowPanels(Window owner, ShellItems shell, Func<CanvasBounds[]> iconBounds)
+    public WindowPanels(Window owner, ShellItems shell, Func<CanvasBounds[]> iconBounds, Func<Panel, bool> releaseUnavailable)
     {
         this.owner = owner;
         this.shell = shell;
         this.iconBounds = iconBounds;
+        this.releaseUnavailable = releaseUnavailable;
     }
 
     public event Action? MapChanged;
@@ -40,13 +42,14 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     public event Action<Panel>? MaximizeRequested;
     public event Action<Panel>? CloseRequested;
     public event Action<Panel>? RemoveRequested;
-    public event Action<Panel>? WindowUnavailable;
 
     public Panel? ActivePanel { get; set; }
     public bool IsPointerOverControls => panels.Any(panel => panel.Card.IsPointerOverControls);
     public bool Contains(Panel panel) => panels.Contains(panel);
-    public Panel[] GetUnavailablePanels() => panels
-        .Where(panel => !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)).ToArray();
+    public Panel[] GetUnavailablePanels(bool includePendingClose = false) => panels
+        .Where(panel => panel.CloseRequest?.Accepted == true ||
+            includePendingClose && panel.CloseRequest is { Completed: false } ||
+            !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)).ToArray();
 
     public bool HasTopmostSource() => panels.Any(panel =>
         NativePanelInput.IsTopmost((nint)panel.Window.Handle) &&
@@ -54,7 +57,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         !WindowCatalog.IsMinimized(panel.Window.Handle));
 
     public Panel? FindPanel(DomainPoint point) => panels.LastOrDefault(panel =>
-        panel.Space == space && point.X >= panel.DisplayBounds.X && point.X <= panel.DisplayBounds.X + panel.DisplayBounds.Width &&
+        !panel.WaitingForRemoval && panel.Space == space &&
+        point.X >= panel.DisplayBounds.X && point.X <= panel.DisplayBounds.X + panel.DisplayBounds.Width &&
         point.Y >= panel.DisplayBounds.Y && point.Y <= panel.DisplayBounds.Y + panel.DisplayBounds.Height);
 
     public WpfPoint GetWindowOrigin(Panel panel, Camera targetCamera)
@@ -101,7 +105,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 
     public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
 
-    public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space)
+    public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space && !panel.WaitingForRemoval)
         .Select(panel => new MinimapItem(panel.DisplayBounds, null, IsPanel: true)).ToArray();
 
     public void ShowPicker()
@@ -217,13 +221,34 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 
     public void RefreshWindows()
     {
-        foreach (var panel in GetUnavailablePanels())
+        var unavailable = GetUnavailablePanels().ToHashSet();
+        var mapChanged = false;
+        foreach (var panel in panels.ToArray())
         {
-            WindowUnavailable?.Invoke(panel);
-            Remove(panel);
+            var hidden = unavailable.Contains(panel);
+            var visibilityChanged = panel.WaitingForRemoval != hidden;
+            panel.WaitingForRemoval = hidden;
+            if (panel.CloseRequest is { Completed: true, Accepted: false })
+            {
+                panel.CloseRequest.Dispose();
+                panel.CloseRequest = null;
+            }
+
+            if (hidden && releaseUnavailable(panel))
+            {
+                Remove(panel);
+            }
+            else
+            {
+                mapChanged |= visibilityChanged;
+            }
         }
 
         Render();
+        if (mapChanged)
+        {
+            MapChanged?.Invoke();
+        }
     }
 
     public void Remove(Panel panel)
@@ -269,7 +294,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         var opacity = PreviewOpacity((double)GetValue(RevealProperty));
         foreach (var panel in panels)
         {
-            var shown = panel.Space == space && owner.WindowState != WindowState.Minimized;
+            var shown = panel.Space == space && !panel.WaitingForRemoval && owner.WindowState != WindowState.Minimized;
             panel.Card.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
             if (!shown)
             {
@@ -447,10 +472,12 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;
         public bool IsFolded { get; set; }
-        public bool ClosePosted { get; set; }
+        public PendingWindowClose? CloseRequest { get; set; }
+        public bool WaitingForRemoval { get; set; }
 
         public void Dispose()
         {
+            CloseRequest?.Dispose();
             Thumbnail?.Dispose();
             Instance.Dispose();
         }
