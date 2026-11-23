@@ -8,6 +8,7 @@ namespace Canvas.Desktop;
 internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 {
     private const string MarkerPrefix = "EscritorioCanvas.WindowRecovery.";
+    private const string FullscreenMarker = "EscritorioCanvas.FullscreenPanel";
     private static readonly nint MarkerValue = 1;
     public int SessionId { get; } = GetCurrentSessionId();
 
@@ -71,6 +72,30 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
     public void Restore(long handle, WindowPlacement placement)
     {
+        ClearPanelFullscreen((nint)handle);
+        ApplyPlacement(handle, placement);
+    }
+
+    public static void MarkPanelFullscreen(nint window)
+    {
+        if (!SetProp(window, FullscreenMarker, MarkerValue))
+        {
+            throw new Win32Exception();
+        }
+        ShellFullscreen.Set(window, true);
+    }
+
+    public static void ClearPanelFullscreen(nint window)
+    {
+        if (GetProp(window, FullscreenMarker) == MarkerValue)
+        {
+            ShellFullscreen.Set(window, false);
+            RemoveProp(window, FullscreenMarker);
+        }
+    }
+
+    private static void ApplyPlacement(long handle, WindowPlacement placement)
+    {
         var native = new NativePlacement
         {
             Length = (uint)Marshal.SizeOf<NativePlacement>(),
@@ -114,7 +139,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         EnsureCurrent(instance);
         var current = Capture(identity.Handle);
         EnsureCurrent(instance);
-        Restore(identity.Handle, current with { ShowCommand = 3, Flags = 0 });
+        ApplyPlacement(identity.Handle, current with { ShowCommand = 3, Flags = 0 });
     }
 
     public PendingWindowClose RequestClose(WindowIdentity identity, WindowInstance instance)
@@ -149,7 +174,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         if (current.ShowCommand != 1)
         {
             EnsureCurrent(instance);
-            Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
+            ApplyPlacement(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
         }
 
         Reposition(identity, instance, x, y, size);

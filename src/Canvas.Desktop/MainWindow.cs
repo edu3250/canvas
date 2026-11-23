@@ -623,6 +623,10 @@ public sealed class MainWindow : Window
             placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y), panel.WorkingSize);
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
+            if (WindowState == WindowState.Maximized)
+            {
+                NativeWindowPlacement.MarkPanelFullscreen(application);
+            }
             if (!NativePanelInput.SetForegroundWindow(application))
             {
                 throw new InvalidOperationException("Windows denied foreground activation.");
@@ -706,9 +710,13 @@ public sealed class MainWindow : Window
         var restoreFailed = false;
         try
         {
-            if (panel.CloseRequest?.Accepted != true && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
+            if (WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
             {
-                placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
+                NativeWindowPlacement.ClearPanelFullscreen((nint)panel.Window.Handle);
+                if (panel.CloseRequest?.Accepted != true)
+                {
+                    placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
+                }
             }
         }
         catch (Exception error) when (IsPanelError(error))
