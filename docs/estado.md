@@ -7,8 +7,8 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 ## Ahora
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
-- **En curso:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Los pasos 1 a 3 están completos. El asa, la lengüeta visual y la iluminación de los paneles se incorporaron en el [PR #49](https://github.com/edu3250/canvas/pull/49).
-- **Siguiente paso:** construir las acciones de la lengüeta en el paso 4: quitar del lienzo, plegar, maximizar y cerrar.
+- **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
+- **Siguiente paso:** definir con el usuario los cambios del siguiente hito, incluidos el cierre diferido a la bandeja y la salida de Canvas cuando una aplicación no responde. Ambos siguen abiertos.
 
 ## Qué funciona hoy
 

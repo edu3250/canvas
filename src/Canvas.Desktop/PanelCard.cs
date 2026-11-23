@@ -21,7 +21,21 @@ internal sealed class PanelCard : Border
     private readonly Border tongue;
     private readonly Border halo;
     private readonly Border lightEdge;
+    private readonly Grid body;
+    private readonly TextBlock minimizedLabel = new()
+    {
+        Text = "minimizada", Foreground = DeskControls.Brush(VisualTokens.Colors.Warning),
+        FontFamily = Theme.Font, FontSize = VisualTokens.Type.Caption, VerticalAlignment = VerticalAlignment.Center,
+        Margin = new Thickness(6, 0, 0, 0), Visibility = Visibility.Collapsed
+    };
     private bool active;
+    private bool compact;
+
+    public event Action? FoldRequested;
+    public event Action? MaximizeRequested;
+    public event Action? CloseRequested;
+    public event Action? RemoveRequested;
+    public bool IsPointerOverControls => tongue.IsMouseOver;
 
     public PanelCard(string title)
     {
@@ -48,6 +62,8 @@ internal sealed class PanelCard : Border
         };
         var handleContent = new DockPanel();
         handleContent.Children.Add(iconFrame);
+        DockPanel.SetDock(minimizedLabel, Dock.Right);
+        handleContent.Children.Add(minimizedLabel);
         handleContent.Children.Add(label);
         Handle = new Border
         {
@@ -58,10 +74,10 @@ internal sealed class PanelCard : Border
         AutomationProperties.SetName(Handle, title);
 
         var controls = new UniformGrid { Rows = 1, Columns = 4 };
-        AddControl("…", "Más opciones");
-        AddControl("−", "Minimizar");
-        AddControl("□", "Maximizar");
-        AddControl("×", "Cerrar ventana");
+        AddControl("…", "Más opciones", OpenMenu);
+        AddControl("−", "Plegar o desplegar panel", _ => FoldRequested?.Invoke());
+        AddControl("⤢", "Maximizar ventana", _ => MaximizeRequested?.Invoke());
+        AddControl("×", "Cerrar ventana", _ => CloseRequested?.Invoke());
         tongue = new Border { Background = Slate, CornerRadius = TabRadius, Child = controls };
         var tabs = new Grid { Background = Brushes.Transparent };
         tabs.ColumnDefinitions.Add(new ColumnDefinition());
@@ -71,7 +87,7 @@ internal sealed class PanelCard : Border
         tabs.Children.Add(tongue);
         content.Children.Add(tabs);
 
-        var body = new Grid { Background = Raised };
+        body = new Grid { Background = Raised };
         Grid.SetRow(body, 1);
         content.Children.Add(body);
 
@@ -108,12 +124,12 @@ internal sealed class PanelCard : Border
         IsKeyboardFocusWithinChanged += (_, _) => UpdateTongue();
         UpdateTongue();
 
-        void AddControl(string glyph, string name)
+        void AddControl(string glyph, string name, Action<Button> action)
         {
             var button = new Button
             {
-                Style = DeskControls.ButtonStyle, IsEnabled = false, MinHeight = 0,
-                BorderThickness = new Thickness(0), Background = Brushes.Transparent,
+                Style = DeskControls.ButtonStyle, MinHeight = 0, ToolTip = name,
+                Background = Brushes.Transparent, BorderBrush = Brushes.Transparent,
                 Padding = new Thickness(2), Margin = new Thickness(0, 3, 0, 3),
                 Content = new Viewbox
                 {
@@ -122,7 +138,19 @@ internal sealed class PanelCard : Border
                 }
             };
             AutomationProperties.SetName(button, name);
+            button.Click += (_, _) => action(button);
             controls.Children.Add(button);
+        }
+
+        void OpenMenu(Button more)
+        {
+            var remove = new MenuItem { Header = "Quitar del lienzo" };
+            remove.Click += (_, _) => RemoveRequested?.Invoke();
+            var menu = new ContextMenu { PlacementTarget = more, Placement = PlacementMode.Bottom };
+            menu.Items.Add(remove);
+            menu.Closed += (_, _) => UpdateTongue();
+            more.ContextMenu = menu;
+            menu.IsOpen = true;
         }
     }
 
@@ -138,6 +166,19 @@ internal sealed class PanelCard : Border
     {
         icon.Source = image;
         iconFrame.Child = icon;
+    }
+
+    public void SetCompact(bool value)
+    {
+        if (compact == value)
+        {
+            return;
+        }
+
+        compact = value;
+        minimizedLabel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+        body.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+        UpdateTongue();
     }
 
     public void SetActive(bool value)
@@ -163,5 +204,6 @@ internal sealed class PanelCard : Border
     }
 
     private void UpdateTongue() =>
-        tongue.Visibility = active || IsMouseOver || IsKeyboardFocusWithin ? Visibility.Visible : Visibility.Hidden;
+        tongue.Visibility = active || compact || IsMouseOver || IsKeyboardFocusWithin
+            ? Visibility.Visible : Visibility.Hidden;
 }

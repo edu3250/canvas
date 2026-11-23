@@ -25,3 +25,5 @@ Correspondencia fija entre los términos del [diseño](../diseno-inicial.md) y l
 | Isla del mapa | `MinimapWindow` |
 | Asa del panel | `PanelCard.Handle` |
 | Lengüeta de controles | `PanelCard.tongue` |
+| Panel plegado | `Panel.IsFolded` |
+| Solicitud de cierre pendiente | `PendingWindowClose` |
