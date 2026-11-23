@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
-- **Siguiente paso:** integrar en Canvas la escritura a escala validada manualmente con Chrome en el [PR #52](https://github.com/edu3250/canvas/pull/52). Probar Ctrl+rueda manteniendo el cursor y la distribución con aplicaciones externas. El producto del [PR #53](https://github.com/edu3250/canvas/pull/53) aún usa la ventana nativa superpuesta.
+- **Siguiente paso:** probar la escritura a escala en el producto del [PR #53](https://github.com/edu3250/canvas/pull/53). Con Chrome, comprobar el primer clic y el cursor al alejar y acercar con Ctrl+rueda. El ensayo anterior se validó en el prototipo.
 
 ## Qué funciona hoy
 
