@@ -14,6 +14,22 @@ internal static class Program
             Application.Run(new Fixture(kind, path));
             return 0;
         }
+        if (args is ["embed-check"])
+            return EmbeddedPanel.Check();
+        if (args is ["embed", "control" or "code" or "chrome"])
+        {
+            var trial = new Run("embed-" + args[1]);
+            bool hostFailed;
+            try
+            {
+                using var host = new EmbeddingHost(trial, args[1]);
+                Application.Run(host);
+                hostFailed = host.Failed;
+            }
+            finally { trial.Dispose(); }
+
+            return trial.Clean && !hostFailed ? 0 : 1;
+        }
         bool layout = args is ["layout"] or ["layout-code"];
         if (!layout && (args.Length == 0 || args[0] is not ("control" or "code") ||
             args.Skip(1).Any(option => option != "--auto")))
@@ -104,6 +120,25 @@ internal sealed class Run : IDisposable
         Log($"B HWND=0x{Neighbor:X} PID={NeighborPid} documento={Path.GetFileName(neighborDocument)}");
     }
 
+    internal Process LaunchEmbeddingCandidate(string kind)
+    {
+        File.WriteAllText(Document, "Documento descartable del ensayo.");
+        if (kind == "control")
+            return Launch(Document, Environment.ProcessPath!, "--fixture", "editor", Document);
+        if (kind == "code")
+            return LaunchCode(Document, "A");
+
+        var page = Path.ChangeExtension(Document, ".html");
+        var title = Path.GetFileName(page);
+        File.WriteAllText(page, $"<!doctype html><meta charset=utf-8><title>{title}</title><h1>Ventana de prueba</h1><input autofocus placeholder='Escribe aquí'><p><a target='_blank' href='{title}'>Abrir otra página de prueba</a></p>");
+        var exe = Environment.GetEnvironmentVariable("PANEL_CHROME_EXE");
+        exe ??= new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86,
+            Environment.SpecialFolder.LocalApplicationData }.Select(folder => Path.Combine(
+                Environment.GetFolderPath(folder), "Google", "Chrome", "Application", "chrome.exe")).FirstOrDefault(File.Exists);
+        if (exe is null) throw new FileNotFoundException("Chrome no está instalado en una ruta conocida.");
+        return Launch(page, exe, "--user-data-dir=" + Path.Combine(temp, "chrome-profile"),
+            "--no-first-run", "--no-default-browser-check", "--new-window", new Uri(page).AbsoluteUri);
+    }
     Process LaunchCode(string document, string subject)
     {
         var exe = Environment.GetEnvironmentVariable("PANEL_CODE_EXE");

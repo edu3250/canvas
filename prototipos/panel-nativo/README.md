@@ -55,3 +55,11 @@ $LASTEXITCODE
 Conserva la resolución de Code.exe y PANEL_CODE_EXE descritas arriba. Requiere área primaria mínima de 1200 × 800 px. Ejecuta el mismo oráculo de seis etapas de layout: A normal y B maximizada en D0; dos retornos y restauraciones finales. No añadir --auto. Registro: evidencia-local/layout-code-<id>/sesion.txt, excluido de Git. Código 0: recorrido y limpieza verificados; 1: fallo; 2: argumentos inválidos.
 
 Contrastar las 12 lecturas, estado exacto y tolerancia de 1 px por borde, sin alterar tiempos ni dimensiones si VS Code los rechaza. Registrar versiones, DPI, área, salida y limpieza. [Evidencia y pendientes](../../docs/inspeccion/f04-evidencia-recorrido.md).
+
+## Ensayo de ventana hija del hito 11
+
+Compilar con `dotnet build prototipos/panel-nativo/PanelNativo.csproj -c Release`. Desde la carpeta de salida, `.\PanelNativo.exe embed-check` comprueba el cambio de padre, el estilo de ventana hija, el tamaño del panel y la devolución del estilo y del padre. Usa ventanas ocultas del mismo proceso y devuelve 0 al pasar.
+
+El ensayo visible requiere aviso y «adelante». Ejecutar por separado `.\PanelNativo.exe embed control`, `.\PanelNativo.exe embed chrome` y `.\PanelNativo.exe embed code`. El host abre a pantalla completa. Pulsar **Abrir**, observar dónde aparece por primera vez la ventana y hacer un clic en el contenido para escribir. En Chrome, **Abrir segunda ventana** lanza otra ventana en el mismo perfil descartable. En el editor de control o en VS Code, abrir y cancelar un diálogo. **Terminar ensayo** separa las ventanas y cierra los procesos del ensayo. Se admite `PANEL_CHROME_EXE` o `PANEL_CODE_EXE` para instalaciones personalizadas.
+
+Se comprueban el PID del proceso lanzado y el título del documento único antes del alojamiento. El registro local recoge los tiempos desde el lanzamiento hasta detectar y alojar la ventana. Para valorar el destello hay que observar la pantalla: esos tiempos por sí solos no prueban qué fotograma vio el usuario. Comparar con el modo `code` de superposición anterior. La captación de ventanas ajenas al ensayo, los controles unificados, el foco en segundo plano y el zoom sobre aplicaciones reales quedan para etapas posteriores.
