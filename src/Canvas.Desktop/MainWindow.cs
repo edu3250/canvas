@@ -738,6 +738,10 @@ public sealed class MainWindow : Window
             mapReturnSource = panel;
             NativePanelInput.RaiseWindow(windowHandle);
             Activate();
+            if (WindowState == WindowState.Maximized && NativePanelInput.IsForeground(windowHandle))
+            {
+                UpdateShellFullscreen();
+            }
         }
         UpdateMapPriority();
         if (activateCanvas && Topmost)
@@ -763,7 +767,7 @@ public sealed class MainWindow : Window
 
     private void UpdateMapPriority()
     {
-        // Only the foreground map needs to compete with managed always-on-top sources.
+        // Release the map's z-order priority as soon as another application takes focus.
         var returningFromTopmostSource = mapReturnSource is { } source &&
             NativePanelInput.IsForeground((nint)source.Window.Handle) &&
             NativePanelInput.IsTopmost((nint)source.Window.Handle) &&
@@ -773,8 +777,10 @@ public sealed class MainWindow : Window
             mapReturnSource = null;
         }
 
-        Topmost = (IsActive || returningFromTopmostSource) && WindowState != WindowState.Minimized &&
-            windowPanels.ActivePanel is null && windowPanels.HasTopmostSource();
+        var fullscreenMapInFront = WindowState == WindowState.Maximized && windowHandle != 0 &&
+            NativePanelInput.IsForeground(windowHandle);
+        Topmost = windowPanels.ActivePanel is null && WindowState != WindowState.Minimized &&
+            (fullscreenMapInFront || ((IsActive || returningFromTopmostSource) && windowPanels.HasTopmostSource()));
         UpdateMinimapVisibility();
     }
 
