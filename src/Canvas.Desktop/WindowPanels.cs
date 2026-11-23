@@ -1,24 +1,38 @@
 using Canvas.Domain;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using DomainPoint = Canvas.Domain.Point;
 using WpfPoint = System.Windows.Point;
 
 namespace Canvas.Desktop;
 
-internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds) : System.Windows.Controls.Canvas, IDisposable
+internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 {
-    private const double TitleHeight = 28;
-    private static readonly Brush BackgroundFill = DeskControls.Brush(VisualTokens.Colors.Slate);
+    private const double TitleHeight = VisualTokens.Size.PanelHandle;
+    private static readonly DependencyProperty RevealProperty = DependencyProperty.Register(
+        "Reveal", typeof(double), typeof(WindowPanels), new PropertyMetadata(1d, OnRevealChanged));
+    private readonly Window owner;
+    private readonly ShellItems shell;
+    private readonly Func<CanvasBounds[]> iconBounds;
     private readonly WindowCatalog catalog = new();
     private readonly List<Panel> panels = [];
     private SpaceId space;
     private Camera camera;
     private Drag? drag;
+    private bool disposed;
+
+    public WindowPanels(Window owner, ShellItems shell, Func<CanvasBounds[]> iconBounds)
+    {
+        this.owner = owner;
+        this.shell = shell;
+        this.iconBounds = iconBounds;
+    }
 
     public event Action? MapChanged;
     public event Action<Panel>? ActivationRequested;
@@ -114,15 +128,37 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         var height = (window.NormalBounds.Bottom - (double)window.NormalBounds.Top) / dpi.DpiScaleY + TitleHeight;
         var center = CanvasBounds.Viewport(camera, new DomainPoint(ActualWidth, ActualHeight)).Center;
         var desired = new CanvasBounds(center.X - width / 2, center.Y - height / 2, width, height);
-        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), CreateCard(window.Title), instance);
+        var panel = new Panel(window, space, PanelPlacement.FindFree(desired, Occupied()), new PanelCard(window.Title), instance);
         panels.Add(panel);
         Children.Add(panel.Card);
-        panel.Card.PreviewMouseLeftButtonDown += (_, e) => StartDrag(panel, e);
-        panel.Card.MouseMove += (_, e) => MoveDrag(e);
-        panel.Card.PreviewMouseLeftButtonUp += (_, e) => FinishDrag(e);
-        panel.Card.LostMouseCapture += (_, _) => CancelDrag();
+        panel.Card.Handle.PreviewMouseLeftButtonDown += (_, e) => StartDrag(panel, e);
+        panel.Card.Handle.MouseMove += (_, e) => MoveDrag(e);
+        panel.Card.Handle.PreviewMouseLeftButtonUp += (_, e) => FinishDrag(e);
+        panel.Card.Handle.LostMouseCapture += (_, _) => CancelDrag();
+        panel.Card.PreviewButton.Click += (_, _) => ActivationRequested?.Invoke(panel);
+        _ = LoadIconAsync(panel);
         Render();
         MapChanged?.Invoke();
+    }
+
+    private async Task LoadIconAsync(Panel panel)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(panel.Window.Identity.ProcessId);
+            if (process.MainModule?.FileName is { } path)
+            {
+                var (image, _) = await shell.ReadImageAsync(path, 32, CancellationToken.None, iconOnly: true);
+                if (image is not null && !disposed && panels.Contains(panel))
+                {
+                    panel.Card.SetIcon(image);
+                }
+            }
+        }
+        catch (Exception error) when (error is ArgumentException or Win32Exception or InvalidOperationException or OperationCanceledException)
+        {
+            Trace.TraceInformation(error.Message);
+        }
     }
 
     public void ShowSpace(SpaceId activeSpace, Camera activeCamera)
@@ -130,11 +166,40 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         if (space != activeSpace)
         {
             CancelDrag();
+            var animate = space != default && Theme.AnimationsEnabled;
+            space = activeSpace;
+            BeginAnimation(RevealProperty, animate ? CreateRevealAnimation() : null);
         }
 
-        space = activeSpace;
         camera = activeCamera;
         Render();
+    }
+
+    private static DoubleAnimationUsingKeyFrames CreateRevealAnimation()
+    {
+        var animation = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+        animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        animation.KeyFrames.Add(new SplineDoubleKeyFrame(1, KeyTime.FromTimeSpan(VisualTokens.Motion.SpaceChange),
+            Theme.MotionSpline()));
+        return animation;
+    }
+
+    private static byte PreviewOpacity(double reveal) =>
+        (byte)Math.Round(reveal * VisualTokens.RestingPanelBrightness * byte.MaxValue);
+
+    private static void OnRevealChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var layer = (WindowPanels)sender;
+        var reveal = (double)e.NewValue;
+        layer.Opacity = reveal;
+        var opacity = PreviewOpacity(reveal);
+        foreach (var panel in layer.panels)
+        {
+            if (panel.Space == layer.space)
+            {
+                panel.Thumbnail?.SetOpacity(opacity);
+            }
+        }
     }
 
     public void RefreshWindows()
@@ -185,6 +250,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         }).ToArray();
 
         var mapChanged = false;
+        var opacity = PreviewOpacity((double)GetValue(RevealProperty));
         foreach (var panel in panels)
         {
             var shown = panel.Space == space && owner.WindowState != WindowState.Minimized;
@@ -220,6 +286,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             panel.Card.Width = bounds.Width;
             panel.Card.Height = bounds.Height;
             panel.Card.RenderTransform = new ScaleTransform(camera.Zoom, camera.Zoom);
+            panel.Card.SetActive(panel == ActivePanel);
 
             if (panel == ActivePanel)
             {
@@ -238,7 +305,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
             var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
                 ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
             panel.Card.Text.Text = size is { } dimensions &&
-                panel.Thumbnail?.Display(area, clip, controls, dimensions) == true ? "" : "Vista previa no disponible";
+                panel.Thumbnail?.Display(area, clip, controls, dimensions, opacity) == true ? "" : "Vista previa no disponible";
             if (size is null)
             {
                 panel.Thumbnail?.Hide();
@@ -256,7 +323,7 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
 
     private void StartDrag(Panel panel, MouseButtonEventArgs e)
     {
-        if (drag is null && panel.Card.CaptureMouse())
+        if (drag is null && panel.Card.Handle.CaptureMouse())
         {
             drag = new Drag(panel, e.GetPosition(this), panel.Bounds);
             e.Handled = true;
@@ -300,12 +367,8 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         {
             UpdateDrag(active, e.GetPosition(this));
             drag = null;
-            active.Panel.Card.ReleaseMouseCapture();
+            active.Panel.Card.Handle.ReleaseMouseCapture();
             e.Handled = true;
-            if (!active.HasMoved)
-            {
-                ActivationRequested?.Invoke(active.Panel);
-            }
         }
     }
 
@@ -315,63 +378,22 @@ internal sealed class WindowPanels(Window owner, Func<CanvasBounds[]> iconBounds
         {
             drag = null;
             active.Panel.Bounds = active.Original;
-            active.Panel.Card.ReleaseMouseCapture();
+            active.Panel.Card.Handle.ReleaseMouseCapture();
             Render();
             MapChanged?.Invoke();
         }
     }
 
-    private static PanelCard CreateCard(string title)
-    {
-        var text = new TextBlock
-        {
-            Foreground = DeskControls.Brush(VisualTokens.Colors.Bone), FontFamily = Theme.Font,
-            FontSize = 13,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(10, 0, 10, 0),
-            Text = title,
-            TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        var head = new Border { Background = BackgroundFill, Child = text, Cursor = Cursors.SizeAll };
-        var card = new PanelCard();
-        var content = new Grid();
-        content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TitleHeight) });
-        content.RowDefinitions.Add(new RowDefinition());
-        content.Children.Add(head);
-        Grid.SetRow(card.Text, 1);
-        content.Children.Add(card.Text);
-        card.Child = content;
-        AutomationProperties.SetName(card, title);
-        return card;
-    }
-
     public void Dispose()
     {
+        disposed = true;
+        BeginAnimation(RevealProperty, null);
         foreach (var panel in panels)
         {
             panel.Dispose();
         }
 
         panels.Clear();
-    }
-
-    internal sealed class PanelCard : Border
-    {
-        public PanelCard()
-        {
-            BorderBrush = BackgroundFill;
-            BorderThickness = new Thickness(1);
-            Background = DeskControls.Brush(VisualTokens.Colors.Raised);
-        }
-
-        public TextBlock Text { get; } = new()
-        {
-            Foreground = DeskControls.Brush(VisualTokens.Colors.Bone), FontFamily = Theme.Font,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            TextWrapping = TextWrapping.Wrap,
-            TextAlignment = TextAlignment.Center
-        };
     }
 
     private sealed record Drag(Panel Panel, WpfPoint Pointer, CanvasBounds Original)

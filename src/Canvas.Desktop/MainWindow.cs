@@ -19,8 +19,8 @@ public sealed class MainWindow : Window
     private const double ActivationDurationMs = 200;
     private const double InitialWidth = 1100;
     private const double InitialHeight = 720;
-    private static readonly Brush SelectedSpaceBrush =
-        DeskControls.Brush(VisualTokens.DefaultLight.Color.WithAlpha(VisualTokens.LightWashOpacity));
+    private readonly ResourceDictionary spaceTheme = Theme.CreateResources(VisualTokens.DefaultLight);
+    private SpaceId displayedSpace;
     private static readonly Brush InactiveSpaceBrush = DeskControls.Brush(VisualTokens.Colors.Raised);
     private static readonly SpaceId Programming = new("Programación");
     private static readonly SpaceId Games = new("Juegos");
@@ -89,6 +89,7 @@ public sealed class MainWindow : Window
         });
         WindowState = WindowState.Maximized;
 
+        Resources.MergedDictionaries.Add(spaceTheme);
         var home = new Camera(new Canvas.Domain.Point(0, 0), 1);
         session = new SessionState(Programming, new Dictionary<SpaceId, SpaceNavigation>
         {
@@ -107,7 +108,7 @@ public sealed class MainWindow : Window
         }
 
         spaceView = new SpaceView(shell, folders.Keys);
-        windowPanels = new WindowPanels(this, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
+        windowPanels = new WindowPanels(this, shell, () => spaceView.GetMapItems().Select(item => item.Bounds).ToArray());
         windowPanels.MapChanged += RefreshMap;
         windowPanels.MapChanged += UpdateMapPriority;
         windowPanels.PreviewMouseWheel += ZoomSurface;
@@ -1047,15 +1048,32 @@ public sealed class MainWindow : Window
 
     private void RefreshSpace()
     {
-        var navigation = session.Spaces[session.ActiveSpaceId];
+        var activeSpace = session.ActiveSpaceId;
+        var navigation = session.Spaces[activeSpace];
+        if (displayedSpace != activeSpace)
+        {
+            displayedSpace = activeSpace;
+            var light = activeSpace == Games ? VisualTokens.FindLight("ember") :
+                activeSpace == Programming ? VisualTokens.DefaultLight : VisualTokens.FindLight("lavender");
+            Theme.SetLight(spaceTheme, light);
+        }
+
         foreach (var (space, button) in spaceButtons)
         {
-            var selected = space == session.ActiveSpaceId;
-            button.Background = selected ? SelectedSpaceBrush : InactiveSpaceBrush;
+            var selected = space == activeSpace;
+            if (selected)
+            {
+                button.SetResourceReference(BackgroundProperty, ThemeKeys.LightWash);
+            }
+            else
+            {
+                button.Background = InactiveSpaceBrush;
+            }
+
             AutomationProperties.SetItemStatus(button, selected ? "Espacio actual" : "");
         }
-        windowPanels.ShowSpace(session.ActiveSpaceId, navigation.Camera);
-        spaceView.ShowSpace(session.ActiveSpaceId, navigation.Camera);
+        windowPanels.ShowSpace(activeSpace, navigation.Camera);
+        spaceView.ShowSpace(activeSpace, navigation.Camera);
         var homeLabel = navigation.ReturnView.HasValue ? "Volver a mi vista" : "Inicio";
         homeButton.Content = homeLabel;
         AutomationProperties.SetName(homeButton, homeLabel);

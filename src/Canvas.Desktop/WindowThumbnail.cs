@@ -6,9 +6,12 @@ namespace Canvas.Desktop;
 
 internal sealed class WindowThumbnail : IDisposable
 {
+    private const uint OpacityFlag = 0x04;
     private readonly nint destination;
     private readonly nint source;
     private readonly List<nint> handles;
+    private int visibleCount;
+    private byte opacity;
 
     private WindowThumbnail(nint destination, nint source, nint initial)
     {
@@ -27,7 +30,7 @@ internal sealed class WindowThumbnail : IDisposable
             ? new Canvas.Domain.Point(size.Width, size.Height)
             : null;
 
-    public bool Display(Rect area, Rect viewport, IReadOnlyList<CanvasBounds> controls, Canvas.Domain.Point size)
+    public bool Display(Rect area, Rect viewport, IReadOnlyList<CanvasBounds> controls, Canvas.Domain.Point size, byte opacity)
     {
         if (area.Width < 1 || area.Height < 1)
         {
@@ -63,7 +66,8 @@ internal sealed class WindowThumbnail : IDisposable
 
             var properties = new ThumbnailProperties
             {
-                Flags = 0x01 | 0x02 | 0x08,
+                Flags = 0x01 | 0x02 | OpacityFlag | 0x08,
+                Opacity = opacity,
                 Visible = true,
                 Destination = target,
                 Source = crop
@@ -77,10 +81,31 @@ internal sealed class WindowThumbnail : IDisposable
         }
 
         HideFrom(used);
+        visibleCount = used;
+        this.opacity = opacity;
         return true;
     }
 
-    public void Hide() => HideFrom(0);
+    public void SetOpacity(byte value)
+    {
+        if (value == opacity)
+        {
+            return;
+        }
+
+        var properties = new ThumbnailProperties { Flags = OpacityFlag, Opacity = value };
+        for (var index = 0; index < visibleCount; index++)
+        {
+            DwmUpdateThumbnailProperties(handles[index], in properties);
+        }
+        opacity = value;
+    }
+
+    public void Hide()
+    {
+        HideFrom(0);
+        visibleCount = 0;
+    }
 
     private void HideFrom(int first)
     {
