@@ -1,4 +1,4 @@
-﻿# Hito 11 · Escritorio a pantalla completa
+# Hito 11 · Escritorio a pantalla completa
 
 **Estado:** en definición. El primer ensayo decide cómo alojar las ventanas.
 
@@ -45,4 +45,5 @@ La elección de arquitectura depende del prototipo. El mecanismo de incorporaci�
 
 | Fecha | Modo | Herramienta y modelo | Qué se hizo | PR | Queda |
 | --- | --- | --- | --- | --- | --- |
-| 23-11-2026 | Definir | Codex · GPT-6 | Se acordaron el recorrido, la política de foco y el ensayo de apertura. | Rama h11-definir | Validar el prototipo y elegir arquitectura. |
+| 23-11-2026 | Definir | Codex · GPT-6 | Se acordaron el recorrido, la política de foco y el ensayo de apertura. | [#51](https://github.com/edu3250/canvas/pull/51) | Validar el prototipo y elegir arquitectura. |
+| 23-11-2026 | Construir | Codex · GPT-6 | Preparado el ensayo de alojamiento para Chrome y VS Code. Release compiló sin advertencias. La comprobación con ventanas ocultas verificó padre, estilo, tamaño y separación. | [#52](https://github.com/edu3250/canvas/pull/52) | Ensayo visible con perfiles descartables tras el «adelante». Evaluar destello, escritura y diálogos. |
