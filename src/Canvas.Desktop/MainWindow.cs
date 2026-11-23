@@ -52,11 +52,6 @@ public sealed class MainWindow : Window
     private readonly Button homeButton;
     private readonly Dictionary<SpaceId, Button> spaceButtons = [];
     private readonly MinimapWindow minimap = new();
-    private readonly TextBlock zoomValue = new() { MinWidth = 52, TextAlignment = TextAlignment.Center,
-        Foreground = DeskControls.Brush(VisualTokens.Colors.Bone), VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button zoomOut = CreateZoomButton("−", "Alejar");
-    private readonly Button zoomIn = CreateZoomButton("+", "Acercar");
-    private readonly Button fitContent = CreateZoomButton("⛶", "Encuadrar el contenido");
     private readonly ShellItems shell = new();
     private readonly Dictionary<SpaceId, SpaceFolderMonitor> folders;
     private readonly string layoutPath;
@@ -190,7 +185,11 @@ public sealed class MainWindow : Window
                 return;
             }
 
-            if (e.Key == Key.Escape && windowPanels.IsMouseCaptureWithin)
+            if (HandleZoomKey(e.Key))
+            {
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && windowPanels.IsMouseCaptureWithin)
             {
                 windowPanels.CancelDrag();
                 e.Handled = true;
@@ -212,16 +211,16 @@ public sealed class MainWindow : Window
         };
         viewport.Children.Add(spaceView);
         viewport.Children.Add(windowPanels);
-        var zoomControls = CreateZoomControls();
-        viewport.Children.Add(zoomControls);
         viewport.Children.Add(returnShortcutStatus);
         viewport.Children.Add(edgeBar);
-        windowPanels.OccludingControls = [toolbar, edgeBar.Grip, zoomControls, returnShortcutStatus];
+        windowPanels.OccludingControls = [toolbar, edgeBar.Grip, returnShortcutStatus];
         toolbar.IsVisibleChanged += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, (Action)windowPanels.Render);
         Content = viewport;
         RefreshSpace();
 
         minimap.CenterRequested += SelectMapPoint;
+        minimap.ZoomRequested += StepZoom;
+        minimap.FitRequested += FitContent;
         SourceInitialized += (_, _) =>
         {
             windowHandle = new WindowInteropHelper(this).Handle;
@@ -324,6 +323,7 @@ public sealed class MainWindow : Window
     }
 
     private DomainPoint ViewportSize => new(spaceView.ActualWidth, spaceView.ActualHeight);
+    private Camera MapZoomCamera => windowPanels.ActivePanel is null ? ActiveCamera : mapCamera;
 
     private void SyncMinimapWindow()
     {
@@ -357,13 +357,9 @@ public sealed class MainWindow : Window
         var size = ViewportSize;
         var camera = ActiveCamera;
         MinimapItem[] items = [.. spaceView.GetMapItems(includePreview: true), .. windowPanels.GetMapItems()];
-        zoomValue.Text = camera.Zoom < 0.01 ? "<1 %" : $"{camera.Zoom * 100:0} %";
-        zoomOut.IsEnabled = camera.Zoom > CameraGestures.MinZoom;
-        zoomIn.IsEnabled = camera.Zoom < CameraGestures.MaxZoom;
-        fitContent.IsEnabled = items.Length != 0;
         if (size.X > 0 && size.Y > 0)
         {
-            minimap.UpdateMap(CanvasBounds.Viewport(camera, size), items);
+            minimap.UpdateMap(CanvasBounds.Viewport(camera, size), MapZoomCamera.Zoom, items);
         }
     }
 
@@ -379,8 +375,8 @@ public sealed class MainWindow : Window
         var right = spaceView.ActualWidth;
         return pointer.Y >= NativePanelInput.ScreenBottom - 2 ||
             relative.Y >= bottom - 2 && relative.X >= 0 && relative.X <= right ||
-            minimap.IsVisible && relative.Y >= bottom - MinimapWindow.MapHeight - MinimapWindow.Inset &&
-                relative.X >= right - MinimapWindow.MapWidth - MinimapWindow.Inset && relative.X <= right;
+            minimap.IsVisible && relative.Y >= bottom - MinimapWindow.IslandHeight - MinimapWindow.Inset &&
+                relative.X >= right - MinimapWindow.IslandWidth - MinimapWindow.Inset && relative.X <= right;
     }
 
     private nint HandleWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
@@ -457,6 +453,7 @@ public sealed class MainWindow : Window
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             recovery.SaveOriginal(identity.Handle, panel.Instance);
             saved = true;
+            mapCamera = previous;
             windowPanels.ActivePanel = panel;
             UpdateMapPriority();
 
@@ -475,10 +472,10 @@ public sealed class MainWindow : Window
                 throw new Win32Exception();
             }
 
-            mapCamera = previous;
             windowPanels.SuspendPreview(panel);
             UpdateActivePanelBounds(syncPosition: false);
             windowPanels.Render();
+            RefreshMap();
             minimap.Hide();
             hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
             returnShortcutStatus.Visibility = hotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
@@ -574,6 +571,7 @@ public sealed class MainWindow : Window
         }
 
         windowPanels.Render();
+        RefreshMap();
         SyncMinimapWindow();
         if (restoreFailed)
         {
@@ -651,50 +649,56 @@ public sealed class MainWindow : Window
         ApplyNavigation(new SetCamera(CameraGestures.CenterOn(world, ViewportSize, ActiveCamera.Zoom)));
     }
 
-    private Border CreateZoomControls()
+    private bool HandleZoomKey(Key key)
     {
-        zoomOut.Click += (_, _) => StepZoom(-1);
-        zoomIn.Click += (_, _) => StepZoom(1);
-        fitContent.Click += (_, _) => FitContent();
-
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        row.Children.Add(zoomOut);
-        row.Children.Add(zoomValue);
-        row.Children.Add(zoomIn);
-        row.Children.Add(fitContent);
-        return new Border
+        var modifiers = Keyboard.Modifiers;
+        if (modifiers != ModifierKeys.Control &&
+            !(modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && key == Key.OemPlus))
         {
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, MinimapWindow.MapWidth + MinimapWindow.Inset + 8, MinimapWindow.Inset),
-            Padding = new Thickness(5),
-            CornerRadius = new CornerRadius(8),
-            Background = DeskControls.Brush(VisualTokens.Colors.Slate),
-            Child = row
-        };
-    }
+            return false;
+        }
 
-    private static Button CreateZoomButton(string content, string name)
-    {
-        var button = new Button
+        switch (key)
         {
-            Style = DeskControls.ButtonStyle, Content = content, Width = 36,
-            Height = VisualTokens.Size.Control, FontSize = 16, ToolTip = name
-        };
-        AutomationProperties.SetName(button, name);
-        return button;
+            case Key.OemMinus or Key.Subtract:
+                StepZoom(-1);
+                return true;
+            case Key.OemPlus or Key.Add:
+                StepZoom(1);
+                return true;
+            case Key.D0 or Key.NumPad0:
+                FitContent();
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void StepZoom(double steps)
     {
+        var camera = MapZoomCamera;
+        if (activationPending ||
+            (steps < 0 && camera.Zoom <= CameraGestures.MinZoom) ||
+            (steps > 0 && camera.Zoom >= CameraGestures.MaxZoom))
+        {
+            return;
+        }
+
+        ReturnToMap();
         CancelGesture();
         var size = ViewportSize;
         var center = new DomainPoint(size.X / 2, size.Y / 2);
-        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, center, steps)));
+        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(camera, center, steps)));
     }
 
     private void FitContent()
     {
+        if (activationPending)
+        {
+            return;
+        }
+
+        ReturnToMap();
         CancelGesture();
         MinimapItem[] items = [.. spaceView.GetMapItems(), .. windowPanels.GetMapItems()];
         if (items.Length != 0)
