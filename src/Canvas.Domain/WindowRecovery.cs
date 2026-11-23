@@ -128,10 +128,24 @@ public sealed class WindowRecovery : IDisposable
             windows.Restore(handle, entry.Placement);
         }
 
+        RemoveEntry(entry, matched);
+    }
+
+    public void ForgetWindow(WindowIdentity identity)
+    {
+        ObjectDisposedException.ThrowIf(gate.SafeFileHandle.IsClosed, this);
+        if (FindInCurrentSession(identity.Handle) is { } entry && entry.Identity == identity)
+        {
+            RemoveEntry(entry, Matches(entry));
+        }
+    }
+
+    private void RemoveEntry(WindowRecoveryEntry entry, bool matched)
+    {
         Write(entries.Where(item => item != entry).ToList());
         if (matched && Matches(entry))
         {
-            windows.RemoveMarker(handle, entry.Marker);
+            windows.RemoveMarker(entry.Handle, entry.Marker);
         }
     }
 

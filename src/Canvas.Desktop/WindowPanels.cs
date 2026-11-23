@@ -36,8 +36,17 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 
     public event Action? MapChanged;
     public event Action<Panel>? ActivationRequested;
+    public event Action<Panel>? FoldRequested;
+    public event Action<Panel>? MaximizeRequested;
+    public event Action<Panel>? CloseRequested;
+    public event Action<Panel>? RemoveRequested;
+    public event Action<Panel>? WindowUnavailable;
 
     public Panel? ActivePanel { get; set; }
+    public bool IsPointerOverControls => panels.Any(panel => panel.Card.IsPointerOverControls);
+    public bool Contains(Panel panel) => panels.Contains(panel);
+    public Panel[] GetUnavailablePanels() => panels
+        .Where(panel => !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)).ToArray();
 
     public bool HasTopmostSource() => panels.Any(panel =>
         NativePanelInput.IsTopmost((nint)panel.Window.Handle) &&
@@ -136,6 +145,10 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         panel.Card.Handle.PreviewMouseLeftButtonUp += (_, e) => FinishDrag(e);
         panel.Card.Handle.LostMouseCapture += (_, _) => CancelDrag();
         panel.Card.PreviewButton.Click += (_, _) => ActivationRequested?.Invoke(panel);
+        panel.Card.FoldRequested += () => FoldRequested?.Invoke(panel);
+        panel.Card.MaximizeRequested += () => MaximizeRequested?.Invoke(panel);
+        panel.Card.CloseRequested += () => CloseRequested?.Invoke(panel);
+        panel.Card.RemoveRequested += () => RemoveRequested?.Invoke(panel);
         _ = LoadIconAsync(panel);
         Render();
         MapChanged?.Invoke();
@@ -204,25 +217,28 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 
     public void RefreshWindows()
     {
-        var removed = panels.Where(panel => !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)).ToArray();
-        if (removed.Length != 0)
+        foreach (var panel in GetUnavailablePanels())
         {
-            foreach (var panel in removed)
-            {
-                if (drag?.Panel == panel)
-                {
-                    CancelDrag();
-                }
-
-                panel.Dispose();
-                Children.Remove(panel.Card);
-                panels.Remove(panel);
-            }
-
-            MapChanged?.Invoke();
+            WindowUnavailable?.Invoke(panel);
+            Remove(panel);
         }
 
         Render();
+    }
+
+    public void Remove(Panel panel)
+    {
+        if (drag?.Panel == panel)
+        {
+            CancelDrag();
+        }
+
+        if (panels.Remove(panel))
+        {
+            panel.Dispose();
+            Children.Remove(panel.Card);
+            MapChanged?.Invoke();
+        }
     }
 
     public void SuspendPreview(Panel panel)
@@ -263,8 +279,13 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 
             var bounds = panel.Bounds;
             var minimized = WindowCatalog.IsMinimized(panel.Window.Handle);
+            var compact = minimized || panel.IsFolded;
             DomainPoint? size = null;
-            if (panel != ActivePanel && !minimized)
+            if (compact)
+            {
+                bounds = bounds with { Height = TitleHeight + 2 };
+            }
+            else if (panel != ActivePanel)
             {
                 panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
                 size = panel.Thumbnail?.ReadSourceSize();
@@ -287,6 +308,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             panel.Card.Height = bounds.Height;
             panel.Card.RenderTransform = new ScaleTransform(camera.Zoom, camera.Zoom);
             panel.Card.SetActive(panel == ActivePanel);
+            panel.Card.SetCompact(compact);
 
             if (panel == ActivePanel)
             {
@@ -295,10 +317,10 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
                 continue;
             }
 
-            if (minimized)
+            if (compact)
             {
                 panel.Thumbnail?.Hide();
-                panel.Card.Text.Text = "Ventana minimizada";
+                panel.Card.Text.Text = "";
                 continue;
             }
 
@@ -369,6 +391,18 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             drag = null;
             active.Panel.Card.Handle.ReleaseMouseCapture();
             e.Handled = true;
+            if (!active.HasMoved)
+            {
+                var panel = active.Panel;
+                if (WindowCatalog.IsMinimized(panel.Window.Handle))
+                {
+                    ActivationRequested?.Invoke(panel);
+                }
+                else if (panel.IsFolded)
+                {
+                    FoldRequested?.Invoke(panel);
+                }
+            }
         }
     }
 
@@ -412,6 +446,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         public PanelCard Card { get; } = card;
         public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;
+        public bool IsFolded { get; set; }
+        public bool ClosePosted { get; set; }
 
         public void Dispose()
         {

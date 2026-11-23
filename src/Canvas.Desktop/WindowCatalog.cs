@@ -91,6 +91,11 @@ internal sealed class WindowCatalog
 
     public static bool IsMinimized(long handle) => IsIconic((nint)handle);
 
+    public static bool IsEnabled(long handle) => IsWindowEnabled((nint)handle);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowEnabled(nint handle);
+
     private static bool IsNonElevated(int processId)
     {
         const uint QueryLimitedInformation = 0x1000;

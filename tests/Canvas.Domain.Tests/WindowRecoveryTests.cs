@@ -62,6 +62,37 @@ public sealed class WindowRecoveryTests : IDisposable
         Assert.Equal(2, windows.RestoreCount);
     }
 
+    [Fact]
+    public void ForgettingClosedWindowDoesNotRestoreItAndPreservesOtherEntries()
+    {
+        using (var recovery = Open())
+        {
+            recovery.SaveOriginal(100);
+            recovery.SaveOriginal(200);
+            recovery.ForgetWindow(windows.Identify(100)!);
+            Assert.Equal([200L], windows.Markers.Keys);
+            Assert.Equal(0, windows.RestoreCount);
+        }
+
+        using var reopened = Open();
+        Assert.Empty(reopened.RestoreAll());
+        Assert.Equal(1, windows.RestoreCount);
+    }
+
+    [Fact]
+    public void ForgetWithDifferentIdentityLeavesOriginalEntry()
+    {
+        using var recovery = Open();
+        recovery.SaveOriginal(100);
+        var identity = windows.Identify(100)!;
+
+        recovery.ForgetWindow(identity with { ProcessId = identity.ProcessId + 1 });
+
+        Assert.Equal([100L], windows.Markers.Keys);
+        Assert.Empty(recovery.RestoreAll());
+        Assert.Equal(1, windows.RestoreCount);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

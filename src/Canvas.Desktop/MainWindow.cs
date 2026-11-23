@@ -116,6 +116,11 @@ public sealed class MainWindow : Window
         windowPanels.MapChanged += UpdateMapPriority;
         windowPanels.PreviewMouseWheel += ZoomSurface;
         windowPanels.ActivationRequested += ActivatePanel;
+        windowPanels.FoldRequested += TogglePanelFold;
+        windowPanels.MaximizeRequested += MaximizePanel;
+        windowPanels.CloseRequested += ClosePanel;
+        windowPanels.RemoveRequested += RemovePanel;
+        windowPanels.WindowUnavailable += ReleaseUnavailablePanel;
         previewTimer.Tick += (_, _) =>
         {
             if (windowPanels.ActivePanel is { } panel &&
@@ -146,7 +151,8 @@ public sealed class MainWindow : Window
                 return;
             }
 
-            if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left)
+            if (windowPanels.ActivePanel is not null && e.ChangedButton == MouseButton.Left &&
+                !windowPanels.IsPointerOverControls)
             {
                 e.Handled = true;
                 if (edgeBar.IsMouseOver)
@@ -267,6 +273,10 @@ public sealed class MainWindow : Window
             previewTimer.Stop();
             edgeTimer.Stop();
             ReleaseReturnShortcut();
+            foreach (var panel in windowPanels.GetUnavailablePanels())
+            {
+                ReleaseUnavailablePanel(panel);
+            }
             windowPanels.Dispose();
             shell.Dispose();
             if (!readingFolders)
@@ -409,9 +419,125 @@ public sealed class MainWindow : Window
 
     private async void ActivatePanel(WindowPanels.Panel panel) => await ActivatePanelAsync(panel, fromMinimap: false);
 
+    private bool CanUsePanel(WindowPanels.Panel panel) =>
+        !closed && !activationPending && panel.Space == session.ActiveSpaceId && windowPanels.Contains(panel);
+
+    private void TogglePanelFold(WindowPanels.Panel panel)
+    {
+        if (!CanUsePanel(panel))
+        {
+            return;
+        }
+
+        if (WindowCatalog.IsMinimized(panel.Window.Handle))
+        {
+            ActivatePanel(panel);
+            return;
+        }
+
+        if (windowPanels.ActivePanel == panel)
+        {
+            ReturnToMap();
+        }
+
+        panel.IsFolded = !panel.IsFolded;
+        windowPanels.Render();
+    }
+
+    private async void MaximizePanel(WindowPanels.Panel panel) =>
+        await UseActivePanelAsync(panel, () => placement.Maximize(panel.Window.Identity, panel.Instance),
+            "No se pudo maximizar la ventana.");
+
+    private async void ClosePanel(WindowPanels.Panel panel) =>
+        await UseActivePanelAsync(panel, () =>
+        {
+            if (panel.ClosePosted && !WindowCatalog.IsEnabled(panel.Window.Handle))
+            {
+                return;
+            }
+
+            NativeWindowPlacement.EnsureCurrent(panel.Instance);
+            var source = (nint)panel.Window.Handle;
+            if (!NativePanelInput.IsForeground(source) && !NativePanelInput.SetForegroundWindow(source))
+            {
+                throw new InvalidOperationException("Windows denied foreground activation.");
+            }
+
+            placement.RequestClose(panel.Window.Identity, panel.Instance);
+            panel.ClosePosted = true;
+        }, "No se pudo solicitar el cierre de la ventana.");
+
+    private async Task UseActivePanelAsync(WindowPanels.Panel panel, Action action, string errorMessage)
+    {
+        if (!CanUsePanel(panel))
+        {
+            return;
+        }
+
+        await ActivatePanelAsync(panel, fromMinimap: false);
+        if (!CanUsePanel(panel) || windowPanels.ActivePanel != panel)
+        {
+            return;
+        }
+
+        try
+        {
+            action();
+        }
+        catch (Exception error) when (IsPanelError(error))
+        {
+            Trace.TraceWarning(error.ToString());
+            MessageBox.Show(this, errorMessage, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void RemovePanel(WindowPanels.Panel panel)
+    {
+        if (!CanUsePanel(panel))
+        {
+            return;
+        }
+
+        if (windowPanels.ActivePanel == panel)
+        {
+            ReturnToMap();
+        }
+
+        if (RestorePanel(panel))
+        {
+            windowPanels.Remove(panel);
+        }
+        else
+        {
+            MessageBox.Show(this, "No se pudo devolver la ventana a su acomodo original.", Title,
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void ReleaseUnavailablePanel(WindowPanels.Panel panel)
+    {
+        if (!closed && windowPanels.ActivePanel == panel)
+        {
+            ReturnToMap();
+        }
+
+        if (panel.ClosePosted)
+        {
+            try
+            {
+                // A window that accepted Close may hide instead of destroying its handle.
+                recovery.ForgetWindow(panel.Window.Identity);
+            }
+            catch (Exception error) when (IsPanelError(error))
+            {
+                Trace.TraceWarning(error.ToString());
+            }
+        }
+    }
+
     private async Task ActivatePanelAsync(WindowPanels.Panel panel, bool fromMinimap)
     {
-        if (activationPending || panel.Space != session.ActiveSpaceId)
+        if (!CanUsePanel(panel))
         {
             return;
         }
@@ -476,6 +602,7 @@ public sealed class MainWindow : Window
                 throw new Win32Exception();
             }
 
+            panel.IsFolded = false;
             windowPanels.SuspendPreview(panel);
             UpdateActivePanelBounds(syncPosition: false);
             windowPanels.Render();
@@ -547,7 +674,10 @@ public sealed class MainWindow : Window
         var restoreFailed = false;
         try
         {
-            placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
+            if (WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
+            {
+                placement.RestoreMaximizedPanel(panel.Window.Identity, panel.Instance);
+            }
         }
         catch (Exception error) when (IsPanelError(error))
         {
