@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **En curso:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Los pasos 1 a 3 están completos. El asa, la lengüeta visual y la iluminación de los paneles se incorporaron en el [PR #49](https://github.com/edu3250/canvas/pull/49).
-- **Siguiente paso:** ensayar las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50) en Windows tras el «adelante» del usuario. Ya se corrigieron la cancelación del cierre y el reintento si falla el registro. Después, revisión de zona sensible en otra sesión.
+- **Siguiente paso:** corregir el cierre a bandeja diferido y permitir salir de Canvas si la aplicación externa no responde en el [PR #50](https://github.com/edu3250/canvas/pull/50). Después, ensayo interactivo autorizado y nueva revisión.
 
 ## Qué funciona hoy
 
