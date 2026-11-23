@@ -2,13 +2,13 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 22-11-2026.
+**Actualizado:** 23-11-2026.
 
 ## Ahora
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
-- **Siguiente paso:** definir con el usuario los cambios del siguiente hito, incluidos el cierre diferido a la bandeja y la salida de Canvas cuando una aplicación no responde. Ambos siguen abiertos.
+- **Siguiente paso:** probar la apertura directa del [hito 11](hitos/11-escritorio-a-pantalla-completa.md) antes de decidir cómo alojar ventanas. Los dos casos de cierre aplazados del #50 forman parte de este hito.
 
 ## Qué funciona hoy
 
