@@ -371,8 +371,17 @@ public sealed class MainWindow : Window
 
     private void UpdateMinimapVisibility()
     {
-        if (WindowState == WindowState.Minimized ||
-            windowPanels.ActivePanel is not null && !PointerRevealsMinimap())
+        if (closed || minimap.Owner is null)
+        {
+            return;
+        }
+
+        var panel = windowPanels.ActivePanel;
+        var canvasInFront = NativePanelInput.IsForeground(windowHandle);
+        var panelInFront = panel is not null && NativePanelInput.IsForeground((nint)panel.Window.Handle)
+            && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance);
+        if (WindowState == WindowState.Minimized || !(canvasInFront || panelInFront) ||
+            panel is not null && !PointerRevealsMinimap())
         {
             minimap.Hide();
             return;
@@ -751,7 +760,7 @@ public sealed class MainWindow : Window
 
         Topmost = (IsActive || returningFromTopmostSource) && WindowState != WindowState.Minimized &&
             windowPanels.ActivePanel is null && windowPanels.HasTopmostSource();
-        minimap.EnsureTopmost();
+        UpdateMinimapVisibility();
     }
 
     private void ReleaseReturnShortcut()
