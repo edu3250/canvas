@@ -16,13 +16,14 @@ internal static class Program
         }
         if (args is ["embed-check"])
             return EmbeddedPanel.Check();
-        if (args is ["embed", "control" or "code" or "chrome"])
+        if (args is ["embed", "control" or "code" or "chrome"] or ["overlay", "chrome"] or
+            ["embed" or "overlay", "chrome", "--check-input"])
         {
-            var trial = new Run("embed-" + args[1]);
+            var trial = new Run(args[0] + "-" + args[1]);
             bool hostFailed;
             try
             {
-                using var host = new EmbeddingHost(trial, args[1]);
+                using var host = new EmbeddingHost(trial, args[1], args.Length == 3, args[0] == "overlay");
                 Application.Run(host);
                 hostFailed = host.Failed;
             }
@@ -130,7 +131,20 @@ internal sealed class Run : IDisposable
 
         var page = Path.ChangeExtension(Document, ".html");
         var title = Path.GetFileName(page);
-        File.WriteAllText(page, $"<!doctype html><meta charset=utf-8><title>{title}</title><h1>Ventana de prueba</h1><input autofocus placeholder='Escribe aquí'><p><a target='_blank' href='{title}'>Abrir otra página de prueba</a></p>");
+        File.WriteAllText(page, $$"""
+            <!doctype html><html lang="es"><meta charset="utf-8"><title>{{title}}</title>
+            <style>body{font:20px system-ui;margin:4vh 5vw}textarea{box-sizing:border-box;width:100%;height:65vh;font:inherit;padding:1em}</style>
+            <h1>Prueba de escritura</h1><label for="entry">Haz un clic en el campo y escribe.</label>
+            <textarea id="entry" placeholder="Escribe aquí"></textarea><output id="result"></output>
+            <p><a target="_blank" href="{{title}}">Abrir otra página de prueba</a></p>
+            <script>
+            const entry = document.querySelector('textarea');
+            entry.addEventListener('input', () => {
+                document.querySelector('output').textContent = 'Chrome recibió la escritura.';
+                document.title = '{{title}} ' + (entry.value === 'canvas42' ? 'INPUT-OK' : 'INPUT');
+            });
+            </script></html>
+            """);
         var exe = Environment.GetEnvironmentVariable("PANEL_CHROME_EXE");
         exe ??= new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86,
             Environment.SpecialFolder.LocalApplicationData }.Select(folder => Path.Combine(

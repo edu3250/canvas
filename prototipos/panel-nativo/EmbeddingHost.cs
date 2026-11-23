@@ -5,6 +5,9 @@ internal sealed class EmbeddingHost : Form
 {
     private readonly Run run;
     private readonly string kind;
+    private readonly bool checkInput;
+    private readonly bool overlay;
+    private bool inputConfirmed;
     private readonly Panel slot = new() { BackColor = Color.FromArgb(43, 47, 57) };
     private readonly Label status = new() { AutoSize = true, ForeColor = Color.White, Padding = new Padding(8) };
     private readonly System.Windows.Forms.Timer poll = new() { Interval = 25 };
@@ -15,10 +18,12 @@ internal sealed class EmbeddingHost : Form
     private readonly List<EmbeddedPanel> embedded = [];
     internal bool Failed { get; private set; }
 
-    internal EmbeddingHost(Run run, string kind)
+    internal EmbeddingHost(Run run, string kind, bool checkInput, bool overlay)
     {
         this.run = run;
         this.kind = kind;
+        this.checkInput = checkInput;
+        this.overlay = overlay;
         Text = "Canvas · Ensayo de apertura";
         BackColor = Color.FromArgb(20, 23, 31);
         FormBorderStyle = FormBorderStyle.None;
@@ -34,7 +39,7 @@ internal sealed class EmbeddingHost : Form
             status.Text = "Esperando la ventana del perfil de prueba…";
             poll.Start();
         });
-        another.Visible = kind == "chrome";
+        another.Visible = kind == "chrome" && !overlay;
         another.Click += (_, _) => Guard(() =>
         {
             another.Enabled = false;
@@ -53,6 +58,7 @@ internal sealed class EmbeddingHost : Form
         poll.Tick += (_, _) => Guard(FindCandidate);
         FormClosing += (_, _) =>
         {
+            if (checkInput && !inputConfirmed) Failed = true;
             poll.Stop();
             foreach (var panel in embedded.AsEnumerable().Reverse())
             {
@@ -93,12 +99,62 @@ internal sealed class EmbeddingHost : Form
         var second = embedded.Count == 1;
         secondSlot.Visible = second;
         LayoutSlot();
-        var panel = new EmbeddedPanel(found);
+        var panel = new EmbeddedPanel(found, overlay);
         embedded.Add(panel);
         panel.Attach(second ? secondSlot : slot);
+        if (overlay && panel.Current && Native.GetForegroundWindow() == Handle)
+            Native.SetForegroundWindow(found);
         another.Enabled = !second && kind == "chrome";
-        run.Log($"Ventana alojada a {elapsed.ElapsedMilliseconds} ms del lanzamiento.");
+        run.Log($"Ventana {(overlay ? "superpuesta" : "alojada")} a {elapsed.ElapsedMilliseconds} ms del lanzamiento.");
         status.Text = "Prueba un clic, escritura y un diálogo. Terminar devuelve la ventana y cierra la prueba.";
+        if (checkInput) _ = VerifyInput(found, panel);
+    }
+
+    private async Task VerifyInput(nint window, EmbeddedPanel panel)
+    {
+        another.Enabled = false;
+        try
+        {
+            await Task.Delay(1200);
+            if (IsDisposed) return;
+            var point = slot.PointToScreen(new Point(slot.Width / 2, slot.Height / 2));
+            bool OwnTarget(nint target) => target == window || IsChild(window, target);
+            bool Eligible() => panel.Current && run.IsOurs(window, process!.Id) &&
+                (Native.GetForegroundWindow() == Handle || Native.GetForegroundWindow() == window);
+            var hit = Native.WindowFromPoint(point);
+            run.Log($"Centro del panel sobre Chrome={OwnTarget(hit)}; panel en primer plano={Eligible()}.");
+            if (!Eligible() || !OwnTarget(hit)) throw new InvalidOperationException("El campo de Chrome no está disponible para el clic.");
+            var previous = Cursor.Position;
+            Cursor.Position = point;
+            try
+            {
+                if (!Eligible() || Native.WindowFromPoint(point) != hit || Cursor.Position != point)
+                    throw new InvalidOperationException("Cambió el destino del clic.");
+                Native.mouse_event(2, 0, 0, 0, 0);
+                Native.mouse_event(4, 0, 0, 0, 0);
+            }
+            finally { if (Cursor.Position == point) Cursor.Position = previous; }
+            await Task.Delay(200);
+            foreach (char key in "canvas42")
+            {
+                if (IsDisposed || !Eligible() || !OwnTarget(ForegroundFocus()))
+                    throw new InvalidOperationException("Tras el clic, el foco de teclado no pertenece al Chrome de prueba.");
+                SendKeys.SendWait(key.ToString());
+            }
+            for (var attempt = 0; attempt < 30 && !IsDisposed; attempt++)
+            {
+                if (panel.Current && Native.Title(window).Contains(" INPUT-OK", StringComparison.Ordinal))
+                {
+                    inputConfirmed = true;
+                    run.Log("La página confirmó el texto exacto canvas42 después de un clic.");
+                    return;
+                }
+                await Task.Delay(100);
+            }
+            throw new InvalidOperationException("La página no confirmó el texto de prueba.");
+        }
+        catch (Exception error) { Failed = true; run.Log("Comprobación de entrada: " + error.Message); }
+        finally { if (!IsDisposed) Close(); }
     }
 
     private void Guard(Action action)
@@ -110,6 +166,7 @@ internal sealed class EmbeddingHost : Form
             poll.Stop();
             run.Log("Error de ensayo: " + error.Message);
             status.Text = error.Message;
+            if (checkInput) Close();
         }
     }
 
@@ -120,5 +177,19 @@ internal sealed class EmbeddingHost : Form
     }
 
     private delegate bool EnumWindow(nint handle, nint data);
+    [DllImport("user32")] private static extern bool IsChild(nint parent, nint child);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GuiThreadInfo
+    {
+        public uint Size, Flags;
+        public nint Active, Focus, Capture, MenuOwner, MoveSize, Caret;
+        public Native.Rect CaretRect;
+    }
+    private static nint ForegroundFocus()
+    {
+        var info = new GuiThreadInfo { Size = (uint)Marshal.SizeOf<GuiThreadInfo>() };
+        return GetGUIThreadInfo(0, ref info) ? info.Focus : 0;
+    }
+    [DllImport("user32")] private static extern bool GetGUIThreadInfo(uint thread, ref GuiThreadInfo info);
     [DllImport("user32")] private static extern bool EnumWindows(EnumWindow callback, nint data);
 }

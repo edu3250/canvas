@@ -11,10 +11,12 @@ internal sealed class EmbeddedPanel
     private readonly int originalStyle;
     private readonly WindowPlacementApi.Placement placement;
     private readonly bool wasVisible;
+    private readonly bool overlay;
 
-    internal EmbeddedPanel(nint window)
+    internal EmbeddedPanel(nint window, bool overlay = false)
     {
         this.window = window;
+        this.overlay = overlay;
         pid = Native.Pid(window);
         originalStyle = GetWindowLongW(window, Style);
         placement = WindowPlacementApi.Capture(window);
@@ -27,6 +29,7 @@ internal sealed class EmbeddedPanel
     internal void Attach(Control slot)
     {
         if (!Current) throw new InvalidOperationException("La ventana de prueba cambió.");
+        if (overlay) { Resize(slot); return; }
         SetStyle((originalStyle & ~Popup) | Child);
         SetParentChecked(slot.Handle);
         Resize(slot);
@@ -36,16 +39,20 @@ internal sealed class EmbeddedPanel
 
     internal void Resize(Control slot)
     {
-        if (Current && !Native.SetWindowPos(window, 0, 0, 0, slot.ClientSize.Width, slot.ClientSize.Height,
-                NoZOrder | NoActivate | FrameChanged))
+        var origin = overlay ? slot.PointToScreen(Point.Empty) : Point.Empty;
+        if (Current && !Native.SetWindowPos(window, 0, origin.X, origin.Y, slot.ClientSize.Width, slot.ClientSize.Height,
+                overlay ? NoActivate : NoZOrder | NoActivate | FrameChanged))
             throw new Win32Exception();
     }
 
     internal void Detach()
     {
         if (!Current) return;
-        if (GetParent(window) != 0) SetParentChecked(0);
-        SetStyle(originalStyle);
+        if (!overlay)
+        {
+            if (GetParent(window) != 0) SetParentChecked(0);
+            SetStyle(originalStyle);
+        }
         if (wasVisible) WindowPlacementApi.Restore(window, placement);
         RemovePropW(window, marker);
     }
