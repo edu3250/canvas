@@ -21,6 +21,20 @@ public sealed class PreviewClippingTests
             PreviewClipping.Fit(area, new Point(sourceWidth, sourceHeight)));
     }
 
+    [Theory]
+    [InlineData(0.3)]
+    [InlineData(1)]
+    [InlineData(3)]
+    public void LocatesClickWithinTheVisibleSourceCrop(double zoom)
+    {
+        var crop = new CanvasBounds(120, 60, 800, 400);
+        var target = new CanvasBounds(-50, 100, 800 * zoom, 400 * zoom);
+        Assert.Equal(new Point(320, 260), PreviewClipping.MapToSource(target, crop,
+            new Point(target.X + 200 * zoom, target.Y + 200 * zoom)));
+        Assert.Null(PreviewClipping.MapToSource(target, crop, new Point(target.X + target.Width, target.Y)));
+        Assert.Null(PreviewClipping.MapToSource(target, crop, new Point(target.X, target.Y - 1)));
+    }
+
     [Fact]
     public void LeavesBottomLeftPreviewIntactAtSameHeightAsZoomControls()
     {

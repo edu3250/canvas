@@ -12,6 +12,26 @@ internal sealed class WindowThumbnail : IDisposable
     private readonly List<nint> handles;
     private int visibleCount;
     private byte? opacity;
+    private readonly List<(CanvasBounds Target, CanvasBounds Crop)> regions = [];
+    private Canvas.Domain.Point sourceSize;
+
+    public System.Windows.Point? MapClick(System.Windows.Point screenPoint)
+    {
+        var local = new PixelPoint { X = (int)screenPoint.X, Y = (int)screenPoint.Y };
+        if (!ScreenToClient(destination, ref local) || !GetWindowRect(source, out var window)) return null;
+        foreach (var (target, crop) in regions)
+        {
+            if (PreviewClipping.MapToSource(target, crop, new Canvas.Domain.Point(local.X, local.Y)) is { } pixel)
+                return new System.Windows.Point(window.Left + pixel.X * (window.Right - window.Left) / sourceSize.X,
+                    window.Top + pixel.Y * (window.Bottom - window.Top) / sourceSize.Y);
+        }
+        return null;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PixelPoint { public int X, Y; }
+    [DllImport("user32")] private static extern bool ScreenToClient(nint hwnd, ref PixelPoint point);
+    [DllImport("user32")] private static extern bool GetWindowRect(nint hwnd, out NativeRect rect);
 
     private WindowThumbnail(nint destination, nint source, nint initial)
     {
@@ -32,6 +52,8 @@ internal sealed class WindowThumbnail : IDisposable
 
     public bool Display(Rect area, Rect viewport, IReadOnlyList<CanvasBounds> controls, Canvas.Domain.Point size, byte opacity)
     {
+        regions.Clear();
+        sourceSize = size;
         if (area.Width < 1 || area.Height < 1)
         {
             Hide();
@@ -77,6 +99,7 @@ internal sealed class WindowThumbnail : IDisposable
                 Hide();
                 return false;
             }
+            regions.Add((AsBounds(target), AsBounds(crop)));
             used++;
         }
 
@@ -85,6 +108,9 @@ internal sealed class WindowThumbnail : IDisposable
         this.opacity = opacity;
         return true;
     }
+
+    private static CanvasBounds AsBounds(NativeRect rect) =>
+        new(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
 
     public void SetOpacity(byte value)
     {
@@ -105,6 +131,7 @@ internal sealed class WindowThumbnail : IDisposable
 
     public void Hide()
     {
+        regions.Clear();
         HideFrom(0);
         visibleCount = 0;
     }

@@ -33,6 +33,15 @@ internal static class NativeCanvasFrame
         public int X, Y;
     }
 
+    public static bool TryGetMonitorArea(nint window, out (int Left, int Top, int Right, int Bottom) area)
+    {
+        var bounds = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        var found = GetMonitorInfo(MonitorFromWindow(window, 2), ref bounds);
+        var rect = bounds.MonitorArea;
+        area = (rect.Left, rect.Top, rect.Right, rect.Bottom);
+        return found;
+    }
+
     public static bool HasFullscreenClient(nint window)
     {
         var bounds = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };

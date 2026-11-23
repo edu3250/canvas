@@ -43,6 +43,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     public event Action<Panel>? CloseRequested;
     public event Action<Panel>? RemoveRequested;
 
+    public bool ProjectActive { get; set; }
     public Panel? ActivePanel { get; set; }
     public bool IsPointerOverPanel => panels.Any(panel => panel.Card.IsMouseOver);
     public bool Contains(Panel panel) => panels.Contains(panel);
@@ -307,7 +308,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             }
 
             var bounds = panel.Bounds;
-            if (panel == ActivePanel && panel.LastNativeSize is { } nativeSize)
+            if (panel == ActivePanel && !ProjectActive && panel.LastNativeSize is { } nativeSize)
             {
                 var dpi = VisualTreeHelper.GetDpi(this);
                 bounds = bounds with
@@ -323,7 +324,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             {
                 bounds = bounds with { Height = TitleHeight + 2 };
             }
-            else if (panel != ActivePanel)
+            else if (panel != ActivePanel || ProjectActive)
             {
                 panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
                 size = panel.Thumbnail?.ReadSourceSize();
@@ -340,7 +341,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             panel.Card.SetActive(panel == ActivePanel);
             panel.Card.SetCompact(compact);
 
-            if (panel == ActivePanel)
+            if (panel == ActivePanel && !ProjectActive)
             {
                 panel.Thumbnail?.Hide();
                 panel.Card.Text.Text = "";
@@ -357,7 +358,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
                 ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
             panel.Card.Text.Text = size is { } dimensions &&
-                panel.Thumbnail?.Display(area, clip, controls, dimensions, opacity) == true ? "" : "Vista previa no disponible";
+                panel.Thumbnail?.Display(area, clip, controls, dimensions, panel == ActivePanel ? byte.MaxValue : opacity) == true ? "" : "Vista previa no disponible";
             if (size is null)
             {
                 panel.Thumbnail?.Hide();

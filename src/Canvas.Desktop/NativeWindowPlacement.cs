@@ -169,6 +169,23 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
     public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
     {
+        EnsureNormal(identity, instance);
+        Reposition(identity, instance, x, y, size);
+    }
+
+    public void PrepareProjection(WindowIdentity identity, WindowInstance instance, nint canvas)
+    {
+        EnsureNormal(identity, instance);
+        if (ReadNormalScreenBounds(identity.Handle) is not { } rect ||
+            !NativeCanvasFrame.TryGetMonitorArea(canvas, out var area))
+            throw new Win32Exception();
+        var x = Math.Clamp(rect.Left, area.Left, Math.Max(area.Left, area.Right - (rect.Right - rect.Left)));
+        var y = Math.Clamp(rect.Top, area.Top, Math.Max(area.Top, area.Bottom - (rect.Bottom - rect.Top)));
+        if (x != rect.Left || y != rect.Top) Reposition(identity, instance, x, y);
+    }
+
+    private void EnsureNormal(WindowIdentity identity, WindowInstance instance)
+    {
         EnsureCurrent(instance);
         var current = Capture(identity.Handle);
         if (current.ShowCommand != 1)
@@ -176,8 +193,6 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
             EnsureCurrent(instance);
             ApplyPlacement(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
         }
-
-        Reposition(identity, instance, x, y, size);
     }
 
     public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size = null)

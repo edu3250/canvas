@@ -10,7 +10,7 @@ internal sealed class PanelWheel : IDisposable
     private readonly Hook callback;
     private readonly nint handle;
 
-    public PanelWheel(nint window, Action<System.Windows.Point, int> queueZoom)
+    public PanelWheel(nint window, nint canvas, Func<bool> isProjected, Action<System.Windows.Point, int> queueZoom)
     {
         callback = (code, message, data) =>
         {
@@ -18,7 +18,8 @@ internal sealed class PanelWheel : IDisposable
                 NativePanelInput.IsForeground(window))
             {
                 var wheel = Marshal.PtrToStructure<WheelData>(data);
-                if (GetAncestor(WindowFromPoint(wheel.Position), RootWindow) == window &&
+                var root = GetAncestor(WindowFromPoint(wheel.Position), RootWindow);
+                if ((root == window || (root == canvas && isProjected())) &&
                     !NativeCanvasFrame.HasFullscreenClient(window))
                 {
                     queueZoom(new(wheel.Position.X, wheel.Position.Y), (short)(wheel.MouseData >> 16));
