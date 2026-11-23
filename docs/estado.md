@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **En curso:** [hito 10 · Mesa de luz](hitos/10-mesa-de-luz.md). Los pasos 1 y 2 están fusionados. El asa, la lengüeta visual y la iluminación de los paneles están en el [PR #49](https://github.com/edu3250/canvas/pull/49).
-- **Siguiente paso:** validar en uso el paso 3 y autorizar su fusión con la CI en verde. El recorrido del puntero hasta la lengüeta y la luz del minimapa y la selección ya se corrigieron en el PR. Después, construir las acciones de la lengüeta en el paso 4.
+- **Siguiente paso:** el PR #49 tiene dictamen favorable y el usuario realizó la prueba manual. Queda autorizar la fusión. Después, construir las acciones de la lengüeta en el paso 4.
 
 ## Qué funciona hoy
 
