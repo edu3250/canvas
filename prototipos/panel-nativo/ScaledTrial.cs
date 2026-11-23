@@ -34,8 +34,7 @@ internal sealed class ScaledTrial : Form
                 original = client.ToRectangle().Size;
                 Marshal.ThrowExceptionForHR(Native.DwmRegisterThumbnail(Handle, browser, out thumbnail));
                 TopMost = true;
-                if (!Native.SetForegroundWindow(browser) && Native.GetForegroundWindow() != browser)
-                    throw new InvalidOperationException("Chrome no recibió el foco.");
+                Native.SetForegroundWindow(browser);
                 Project();
                 watch.Start();
             }
@@ -43,9 +42,26 @@ internal sealed class ScaledTrial : Form
         };
         watch.Tick += (_, _) =>
         {
-            if (!run.IsOurs(browser, pid)) { Close(); return; }
+            if (!IsWindow(browser) || Native.Pid(browser) != pid)
+            {
+                run.Log("La ventana de Chrome del ensayo dejó de existir.");
+                Failed = true;
+                Close();
+                return;
+            }
             var foreground = Native.GetForegroundWindow();
-            if (foreground != browser && foreground != Handle) { Close(); return; }
+            if (!run.IsOurs(browser, pid) || (foreground != browser && foreground != Handle))
+            {
+                if (TopMost)
+                {
+                    TopMost = false;
+                    status = "Ensayo en pausa. Vuelve y haz clic en el campo para continuar.";
+                    run.Log("Entrada en pausa por cambio de foco o de documento.");
+                    Invalidate();
+                }
+                return;
+            }
+            if (!TopMost) TopMost = true;
             if (!GetClientRect(browser, out var size) || size.ToRectangle().Size != original)
             {
                 run.Log("Cambió el tamaño del cliente de Chrome.");
@@ -59,7 +75,11 @@ internal sealed class ScaledTrial : Form
 
     protected override void WndProc(ref Message message)
     {
-        if (message.Msg == 0x21) { message.Result = 3; return; } // MA_NOACTIVATE
+        if (message.Msg == 0x21 && Native.GetForegroundWindow() == browser)
+        {
+            message.Result = 3; // MA_NOACTIVATE: preserve the caret in Chrome.
+            return;
+        }
         base.WndProc(ref message);
     }
 
@@ -120,10 +140,11 @@ internal sealed class ScaledTrial : Form
         for (int i=0; i<4; i++)
         {
             if (!new Rectangle(8+i*94,8,88,38).Contains(e.Location)) continue;
-            if (i==3) Close(); else { zoom=scales[i]; Project(); }
+            if (i==3) { run.Log("Salida con el botón Terminar."); Close(); }
+            else if (FocusBrowser()) { zoom=scales[i]; Project(); }
             return;
         }
-        if (!destination.Contains(e.Location) || !run.IsOurs(browser,pid) || Native.GetForegroundWindow()!=browser) return;
+        if (!destination.Contains(e.Location) || !FocusBrowser()) return;
         var pos = ToSource(e.Location, destination, source);
         var target = browser;
         while (true)
@@ -141,6 +162,21 @@ internal sealed class ScaledTrial : Form
         Invalidate();
     }
 
+    private bool FocusBrowser()
+    {
+        if (!run.IsOurs(browser, pid)) return false;
+        if (Native.GetForegroundWindow() == browser) return true;
+        if (Native.GetForegroundWindow() == Handle)
+        {
+            TopMost = true;
+            Native.SetForegroundWindow(browser);
+            if (Native.GetForegroundWindow() == browser) return true;
+        }
+        status = "Chrome aún no tiene el foco. Vuelve a hacer clic en el campo.";
+        Invalidate();
+        return false;
+    }
+
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         watch.Stop();
@@ -150,6 +186,7 @@ internal sealed class ScaledTrial : Form
     }
 
     [DllImport("user32")] private static extern bool GetClientRect(nint window, out Native.Rect rect);
+    [DllImport("user32")] private static extern bool IsWindow(nint window);
     [DllImport("user32")] private static extern nint ChildWindowFromPointEx(nint window, Point point, uint flags);
     [DllImport("user32")] private static extern int MapWindowPoints(nint from, nint to, ref Point point, uint count);
     [DllImport("user32")] private static extern bool PostMessageW(nint window, uint msg, nuint wParam, nint lParam);
