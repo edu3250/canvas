@@ -41,7 +41,7 @@ Abro Chrome con Canvas minimizado y puedo escribir en su panel. Una segunda vent
 
 La elección de arquitectura depende del prototipo. El mecanismo de incorporación debe respetar el foco también cuando el origen de una ventana resulte ambiguo.
 
-Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio aparecer fuera del panel y no pudo escribir. La comprobación del clic y la lectura del foco reprodujeron el fallo, incluso al intentar dar foco al alojar la ventana. La superposición queda como candidata para la comparación visual.
+Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio aparecer fuera del panel y no pudo escribir. La comprobación del clic y la lectura del foco reprodujeron el fallo, incluso al intentar dar foco al alojar la ventana. La superposición pasó la prueba manual con Chrome y VS Code y queda pendiente la elección con el usuario.
 
 ## Registro de sesiones
 
@@ -52,3 +52,4 @@ Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio ap
 | 23-11-2026 | Construir | Codex · GPT-6 | En Windows, Chrome superpuesto recibió `canvas42` tras un solo clic en dos ejecuciones. La página confirmó el texto exacto. Como hija, el clic alcanzó Chrome y el foco quedó fuera. Se cerraron los procesos de prueba y se eliminaron sus temporales. | [#52](https://github.com/edu3250/canvas/pull/52), `6bdbe43` | Observar la apertura superpuesta con el usuario y contrastar con VS Code y sus diálogos antes de decidir. |
 | 23-11-2026 | Construir | Codex · GPT-6 | El usuario confirmó la escritura tras un clic en Chrome superpuesto («funciona correctamente»). El ensayo terminó el proceso descartable por cierre forzado y eliminó el temporal. | [#52](https://github.com/edu3250/canvas/pull/52) | Contrastar VS Code y sus diálogos. El destello de Chrome superpuesto queda sin confirmación explícita. |
 | 23-11-2026 | Construir | Codex · GPT-6 | Confirmación visual del usuario en el ensayo de Chrome superpuesto: «chrome no aparece un instante afuera». Autorizó el ensayo interactivo con VS Code. | [#52](https://github.com/edu3250/canvas/pull/52) | Validar escritura, diálogo y retorno al editor. |
+| 23-11-2026 | Construir | Codex · GPT-6 | En VS Code superpuesto el usuario confirmó el primer clic, el diálogo Abrir archivo y la escritura después de Esc sin otro clic («si funciona correctamente todo siguiente»). El proceso terminó y se eliminó el temporal. | [#52](https://github.com/edu3250/canvas/pull/52) | Elegir el alojamiento para producto. La segunda ventana y el foco ante aperturas espontáneas requieren validación aparte. |
