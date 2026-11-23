@@ -33,6 +33,27 @@ internal static class NativeCanvasFrame
         public int X, Y;
     }
 
+    public static bool HasFullscreenClient(nint window)
+    {
+        var bounds = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        var origin = new NativePoint();
+        if (!GetMonitorInfo(MonitorFromWindow(window, 2), ref bounds) ||
+            !GetClientRect(window, out var client) || !ClientToScreen(window, ref origin))
+        {
+            return true;
+        }
+
+        var monitor = bounds.MonitorArea;
+        return origin.X <= monitor.Left && origin.Y <= monitor.Top &&
+            origin.X + client.Right >= monitor.Right && origin.Y + client.Bottom >= monitor.Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool ClientToScreen(nint window, ref NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(nint window, out NativeRect bounds);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect
     {

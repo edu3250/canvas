@@ -31,6 +31,7 @@ public sealed class MainWindow : Window
     private readonly DispatcherTimer edgeTimer = new() { Interval = TimeSpan.FromMilliseconds(75) };
     private Camera mapCamera;
     private WindowPanels.Panel? mapReturnSource;
+    private PanelWheel? panelWheel;
     private nint windowHandle;
     private bool hotkeyRegistered;
     private readonly TextBlock returnShortcutStatus = new()
@@ -286,6 +287,7 @@ public sealed class MainWindow : Window
         Closed += (_, _) =>
         {
             closed = true;
+            ReleasePanelWheel();
             folderTimer.Stop();
             previewTimer.Stop();
             edgeTimer.Stop();
@@ -646,12 +648,14 @@ public sealed class MainWindow : Window
             minimap.Hide();
             hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
             returnShortcutStatus.Visibility = hotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
+            ListenForPanelZoom(panel, application);
             edgeTimer.Start();
         }
         catch (Exception error) when (IsPanelError(error))
         {
             Trace.TraceWarning(error.ToString());
             ReleaseReturnShortcut();
+            ReleasePanelWheel();
             windowPanels.ActivePanel = null;
             var restored = !saved || RestorePanel(panel);
             UpdateMapPriority();
@@ -702,6 +706,7 @@ public sealed class MainWindow : Window
         }
 
         ReleaseReturnShortcut();
+        ReleasePanelWheel();
         UpdateActivePanelBounds(syncPosition: activateCanvas);
         FinishGesture();
         windowPanels.ActivePanel = null;
@@ -1140,11 +1145,54 @@ public sealed class MainWindow : Window
     private void ZoomSurface(object sender, MouseWheelEventArgs e)
     {
         e.Handled = true;
+        if (windowPanels.ActivePanel is { } panel && !activationPending &&
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Control) &&
+            !NativeCanvasFrame.HasFullscreenClient((nint)panel.Window.Handle))
+        {
+            ZoomFromPanel(spaceView.GetPointer(e), e.Delta);
+            return;
+        }
         if (gesture is null && windowPanels.ActivePanel is null && !activationPending)
         {
             var cursor = spaceView.GetPointer(e);
             ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, e.Delta / 120.0)));
         }
+    }
+
+    private void ReleasePanelWheel()
+    {
+        panelWheel?.Dispose();
+        panelWheel = null;
+    }
+
+    private void ListenForPanelZoom(WindowPanels.Panel panel, nint window)
+    {
+        var delta = 0;
+        var scheduled = false;
+        panelWheel = new PanelWheel(window, (point, increment) =>
+        {
+            delta += increment;
+            if (scheduled) return;
+            scheduled = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                scheduled = false;
+                var accumulated = delta;
+                delta = 0;
+                if (closed || activationPending || windowPanels.ActivePanel != panel ||
+                    !NativePanelInput.IsForeground(window) || !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
+                    NativeCanvasFrame.HasFullscreenClient(window)) return;
+                var cursor = spaceView.PointFromScreen(point);
+                ZoomFromPanel(new DomainPoint(cursor.X, cursor.Y), accumulated);
+            }));
+        });
+    }
+
+    private void ZoomFromPanel(DomainPoint cursor, int delta)
+    {
+        var camera = ActiveCamera;
+        ReturnToMap(restoreCamera: false);
+        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(camera, cursor, delta / 120.0)));
     }
 
     private Border CreateToolbar()
