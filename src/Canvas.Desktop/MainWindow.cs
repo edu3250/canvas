@@ -441,10 +441,20 @@ public sealed class MainWindow : Window
                 if (pressed == panel && target.HasValue) ForwardProjectedInput(panel, target.Value);
                 return 0;
             }
-            if (target.HasValue && NativePanelInput.IsForeground((nint)panel.Window.Handle))
+            if (target.HasValue && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
             {
                 if (message == MouseActivate) { handled = true; return 3; } // MA_NOACTIVATE
-                if (message == LeftDown) { projectedPress = panel; handled = true; return 0; }
+                if (message == LeftDown)
+                {
+                    var source = (nint)panel.Window.Handle;
+                    if (NativePanelInput.IsForeground(source) || NativePanelInput.SetForegroundWindow(source))
+                    {
+                        projectedPress = panel;
+                        UpdateMapPriority();
+                        handled = true;
+                    }
+                    return 0;
+                }
                 if (message == MouseWheel && ((long)wParam & 8) == 0)
                 {
                     handled = true;
@@ -678,7 +688,7 @@ public sealed class MainWindow : Window
             UpdateMapPriority();
 
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
-            windowPanels.ProjectActive = ActiveCamera.Zoom != 1;
+            windowPanels.ProjectActive = Math.Abs(ActiveCamera.Zoom - 1) > 0.000001;
             if (windowPanels.ProjectActive)
             {
                 placement.PrepareProjection(identity, panel.Instance, windowHandle);
@@ -1275,14 +1285,28 @@ public sealed class MainWindow : Window
             return;
         }
         var camera = ActiveCamera;
-        if (!windowPanels.ProjectActive)
+        var next = CameraGestures.ZoomAt(camera, cursor, delta / 120.0);
+        var project = Math.Abs(next.Zoom - 1) > 0.000001;
+        try
         {
-            try { placement.PrepareProjection(panel.Window.Identity, panel.Instance, windowHandle); }
-            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException) { ReturnToMap(); return; }
-            windowPanels.ProjectActive = true;
+            if (project && !windowPanels.ProjectActive)
+                placement.PrepareProjection(panel.Window.Identity, panel.Instance, windowHandle);
+            else if (!project && windowPanels.ProjectActive)
+            {
+                var origin = windowPanels.GetWindowOrigin(panel, next);
+                placement.MoveTo(panel.Window.Identity, panel.Instance, (int)Math.Round(origin.X),
+                    (int)Math.Round(origin.Y), windowPanels.GetVisiblePixelSize(panel, next));
+            }
+            windowPanels.ProjectActive = project;
+            ApplyNavigation(new SetCamera(next));
+            UpdateMapPriority();
+            if (!project && !NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle))
+                throw new Win32Exception();
         }
-        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(camera, cursor, delta / 120.0)));
-        UpdateMapPriority();
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            ReturnToMap();
+        }
     }
 
     private void UpdateShellFullscreen()
