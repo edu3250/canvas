@@ -19,6 +19,7 @@ Abrir una aplicación y empezar a escribir en el espacio actual de Canvas, inclu
 | Apariencia | «demasiado oscuras», «me gusta el tamaño de la captura 3» | Atenuación discreta y tamaño inicial uniforme. Probar 90 % y aproximadamente 1060 × 810 a la escala de la captura, ajustando al espacio disponible. Son valores de prueba. |
 | Navegación | «el minimapa inferior no debe de verse en la pantalla si la aplicacion esta minimizada», «control + desplazamiento de la rueda del mouse siempre te deja alejar el lienzor de la ventana (salvo pantalla completa)» | Al minimizar Canvas desaparece la isla. Ctrl+rueda sobre el contenido aleja el lienzo y conserva el zoom de la aplicación, salvo en pantalla completa. |
 | Apertura y alojamiento | «podria funcionar», «okay vamos a ello» | Juzgar la primera aparición en un prototipo. Comparar ventana superpuesta y ventana hija. Observar el destello con arranque en frío y segunda ventana. |
+| Arquitectura elegida | «Usar la ventana nativa superpuesta y avanzar con Canvas a pantalla completa» | Canvas sitúa la ventana nativa sobre su panel al trabajar en ella. |
 | Cierres pendientes | «procedamos en el siguiente hito quiero cambiar muchas cosas entre esas esto que queda pendiente» | Retomar el cierre diferido a bandeja y la salida de Canvas ante una aplicación bloqueada del PR #50. |
 
 ## Riesgos
@@ -27,7 +28,7 @@ Zona sensible. Probar foco, diálogos, escalado, devolución y cierre con proces
 
 ## Pasos
 
-- [ ] 1. Comparar el alojamiento y la apertura con Chrome y VS Code; decidir con el usuario a partir del ensayo · `prototipos/`.
+- [x] 1. Comparar el alojamiento y la apertura con Chrome y VS Code; decidir con el usuario a partir del ensayo · `prototipos/`.
 - [ ] 2. Abrir Canvas a pantalla completa, ajustar tamaño inicial y luz en reposo, retirar la isla al minimizar · `src/Canvas.Desktop`.
 - [ ] 3. Incorporar las ventanas nuevas, distinguir apertura voluntaria de aparición en segundo plano y validar un clic y Ctrl+rueda sobre la aplicación real · `src/Canvas.Desktop`, `tests/`.
 - [ ] 4. Unificar controles y diferenciar ventana normal, maximizada con margen y pantalla completa · `src/Canvas.Desktop`.
@@ -39,9 +40,9 @@ Abro Chrome con Canvas minimizado y puedo escribir en su panel. Una segunda vent
 
 ## Bloqueos
 
-La elección de arquitectura depende del prototipo. El mecanismo de incorporación debe respetar el foco también cuando el origen de una ventana resulte ambiguo.
+El mecanismo de incorporación debe respetar el foco también cuando el origen de una ventana resulte ambiguo.
 
-Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio aparecer fuera del panel y no pudo escribir. La comprobación del clic y la lectura del foco reprodujeron el fallo, incluso al intentar dar foco al alojar la ventana. La superposición pasó la prueba manual con Chrome y VS Code y queda pendiente la elección con el usuario.
+Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio aparecer fuera del panel y no pudo escribir. La comprobación del clic y la lectura del foco reprodujeron el fallo, incluso al intentar dar foco al alojar la ventana. La superposición pasó la prueba manual con Chrome y VS Code y fue elegida para el producto.
 
 ## Registro de sesiones
 
@@ -53,3 +54,4 @@ Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio ap
 | 23-11-2026 | Construir | Codex · GPT-6 | El usuario confirmó la escritura tras un clic en Chrome superpuesto («funciona correctamente»). El ensayo terminó el proceso descartable por cierre forzado y eliminó el temporal. | [#52](https://github.com/edu3250/canvas/pull/52) | Contrastar VS Code y sus diálogos. El destello de Chrome superpuesto queda sin confirmación explícita. |
 | 23-11-2026 | Construir | Codex · GPT-6 | Confirmación visual del usuario en el ensayo de Chrome superpuesto: «chrome no aparece un instante afuera». Autorizó el ensayo interactivo con VS Code. | [#52](https://github.com/edu3250/canvas/pull/52) | Validar escritura, diálogo y retorno al editor. |
 | 23-11-2026 | Construir | Codex · GPT-6 | En VS Code superpuesto el usuario confirmó el primer clic, el diálogo Abrir archivo y la escritura después de Esc sin otro clic («si funciona correctamente todo siguiente»). El proceso terminó y se eliminó el temporal. | [#52](https://github.com/edu3250/canvas/pull/52) | Elegir el alojamiento para producto. La segunda ventana y el foco ante aperturas espontáneas requieren validación aparte. |
+| 23-11-2026 | Construir | Codex · GPT-6 | Se eligió la superposición y se implementó el paso 2. Compilación Release y 99 pruebas locales aprobadas. | [#53](https://github.com/edu3250/canvas/pull/53) | Validar pantalla completa, tamaño, brillo y minimapa en el producto. |
