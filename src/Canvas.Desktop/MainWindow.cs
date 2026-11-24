@@ -686,10 +686,10 @@ public sealed class MainWindow : Window
             mapCamera = previous;
             panel.LastNativeSize = null;
             windowPanels.ActivePanel = panel;
+            windowPanels.ProjectActive = Math.Abs(ActiveCamera.Zoom - 1) > 0.000001;
             UpdateMapPriority();
 
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
-            windowPanels.ProjectActive = Math.Abs(ActiveCamera.Zoom - 1) > 0.000001;
             if (windowPanels.ProjectActive)
             {
                 placement.PrepareProjection(identity, panel.Instance, windowHandle);

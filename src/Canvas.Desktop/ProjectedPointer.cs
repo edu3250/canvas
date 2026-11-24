@@ -11,6 +11,17 @@ internal static class ProjectedPointer
         if (!current() || !GetWindowRect(canvas, out var bounds) || !GetCursorPos(out var before)) return;
         var x = (int)Math.Round(target.X);
         var y = (int)Math.Round(target.Y);
+        var point = new Pixel { X = x, Y = y };
+        // Deliver client input in place. Moving the desktop cursor here can expose the
+        // native window and make the panel flash at its unscaled size.
+        var clientPoint = point;
+        if (ScreenToClient(source, ref clientPoint) && GetClientRect(source, out var client) &&
+            clientPoint.X >= 0 && clientPoint.Y >= 0 && clientPoint.X < client.Right && clientPoint.Y < client.Bottom)
+        {
+            DispatchToChild(source, point, wheel, current);
+            return;
+        }
+
         var saved = CreateRectRgn(0, 0, 0, 0);
         var clipped = CreateRectRgn(0, 0, bounds.Right - bounds.Left, bounds.Bottom - bounds.Top);
         var hole = CreateRectRgn(x - bounds.Left - 2, y - bounds.Top - 2, x - bounds.Left + 3, y - bounds.Top + 3);
@@ -27,7 +38,6 @@ internal static class ProjectedPointer
                 SetWindowRgn(canvas, clipped, true) == 0) return;
             clipped = 0; // Windows owns an installed region.
             installed = true;
-            var point = new Pixel { X = x, Y = y };
             bool Eligible() => current() && GetAncestor(WindowFromPoint(point), 2) == source;
             if (!Eligible())
             {
@@ -96,6 +106,7 @@ internal static class ProjectedPointer
     [StructLayout(LayoutKind.Sequential)] private struct Pixel { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] private struct Bounds { public int Left, Top, Right, Bottom; }
     [DllImport("user32", EntryPoint = "SendMessageTimeoutW")] private static extern nint SendMessageTimeout(nint hwnd, uint msg, nint wp, nint lp, uint flags, uint timeout, out nuint result);
+    [DllImport("user32")] private static extern bool GetClientRect(nint window, out Bounds bounds);
     [DllImport("user32")] private static extern bool GetWindowRect(nint window, out Bounds bounds);
     [DllImport("user32")] private static extern bool IsWindow(nint window);
     [DllImport("user32")] private static extern int GetWindowRgn(nint window, nint region);
