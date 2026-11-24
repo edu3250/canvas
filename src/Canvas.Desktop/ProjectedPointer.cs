@@ -29,7 +29,13 @@ internal static class ProjectedPointer
             installed = true;
             var point = new Pixel { X = x, Y = y };
             bool Eligible() => current() && GetAncestor(WindowFromPoint(point), 2) == source;
-            if (!Eligible()) return;
+            if (!Eligible())
+            {
+                // The foreground source can still be covered by another window behind Canvas.
+                // Resolve the recipient within that source, independently of desktop z-order.
+                DispatchToChild(source, point, wheel, current);
+                return;
+            }
             if (wheel is { } keysAndDelta)
             {
                 var recipient = WindowFromPoint(point);
@@ -54,6 +60,39 @@ internal static class ProjectedPointer
         }
     }
 
+    private static void DispatchToChild(nint source, Pixel screen, nint? wheel, Func<bool> current)
+    {
+        var child = source;
+        Pixel local;
+        while (true)
+        {
+            local = screen;
+            if (!ScreenToClient(child, ref local)) return;
+            var next = ChildWindowFromPointEx(child, local, 7); // Skip invisible, disabled and transparent children.
+            if (next == 0) return;
+            if (next == child) break;
+            if (GetAncestor(next, 2) != source) return;
+            child = next;
+        }
+
+        if (!current() || GetAncestor(child, 2) != source) return;
+        if (wheel is { } delta)
+        {
+            SendMessageTimeout(child, 0x20A, delta, Pack(screen), 2, 50, out _);
+        }
+        else
+        {
+            var position = Pack(local);
+            if (PostMessage(child, 0x0201, 1, position))
+                PostMessage(child, 0x0202, 0, position);
+        }
+    }
+
+    private static nint Pack(Pixel point) => (nint)((point.Y << 16) | (point.X & 0xffff));
+
+    [DllImport("user32")] private static extern bool ScreenToClient(nint window, ref Pixel point);
+    [DllImport("user32")] private static extern nint ChildWindowFromPointEx(nint parent, Pixel point, uint flags);
+    [DllImport("user32", EntryPoint = "PostMessageW")] private static extern bool PostMessage(nint window, uint message, nint wp, nint lp);
     [StructLayout(LayoutKind.Sequential)] private struct Pixel { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] private struct Bounds { public int Left, Top, Right, Bottom; }
     [DllImport("user32", EntryPoint = "SendMessageTimeoutW")] private static extern nint SendMessageTimeout(nint hwnd, uint msg, nint wp, nint lp, uint flags, uint timeout, out nuint result);
