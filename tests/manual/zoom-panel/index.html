@@ -1,0 +1,95 @@
+﻿<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Ensayo de zoom de Canvas</title>
+<style>
+:root {font:18px system-ui;color:#172633;background:white} body {max-width:50rem;margin:1rem auto;padding:0 1rem}
+video {width:180px;height:72px;vertical-align:middle;background:#17334e} input {font:inherit}
+#sample {display:inline-block;padding:12px;border:1px solid #677} li {margin:.35em 0} output {font-weight:bold}
+</style>
+<h1>Ensayo de zoom de Canvas</h1>
+<p>Añade esta ventana al lienzo. Al 100 %, pulsa «Iniciar». Con el panel activo, aléjate con Ctrl + rueda hasta aproximadamente el 50 %. Mantén ese zoom para las tres acciones.</p>
+<button id="start">Iniciar o repetir</button> <output id="size"></output>
+<ol>
+<li>Pulsa «Reproducir» una vez. <button id="play">Reproducir</button> <video muted playsinline></video> <output id="movie"></output></li>
+<li>Haz un clic en el buscador y escribe <b>canvas42</b>. <input id="search" aria-label="Buscador" autocomplete="off"> <output id="typing"></output></li>
+<li>Arrastra desde la primera hasta la última letra de <span id="sample">ventana estable</span>. <output id="drag"></output></li>
+</ol>
+<p>Vuelve al 100 % con Ctrl + rueda. Comprueba si el contenido saltó a tamaño nativo o la cámara se desplazó al pulsar.</p>
+<label><input id="visual" type="checkbox"> Hice el recorrido de zoom y el panel conservó el encuadre al pulsar.</label>
+<p><button id="finish">Evaluar</button> <output id="result" aria-live="polite"></output></p>
+<script>
+const byId = id => document.getElementById(id);
+const video = document.querySelector('video');
+const frame = document.createElement('canvas');
+frame.width = 180;
+frame.height = 72;
+const ctx = frame.getContext('2d');
+let baseline, changed, playing, selected, origin, playClicks, fieldClicks, keyboard;
+function measure() {
+  if (!baseline) return;
+  const current = [innerWidth, innerHeight, devicePixelRatio];
+  if (current.some((v,i) => v !== baseline[i])) changed = true;
+  byId('size').textContent = baseline.join(' × ') + ' → ' + current.join(' × ') + (changed ? ' · tamaño o escala alterados' : '');
+}
+addEventListener('resize', measure);
+byId('start').onclick = () => {
+  baseline = [innerWidth, innerHeight, devicePixelRatio];
+  changed = playing = selected = keyboard = false;
+  origin = null;
+  playClicks = fieldClicks = 0;
+  video.pause();
+  byId('visual').checked = false;
+  byId('search').value = '';
+  for (const id of ['movie','typing','drag','result']) byId(id).textContent = '';
+  measure();
+};
+setInterval(() => {
+  ctx.fillStyle = '#17334e';
+  ctx.fillRect(0,0,180,72);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect((performance.now()/10)%160,28,20,16);
+  measure();
+}, 50);
+video.srcObject = frame.captureStream(20);
+byId('play').onclick = async () => {
+  if (!baseline) return;
+  playClicks++;
+  try { await video.play(); } catch { byId('movie').textContent = 'Error de reproducción'; }
+};
+video.ontimeupdate = () => {
+  if (baseline && !video.paused && video.currentTime > 0 && playClicks) {
+    playing = true;
+    byId('movie').textContent = 'Reproducción activa';
+  }
+};
+const field = byId('search');
+field.addEventListener('pointerdown', () => fieldClicks++);
+field.addEventListener('keydown', e => { if (e.isTrusted && e.key.length === 1) keyboard = true; });
+field.oninput = () => { byId('typing').textContent = field.value === 'canvas42' ? 'Texto recibido' : ''; };
+const sample = byId('sample');
+sample.onpointerdown = e => { origin = [e.clientX,e.clientY]; };
+document.addEventListener('pointerup', e => {
+  if (!origin) return;
+  const moved = Math.abs(e.clientX-origin[0]) > 5;
+  origin = null;
+  const selection = getSelection();
+  if (moved && sample.contains(selection.anchorNode) && sample.contains(selection.focusNode) &&
+      selection.toString() === sample.textContent) {
+    selected = true;
+    byId('drag').textContent = 'Selección completa';
+  }
+});
+byId('finish').onclick = () => {
+  if (!baseline) { byId('result').textContent = 'Primero pulsa Iniciar.'; return; }
+  measure();
+  const failures = [];
+  if (changed) failures.push('dimensiones o escala de Chrome');
+  if (!playing || playClicks !== 1) failures.push('reproducción al primer clic');
+  if (!keyboard || field.value !== 'canvas42' || fieldClicks !== 1) failures.push('escritura con un clic');
+  if (!selected) failures.push('selección por arrastre');
+  if (!byId('visual').checked) failures.push('recorrido de cámara sin saltos');
+  byId('result').textContent = failures.length ? 'Sin aprobar · ' + failures.join(', ') : 'Aprobado';
+};
+</script>
+</html>
