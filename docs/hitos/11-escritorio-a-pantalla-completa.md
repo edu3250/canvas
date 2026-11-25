@@ -18,7 +18,8 @@ Abrir una aplicación y empezar a escribir en el espacio actual de Canvas, inclu
 | Controles | «Los mismos controles de Canvas en todo momento» | Un único juego de controles por ventana. Verificar las pestañas y menús propios de Chrome y VS Code antes de elegir arquitectura. |
 | Apariencia | «demasiado oscuras», «me gusta el tamaño de la captura 3» | Atenuación discreta y tamaño inicial uniforme. Probar 96 % y aproximadamente 1060 × 810 a la escala de la captura, ajustando al espacio disponible. Son valores de prueba. |
 | Ajuste de brillo | «coloca el brillo al 96% para probar» | Validar la nueva intensidad en las miniaturas inactivas. |
-| Interacción a escala | «si, eso es lo que quiero lograr» | Mantener la distribución y el punto de escritura al cambiar de escala. Probar la proyección interactiva antes de incorporarla al producto. |
+| Interacción a escala | «si, eso es lo que quiero lograr» | Mantener la distribución y el punto de escritura al cambiar de escala. El ensayo de proyección fue exploratorio. La decisión del 25-11 fija la presentación nativa. |
+| Ventanas reales y zoom | «quiero que se muestren como lo hace el acoplamiento de ventanas», «Chrome sigue midiendo 1000 × 700» | Las ventanas visibles del espacio se presentan simultáneamente como ventanas nativas. Ctrl+rueda cambia sus posiciones en pantalla con la cámara y conserva las dimensiones de cada ventana. Al cambiar el foco, el primer clic actúa sobre el contenido. |
 | Cambio de ventana | «la camara no deberia de alejarse de la ventana aunque la ventana no este activa» | El clic directo conserva posición y zoom del lienzo; el minimapa mantiene su navegación explícita. |
 | Navegación | «el minimapa inferior no debe de verse en la pantalla si la aplicacion esta minimizada», «control + desplazamiento de la rueda del mouse siempre te deja alejar el lienzor de la ventana (salvo pantalla completa)» | Al minimizar Canvas desaparece la isla. Ctrl+rueda sobre el contenido aleja el lienzo y conserva el zoom de la aplicación, salvo en pantalla completa. |
 | Apertura y alojamiento | «podria funcionar», «okay vamos a ello» | Juzgar la primera aparición en un prototipo. Comparar ventana superpuesta y ventana hija. Observar el destello con arranque en frío y segunda ventana. |
@@ -40,6 +41,8 @@ Zona sensible. Probar foco, diálogos, escalado, devolución y cierre con proces
 ## Lo doy por bueno cuando
 
 Abro Chrome con Canvas minimizado y puedo escribir en su panel. Una segunda ventana recibe su propio panel. Si estoy escribiendo en VS Code y aparece una ventana en segundo plano, sigo escribiendo en VS Code. Compruebo maximización, F11, zoom y devolución en Windows real.
+
+Con Chrome a 1000 × 700 reproduciendo vídeo y un editor abierto a su lado, alejo al 50 % y vuelvo al 100 %. Compruebo las dimensiones reales de ambas ventanas, escribo en el editor y pauso el vídeo con el primer clic. El zoom puede provocar solapamiento; un clic mantiene el encuadre.
 
 ## Bloqueos
 
@@ -85,3 +88,4 @@ Chrome como ventana hija sigue bloqueado para escritura. El usuario no lo vio ap
 | 24-11-2026 | Construir | Codex · GPT-6 | La fuente proyectada recibía la marca de pantalla completa del Shell durante la activación. Se limita la marca a presentación directa y se difiere la lectura del primer plano al completar la desactivación. Release, Debug y 102 pruebas correctas. | [#53](https://github.com/edu3250/canvas/pull/53) | Falta verificar ausencia de destellos con el ensayo interactivo. |
 | 24-11-2026 | Construir | Codex · GPT-6 | El usuario confirma que fb249f7 sigue parpadeando. Añadida traza opcional por clic y fotograma WPF con cámara, rectángulo nativo, foco y ventana visible en su centro. Release y 102 pruebas correctas. | #53 | Obtener traza del ensayo interactivo. Sigue bloqueado. |
 | 24-11-2026 | Construir | Codex · GPT-6 | Chrome maximizado, Ctrl+rueda hasta 51,2 %. Antes del ajuste la ventana nativa apareció en 277/500 muestras con cámara y tamaño constantes. Se suprimió la activación implícita de Canvas durante la proyección y se conserva prioridad durante la transición sin primer plano. Dos repeticiones con diez clics dieron 0/500 cada una. Release y 102 pruebas correctas. | #53 | Validar visualmente en el flujo habitual y revisar por separado. |
+| 25-11-2026 | Definir | Codex · GPT-6 | Acordado el tamaño físico constante con varias ventanas nativas visibles. Sustituye la proyección interactiva como objetivo del producto. | #51 | Implementar y verificar con dos aplicaciones. |
