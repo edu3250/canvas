@@ -29,6 +29,24 @@ internal static class NativePanelInput
     private const int Topmost = 0x00000008;
     private const int NoActivateStyle = 0x08000000;
 
+    public static string DescribeStack(nint canvas, nint source)
+    {
+        string Role(nint handle) => handle == 0 ? "none" : handle == canvas ? "canvas" :
+            handle == source ? "source" : "other";
+        var foreground = Role(GetForegroundWindow());
+        if (source == 0 || !GetWindowRect(source, out var bounds)) return $"{foreground},none,,,,";
+        var center = new NativePoint { X = bounds.Left + (bounds.Right - bounds.Left) / 2,
+            Y = bounds.Top + (bounds.Bottom - bounds.Top) / 2 };
+        var visible = Role(GetAncestor(WindowFromPoint(center), 2));
+        return $"{foreground},{visible},{bounds.Left},{bounds.Top},{bounds.Right},{bounds.Bottom}";
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] private static extern nint WindowFromPoint(NativePoint point);
+    [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(nint window, out NativeRect rect);
+
     public static bool IsForeground(nint window) => GetForegroundWindow() == window;
 
     public static bool TryReturnForeground(nint canvas, nint panel)

@@ -16,6 +16,7 @@ namespace Canvas.Desktop;
 
 public sealed class MainWindow : Window
 {
+    private Action<string>? sampleProjection;
     private const double ActivationDurationMs = 200;
     private const double InitialWidth = 1100;
     private const double InitialHeight = 720;
@@ -246,6 +247,8 @@ public sealed class MainWindow : Window
             windowHandle = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(windowHandle).AddHook(HandleWindowMessage);
             UpdateShellFullscreen();
+            var tracePath = Environment.GetEnvironmentVariable("CANVAS_PROJECTION_TRACE");
+            if (!string.IsNullOrWhiteSpace(tracePath)) StartProjectionTrace(tracePath);
         };
         ContentRendered += (_, _) =>
         {
@@ -433,6 +436,7 @@ public sealed class MainWindow : Window
 
     private nint HandleWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
+        if (message is 0x21 or 0x201 or 0x202 or 0x06) sampleProjection?.Invoke($"wm-{message:x}");
         const int MouseActivate = 0x21, LeftDown = 0x201, LeftUp = 0x202, MouseWheel = 0x20A;
         if (message is MouseActivate or LeftDown or LeftUp or MouseWheel && !windowPanels.IsDragging && windowPanels.ProjectActive &&
             windowPanels.ActivePanel is { } panel && NativePanelInput.TryGetPointer(out var pointer))
@@ -1347,6 +1351,40 @@ public sealed class MainWindow : Window
         {
             ReturnToMap();
         }
+    }
+
+    private void StartProjectionTrace(string path)
+    {
+        StreamWriter log;
+        try { log = new StreamWriter(new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Trace.TraceWarning(ex.Message);
+            return;
+        }
+
+        var clock = Stopwatch.StartNew();
+        string? last = null;
+        void Sample(string reason)
+        {
+            var source = (nint)(windowPanels.ActivePanel?.Window.Handle ?? 0);
+            var camera = ActiveCamera;
+            var state = FormattableString.Invariant($"{camera.Position.X:R},{camera.Position.Y:R},{camera.Zoom:R},{windowPanels.ProjectActive},{NativePanelInput.DescribeStack(windowHandle, source)}");
+            if (reason == "frame" && state == last) return;
+            last = state;
+            try { log.WriteLine($"{clock.ElapsedMilliseconds},{reason},{state}"); }
+            catch (IOException) { CompositionTarget.Rendering -= OnFrame; sampleProjection = null; }
+        }
+        void OnFrame(object? sender, EventArgs args) => Sample("frame");
+        log.WriteLine("ms,event,cameraX,cameraY,zoom,projected,foreground,visibleAtSourceCenter,left,top,right,bottom");
+        sampleProjection = Sample;
+        CompositionTarget.Rendering += OnFrame;
+        Closed += (_, _) =>
+        {
+            CompositionTarget.Rendering -= OnFrame;
+            sampleProjection = null;
+            log.Dispose();
+        };
     }
 
     private void SetPanelPresentation(nint source, bool projected)
