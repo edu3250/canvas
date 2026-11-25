@@ -2,13 +2,13 @@
 
 Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como mucho una pantalla: el detalle va en el archivo del hito.
 
-**Actualizado:** 22-11-2026.
+**Actualizado:** 25-11-2026.
 
 ## Ahora
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
-- **Siguiente paso:** definir con el usuario los cambios del siguiente hito, incluidos el cierre diferido a la bandeja y la salida de Canvas cuando una aplicación no responde. Ambos siguen abiertos.
+- **Siguiente paso:** probar el PR #53 (783968f) en Windows con un vídeo y un editor. Verificar tamaño constante, reproducción y primer clic al cambiar el zoom.
 
 ## Qué funciona hoy
 
