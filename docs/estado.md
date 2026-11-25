@@ -8,7 +8,7 @@ Lo lee toda sesión al empezar y lo actualiza al terminar si algo cambió. Como 
 
 - **Cerrado:** [hito 09 · Ventanas reales en el lienzo](hitos/09-ventanas-reales.md). Continuidad visual y regreso desde maximizada validados en el [PR #46](https://github.com/edu3250/canvas/pull/46).
 - **Hito 10:** [Mesa de luz](hitos/10-mesa-de-luz.md) llega al paso 4 con las acciones de la lengüeta del [PR #50](https://github.com/edu3250/canvas/pull/50). El paso 5 (luz y fondo persistentes) sigue pendiente.
-- **Siguiente paso:** implementar en el hito 11 varias ventanas nativas visibles con tamaño constante. Validar zoom, vídeo en segundo plano y primer clic con dos aplicaciones. El PR #53 aún contiene la proyección anterior.
+- **Siguiente paso:** probar el PR #53 (783968f) en Windows con un vídeo y un editor. Verificar tamaño constante, reproducción y primer clic al cambiar el zoom.
 
 ## Qué funciona hoy
 
