@@ -15,6 +15,12 @@ public static class Geometry
             (world.Y - camera.Position.Y) * camera.Zoom);
     }
 
+    public static CanvasBounds NativeWindowFootprint(CanvasBounds window, Camera camera)
+    {
+        ValidateCamera(camera);
+        return window with { Width = window.Width / camera.Zoom, Height = window.Height / camera.Zoom };
+    }
+
     public static Point ViewToWorld(Point view, Camera camera)
     {
         ValidatePoint(view, nameof(view));

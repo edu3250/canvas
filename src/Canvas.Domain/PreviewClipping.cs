@@ -2,6 +2,14 @@ namespace Canvas.Domain;
 
 public static class PreviewClipping
 {
+    public static Point? MapToSource(CanvasBounds destination, CanvasBounds crop, Point pointer)
+    {
+        var x = pointer.X - destination.X;
+        var y = pointer.Y - destination.Y;
+        if (x < 0 || y < 0 || x >= destination.Width || y >= destination.Height) return null;
+        return new Point(crop.X + x * crop.Width / destination.Width, crop.Y + y * crop.Height / destination.Height);
+    }
+
     public static CanvasBounds Fit(CanvasBounds area, Point source)
     {
         var scale = Math.Min(area.Width / source.X, area.Height / source.Y);

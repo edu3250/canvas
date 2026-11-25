@@ -6,7 +6,7 @@ internal static class NativeCanvasFrame
 {
     public const int GetMinMaxInfo = 0x0024;
 
-    public static bool MaximizeToWorkArea(nint window, nint info)
+    public static bool MaximizeToMonitor(nint window, nint info)
     {
         const uint NearestMonitor = 2;
         var monitor = MonitorFromWindow(window, NearestMonitor);
@@ -17,15 +17,11 @@ internal static class NativeCanvasFrame
         }
 
         var limits = Marshal.PtrToStructure<MinMaxInfo>(info);
-        limits.MaxPosition = new NativePoint
-        {
-            X = bounds.WorkArea.Left - bounds.MonitorArea.Left,
-            Y = bounds.WorkArea.Top - bounds.MonitorArea.Top
-        };
+        limits.MaxPosition = default;
         limits.MaxSize = new NativePoint
         {
-            X = bounds.WorkArea.Right - bounds.WorkArea.Left,
-            Y = bounds.WorkArea.Bottom - bounds.WorkArea.Top
+            X = bounds.MonitorArea.Right - bounds.MonitorArea.Left,
+            Y = bounds.MonitorArea.Bottom - bounds.MonitorArea.Top
         };
         Marshal.StructureToPtr(limits, info, false);
         return true;
@@ -36,6 +32,36 @@ internal static class NativeCanvasFrame
     {
         public int X, Y;
     }
+
+    public static bool TryGetMonitorArea(nint window, out (int Left, int Top, int Right, int Bottom) area)
+    {
+        var bounds = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        var found = GetMonitorInfo(MonitorFromWindow(window, 2), ref bounds);
+        var rect = bounds.MonitorArea;
+        area = (rect.Left, rect.Top, rect.Right, rect.Bottom);
+        return found;
+    }
+
+    public static bool HasFullscreenClient(nint window)
+    {
+        var bounds = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        var origin = new NativePoint();
+        if (!GetMonitorInfo(MonitorFromWindow(window, 2), ref bounds) ||
+            !GetClientRect(window, out var client) || !ClientToScreen(window, ref origin))
+        {
+            return true;
+        }
+
+        var monitor = bounds.MonitorArea;
+        return origin.X <= monitor.Left && origin.Y <= monitor.Top &&
+            origin.X + client.Right >= monitor.Right && origin.Y + client.Bottom >= monitor.Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool ClientToScreen(nint window, ref NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(nint window, out NativeRect bounds);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect

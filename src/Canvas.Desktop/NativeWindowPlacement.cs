@@ -8,6 +8,7 @@ namespace Canvas.Desktop;
 internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 {
     private const string MarkerPrefix = "EscritorioCanvas.WindowRecovery.";
+    private const string FullscreenMarker = "EscritorioCanvas.FullscreenPanel";
     private static readonly nint MarkerValue = 1;
     public int SessionId { get; } = GetCurrentSessionId();
 
@@ -71,6 +72,30 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
     public void Restore(long handle, WindowPlacement placement)
     {
+        ClearPanelFullscreen((nint)handle);
+        ApplyPlacement(handle, placement);
+    }
+
+    public static void MarkPanelFullscreen(nint window)
+    {
+        if (!SetProp(window, FullscreenMarker, MarkerValue))
+        {
+            throw new Win32Exception();
+        }
+        ShellFullscreen.Set(window, true);
+    }
+
+    public static void ClearPanelFullscreen(nint window)
+    {
+        if (GetProp(window, FullscreenMarker) == MarkerValue)
+        {
+            ShellFullscreen.Set(window, false);
+            RemoveProp(window, FullscreenMarker);
+        }
+    }
+
+    private static void ApplyPlacement(long handle, WindowPlacement placement)
+    {
         var native = new NativePlacement
         {
             Length = (uint)Marshal.SizeOf<NativePlacement>(),
@@ -90,11 +115,11 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
-    public (WindowRectangle Visible, (int Width, int Height) Size)? ReadNormalScreenBounds(long handle)
+    public WindowRectangle? ReadNormalScreenBounds(long handle)
     {
         var window = (nint)handle;
         return !IsIconic(window) && !IsZoomed(window) && GetWindowRect(window, out var bounds)
-            ? (VisibleFrame(window, bounds), (bounds.Right - bounds.Left, bounds.Bottom - bounds.Top))
+            ? VisibleFrame(window, bounds)
             : null;
     }
 
@@ -114,7 +139,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         EnsureCurrent(instance);
         var current = Capture(identity.Handle);
         EnsureCurrent(instance);
-        Restore(identity.Handle, current with { ShowCommand = 3, Flags = 0 });
+        ApplyPlacement(identity.Handle, current with { ShowCommand = 3, Flags = 0 });
     }
 
     public PendingWindowClose RequestClose(WindowIdentity identity, WindowInstance instance)
@@ -142,20 +167,18 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(nint window, int command);
 
-    public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
+    public void EnsureNormal(WindowIdentity identity, WindowInstance instance)
     {
         EnsureCurrent(instance);
         var current = Capture(identity.Handle);
         if (current.ShowCommand != 1)
         {
             EnsureCurrent(instance);
-            Restore(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
+            ApplyPlacement(identity.Handle, current with { ShowCommand = 1, Flags = 0 });
         }
-
-        Reposition(identity, instance, x, y, size);
     }
 
-    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size = null)
+    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y)
     {
         EnsureCurrent(instance);
         var window = (nint)identity.Handle;
@@ -166,14 +189,8 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
         var visible = VisibleFrame(window, full);
         const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
-        var flags = NoZOrder | NoActivate;
-        if (size is null)
-        {
-            flags |= NoSize;
-        }
-
         if (!SetWindowPos(window, 0, x - (visible.Left - full.Left), y - (visible.Top - full.Top),
-            size?.Width ?? 0, size?.Height ?? 0, flags))
+            0, 0, NoSize | NoZOrder | NoActivate))
         {
             throw new Win32Exception();
         }
