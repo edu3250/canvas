@@ -126,6 +126,7 @@ public sealed class MainWindow : Window
         windowPanels.MaximizeRequested += MaximizePanel;
         windowPanels.CloseRequested += ClosePanel;
         windowPanels.RemoveRequested += RemovePanel;
+        nint lastFullscreenForeground = 0;
         previewTimer.Tick += (_, _) =>
         {
             if (windowPanels.ActivePanel is { } panel &&
@@ -137,6 +138,27 @@ public sealed class MainWindow : Window
 
             var focused = windowPanels.Panels.FirstOrDefault(p => p.Presented && p.Space == session.ActiveSpaceId &&
                 NativePanelInput.IsForeground((nint)p.Window.Handle) && CanUsePanel(p) && WindowCatalog.IsLive(p.Window.Identity, p.Instance));
+            var fullscreenForeground = WindowState == WindowState.Maximized && focused is { IsFolded: false }
+                ? (nint)focused.Window.Handle : 0;
+            if (fullscreenForeground != lastFullscreenForeground)
+            {
+                if (fullscreenForeground != 0)
+                {
+                    try
+                    {
+                        NativeWindowPlacement.MarkPanelFullscreen(fullscreenForeground);
+                        lastFullscreenForeground = fullscreenForeground;
+                    }
+                    catch (Exception error) when (IsPanelError(error))
+                    {
+                        Trace.TraceWarning(error.Message);
+                    }
+                }
+                else
+                {
+                    lastFullscreenForeground = 0;
+                }
+            }
             if (focused is not null && focused != windowPanels.ActivePanel)
             {
                 windowPanels.ActivePanel = focused;
