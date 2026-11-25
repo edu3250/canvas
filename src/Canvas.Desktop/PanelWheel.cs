@@ -10,19 +10,17 @@ internal sealed class PanelWheel : IDisposable
     private readonly Hook callback;
     private readonly nint handle;
 
-    public PanelWheel(nint window, nint canvas, Func<bool> isProjected, Action<System.Windows.Point, int> queueZoom)
+    public PanelWheel(Func<nint, bool> isPanel, Action<nint, System.Windows.Point, int> queueZoom)
     {
         callback = (code, message, data) =>
         {
-            if (code >= 0 && message == MouseWheel && GetAsyncKeyState(ControlKey) < 0 &&
-                NativePanelInput.IsForeground(window))
+            if (code >= 0 && message == MouseWheel && GetAsyncKeyState(ControlKey) < 0)
             {
                 var wheel = Marshal.PtrToStructure<WheelData>(data);
                 var root = GetAncestor(WindowFromPoint(wheel.Position), RootWindow);
-                if ((root == window || (root == canvas && isProjected())) &&
-                    !NativeCanvasFrame.HasFullscreenClient(window))
+                if (NativePanelInput.IsForeground(root) && isPanel(root) && !NativeCanvasFrame.HasFullscreenClient(root))
                 {
-                    queueZoom(new(wheel.Position.X, wheel.Position.Y), (short)(wheel.MouseData >> 16));
+                    queueZoom(root, new(wheel.Position.X, wheel.Position.Y), (short)(wheel.MouseData >> 16));
                     return 1;
                 }
             }

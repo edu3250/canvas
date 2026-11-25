@@ -94,17 +94,24 @@ internal static class NativePanelInput
         return SetWindowPos(canvas, after, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
     }
 
+    public static void StackAtCanvas(nint window, nint canvas, bool above)
+    {
+        // Preserve relative order among already-visible panels.
+        for (var current = GetWindow(canvas, 3); current != 0; current = GetWindow(current, 3))
+        {
+            if (current != window) continue;
+            if (!above) SetWindowPos(window, canvas, 0, 0, 0, 0, 0x213);
+            return;
+        }
+        if (above) SetWindowPos(window, GetWindow(canvas, 3), 0, 0, 0, 0, 0x213);
+    }
+
+    [DllImport("user32.dll")] private static extern nint GetWindow(nint window, uint command);
+
     public static void RaiseWindow(nint window, bool topmost = false)
     {
         const uint NoSize = 0x0001, NoMove = 0x0002, NoActivate = 0x0010, NoOwnerZOrder = 0x0200;
         SetWindowPos(window, topmost ? -1 : 0, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
-    }
-
-    public static void SetProjectedInput(nint canvas, bool enabled)
-    {
-        var style = GetWindowLong(canvas, ExtendedStyle);
-        var next = enabled ? style | NoActivateStyle : style & ~NoActivateStyle;
-        if (next != style) SetWindowLong(canvas, ExtendedStyle, next);
     }
 
     public static void PreventActivation(nint window) =>

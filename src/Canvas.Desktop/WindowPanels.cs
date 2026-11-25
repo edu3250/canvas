@@ -45,7 +45,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
     public event Action<Panel>? CloseRequested;
     public event Action<Panel>? RemoveRequested;
 
-    public bool ProjectActive { get; set; }
+    public IReadOnlyList<Panel> Panels => panels;
+    public event Action<Panel>? Added;
     public Panel? ActivePanel { get; set; }
     public bool IsPointerOverPanel => panels.Any(panel => panel.Card.IsMouseOver);
     public bool Contains(Panel panel) => panels.Contains(panel);
@@ -66,15 +67,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
 
     public WpfPoint GetWindowOrigin(Panel panel, Camera targetCamera)
     {
-        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X + 1, panel.Bounds.Y + TitleHeight + 1), targetCamera);
-        return PointToScreen(new WpfPoint(point.X, point.Y));
-    }
-
-    public (int Width, int Height) GetUnscaledPixelSize(Panel panel)
-    {
-        var dpi = VisualTreeHelper.GetDpi(this);
-        return (Math.Max(1, (int)Math.Round((panel.Bounds.Width - 2) * dpi.DpiScaleX)),
-            Math.Max(1, (int)Math.Round((panel.Bounds.Height - TitleHeight - 2) * dpi.DpiScaleY)));
+        var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(panel.Bounds.X, panel.Bounds.Y), targetCamera);
+        return PointToScreen(new WpfPoint(point.X + 1, point.Y + TitleHeight + 1));
     }
 
     public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)
@@ -85,22 +79,14 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         if (width <= 0 || height <= 0) return;
 
         var bounds = panel.Bounds;
-        // The first measurement can reflect the application's enforced minimum.
-        // Only subsequent native size changes should resize the panel on the canvas.
         var lastSize = panel.LastNativeSize;
-        if (lastSize is { } previous)
-        {
-            if (width != previous.Width)
-                bounds = bounds with { Width = width / dpi.DpiScaleX / camera.Zoom + 2 };
-            if (height != previous.Height)
-                bounds = bounds with { Height = height / dpi.DpiScaleY / camera.Zoom + TitleHeight + 2 };
-        }
+        bounds = bounds with { Width = width / dpi.DpiScaleX + 2, Height = height / dpi.DpiScaleY + TitleHeight + 2 };
         panel.LastNativeSize = (width, height);
         if (syncPosition)
         {
             var topLeft = PointFromScreen(new WpfPoint(screenBounds.Left, screenBounds.Top));
-            var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X, topLeft.Y), camera);
-            bounds = bounds with { X = origin.X - 1, Y = origin.Y - TitleHeight - 1 };
+            var origin = Canvas.Domain.Geometry.ViewToWorld(new DomainPoint(topLeft.X - 1, topLeft.Y - TitleHeight - 1), camera);
+            bounds = bounds with { X = origin.X, Y = origin.Y };
         }
 
         if (bounds != panel.Bounds || lastSize != (width, height))
@@ -111,7 +97,6 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         }
     }
 
-    public IReadOnlyList<FrameworkElement> OccludingControls { get; set; } = [];
 
     public MinimapItem[] GetMapItems() => panels.Where(panel => panel.Space == space && !panel.WaitingForRemoval)
         .Select(panel => new MinimapItem(panel.DisplayBounds, null, IsPanel: true)).ToArray();
@@ -160,6 +145,7 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         panel.Card.MaximizeRequested += () => MaximizeRequested?.Invoke(panel);
         panel.Card.CloseRequested += () => CloseRequested?.Invoke(panel);
         panel.Card.RemoveRequested += () => RemoveRequested?.Invoke(panel);
+        Added?.Invoke(panel);
         _ = LoadIconAsync(panel);
         Render();
         MapChanged?.Invoke();
@@ -208,23 +194,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         return animation;
     }
 
-    private static byte PreviewOpacity(double reveal) =>
-        (byte)Math.Round(reveal * VisualTokens.RestingPanelBrightness * byte.MaxValue);
-
-    private static void OnRevealChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
-    {
-        var layer = (WindowPanels)sender;
-        var reveal = (double)e.NewValue;
-        layer.Opacity = reveal;
-        var opacity = PreviewOpacity(reveal);
-        foreach (var panel in layer.panels)
-        {
-            if (panel.Space == layer.space)
-            {
-                panel.Thumbnail?.SetOpacity(opacity);
-            }
-        }
-    }
+    private static void OnRevealChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) =>
+        ((WindowPanels)sender).Opacity = (double)e.NewValue;
 
     public void RefreshWindows()
     {
@@ -273,12 +244,6 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         }
     }
 
-    public void SuspendPreview(Panel panel)
-    {
-        panel.Thumbnail?.Dispose();
-        panel.Thumbnail = null;
-    }
-
     public void Render()
     {
         if (PresentationSource.FromVisual(this) is not HwndSource source || source.RootVisual is not Visual root)
@@ -286,85 +251,31 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
             return;
         }
 
-        var matrix = source.CompositionTarget.TransformToDevice;
-        var transform = TransformToAncestor(root);
-        WpfPoint ToDevice(double x, double y) => matrix.Transform(transform.Transform(new WpfPoint(x, y)));
-        var clip = new Rect(ToDevice(0, 0), ToDevice(ActualWidth, ActualHeight));
-        var controls = OccludingControls.Where(control => control.IsVisible).Select(control =>
-        {
-            var bounds = control.TransformToAncestor(root).TransformBounds(new Rect(control.RenderSize));
-            var pixels = new Rect(matrix.Transform(bounds.TopLeft), matrix.Transform(bounds.BottomRight));
-            return new CanvasBounds(pixels.X, pixels.Y, pixels.Width, pixels.Height);
-        }).ToArray();
-
         var mapChanged = false;
-        var opacity = PreviewOpacity((double)GetValue(RevealProperty));
         foreach (var panel in panels)
         {
             var shown = panel.Space == space && !panel.WaitingForRemoval && owner.WindowState != WindowState.Minimized;
             panel.Card.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
             if (!shown)
             {
-                panel.Thumbnail?.Hide();
                 continue;
             }
 
             var bounds = panel.Bounds;
-            if (panel == ActivePanel && !ProjectActive && panel.LastNativeSize is { } nativeSize)
-            {
-                var dpi = VisualTreeHelper.GetDpi(this);
-                bounds = bounds with
-                {
-                    Width = nativeSize.Width / dpi.DpiScaleX / camera.Zoom + 2,
-                    Height = nativeSize.Height / dpi.DpiScaleY / camera.Zoom + TitleHeight + 2
-                };
-            }
-            var minimized = WindowCatalog.IsMinimized(panel.Window.Handle);
-            var compact = minimized || panel.IsFolded;
-            DomainPoint? size = null;
-            if (compact)
-            {
-                bounds = bounds with { Height = TitleHeight + 2 };
-            }
-            else if (panel != ActivePanel || ProjectActive)
-            {
-                panel.Thumbnail ??= WindowThumbnail.Register(source.Handle, panel.Window.Handle);
-                size = panel.Thumbnail?.ReadSourceSize();
-            }
-
-            mapChanged |= bounds != panel.DisplayBounds;
-            panel.DisplayBounds = bounds;
+            var compact = WindowCatalog.IsMinimized(panel.Window.Handle) || panel.IsFolded;
+            if (compact) bounds = bounds with { Height = TitleHeight + 2 };
+            var footprint = Canvas.Domain.Geometry.NativeWindowFootprint(bounds, camera);
+            mapChanged |= footprint != panel.DisplayBounds;
+            panel.DisplayBounds = footprint;
             var point = Canvas.Domain.Geometry.WorldToView(new DomainPoint(bounds.X, bounds.Y), camera);
             SetLeft(panel.Card, point.X);
             SetTop(panel.Card, point.Y);
             panel.Card.Width = bounds.Width;
             panel.Card.Height = bounds.Height;
-            panel.Card.RenderTransform = new ScaleTransform(camera.Zoom, camera.Zoom);
             panel.Card.SetActive(panel == ActivePanel);
             panel.Card.SetCompact(compact);
+            panel.Card.Text.Text = "";
 
-            if (panel == ActivePanel && !ProjectActive)
-            {
-                panel.Thumbnail?.Hide();
-                panel.Card.Text.Text = "";
-                continue;
-            }
-
-            if (compact)
-            {
-                panel.Thumbnail?.Hide();
-                panel.Card.Text.Text = "";
-                continue;
-            }
-
-            var area = new Rect(ToDevice(point.X + camera.Zoom, point.Y + (TitleHeight + 1) * camera.Zoom),
-                ToDevice(point.X + (bounds.Width - 1) * camera.Zoom, point.Y + (bounds.Height - 1) * camera.Zoom));
-            panel.Card.Text.Text = size is { } dimensions &&
-                panel.Thumbnail?.Display(area, clip, controls, dimensions, panel == ActivePanel ? byte.MaxValue : opacity) == true ? "" : "Vista previa no disponible";
-            if (size is null)
-            {
-                panel.Thumbnail?.Hide();
-            }
         }
 
         if (mapChanged)
@@ -481,8 +392,8 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         public CanvasBounds DisplayBounds { get; set; } = bounds;
         public (int Width, int Height)? LastNativeSize { get; set; }
         public PanelCard Card { get; } = card;
-        public WindowThumbnail? Thumbnail { get; set; }
         public WindowInstance Instance { get; } = instance;
+        public bool Presented { get; set; }
         public bool IsFolded { get; set; }
         public PendingWindowClose? CloseRequest { get; set; }
         public bool WaitingForRemoval { get; set; }
@@ -490,7 +401,6 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         public void Dispose()
         {
             CloseRequest?.Dispose();
-            Thumbnail?.Dispose();
             Instance.Dispose();
         }
     }

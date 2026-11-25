@@ -31,9 +31,6 @@ public sealed class MainWindow : Window
     private readonly NativeWindowPlacement placement;
     private readonly DispatcherTimer edgeTimer = new() { Interval = TimeSpan.FromMilliseconds(75) };
     private Camera mapCamera;
-    private WindowPanels.Panel? mapReturnSource;
-    private WindowPanels.Panel? projectedPress;
-    private bool forwardingClick;
     private PanelWheel? panelWheel;
     private nint windowHandle;
     private bool hotkeyRegistered;
@@ -123,6 +120,7 @@ public sealed class MainWindow : Window
         windowPanels.MapChanged += UpdateMapPriority;
         windowPanels.PreviewMouseWheel += ZoomSurface;
         windowPanels.ActivationRequested += ActivatePanel;
+        windowPanels.Added += ActivatePanel;
         windowPanels.PanelMoved += AlignDraggedWindow;
         windowPanels.FoldRequested += TogglePanelFold;
         windowPanels.MaximizeRequested += MaximizePanel;
@@ -137,6 +135,13 @@ public sealed class MainWindow : Window
                 ReturnToMap();
             }
 
+            var focused = windowPanels.Panels.FirstOrDefault(p => p.Presented && p.Space == session.ActiveSpaceId &&
+                NativePanelInput.IsForeground((nint)p.Window.Handle) && CanUsePanel(p) && WindowCatalog.IsLive(p.Window.Identity, p.Instance));
+            if (focused is not null && focused != windowPanels.ActivePanel)
+            {
+                windowPanels.ActivePanel = focused;
+                edgeTimer.Start();
+            }
             windowPanels.RefreshWindows();
             UpdateMapPriority();
         };
@@ -234,7 +239,6 @@ public sealed class MainWindow : Window
         viewport.Children.Add(windowPanels);
         viewport.Children.Add(returnShortcutStatus);
         viewport.Children.Add(edgeBar);
-        windowPanels.OccludingControls = [toolbar, edgeBar.Grip, returnShortcutStatus];
         toolbar.IsVisibleChanged += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, (Action)windowPanels.Render);
         Content = viewport;
         RefreshSpace();
@@ -354,7 +358,7 @@ public sealed class MainWindow : Window
 
     private void UpdateActivePanelBounds(bool syncPosition = true)
     {
-        if (!windowPanels.ProjectActive && windowPanels.ActivePanel is { } panel &&
+        if (windowPanels.ActivePanel is { } panel && panel.Space == session.ActiveSpaceId &&
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) &&
             placement.ReadNormalScreenBounds(panel.Window.Handle) is { } bounds)
         {
@@ -363,7 +367,7 @@ public sealed class MainWindow : Window
     }
 
     private DomainPoint ViewportSize => new(spaceView.ActualWidth, spaceView.ActualHeight);
-    private Camera MapZoomCamera => windowPanels.ActivePanel is null || windowPanels.ProjectActive ? ActiveCamera : mapCamera;
+    private Camera MapZoomCamera => ActiveCamera;
 
     private void SyncMinimapWindow()
     {
@@ -437,47 +441,6 @@ public sealed class MainWindow : Window
     private nint HandleWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
         if (message is 0x21 or 0x201 or 0x202 or 0x06) sampleProjection?.Invoke($"wm-{message:x}");
-        const int MouseActivate = 0x21, LeftDown = 0x201, LeftUp = 0x202, MouseWheel = 0x20A;
-        if (message is MouseActivate or LeftDown or LeftUp or MouseWheel && !windowPanels.IsDragging && windowPanels.ProjectActive &&
-            windowPanels.ActivePanel is { } panel && NativePanelInput.TryGetPointer(out var pointer))
-        {
-            var target = ProjectedTarget(panel, pointer);
-            if (message == LeftUp && projectedPress is not null)
-            {
-                handled = true;
-                var pressed = projectedPress;
-                projectedPress = null;
-                if (pressed == panel && target.HasValue) ForwardProjectedInput(panel, target.Value);
-                return 0;
-            }
-            if (target.HasValue && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
-            {
-                if (message == MouseActivate) { handled = true; return 3; } // MA_NOACTIVATE
-                if (message == LeftDown)
-                {
-                    var source = (nint)panel.Window.Handle;
-                    if (NativePanelInput.IsForeground(source) || NativePanelInput.SetForegroundWindow(source))
-                    {
-                        projectedPress = panel;
-                        UpdateMapPriority();
-                        handled = true;
-                    }
-                    return 0;
-                }
-                if (message == MouseWheel && ((long)wParam & 8) == 0)
-                {
-                    handled = true;
-                    ForwardProjectedInput(panel, target.Value, wParam);
-                    return 0;
-                }
-            }
-        }
-        // Canvas controls outside the projection can take focus normally.
-        if (message == MouseActivate && windowPanels.ProjectActive)
-        {
-            handled = true;
-            return 1; // MA_ACTIVATE
-        }
         if (message == NativeCanvasFrame.GetMinMaxInfo)
         {
             handled = NativeCanvasFrame.MaximizeToMonitor(hwnd, lParam);
@@ -500,35 +463,7 @@ public sealed class MainWindow : Window
         return 0;
     }
 
-    private async void ActivatePanel(WindowPanels.Panel panel)
-    {
-        var clickedBody = panel.Card.PreviewButton.IsMouseOver;
-        var hasPoint = NativePanelInput.TryGetPointer(out var point);
-        await ActivatePanelAsync(panel, fromMinimap: false);
-        if (clickedBody && hasPoint && windowPanels.ProjectActive && windowPanels.ActivePanel == panel &&
-            ProjectedTarget(panel, point) is { } target) ForwardProjectedInput(panel, target);
-    }
-
-    private System.Windows.Point? ProjectedTarget(WindowPanels.Panel panel, System.Windows.Point screen)
-    {
-        var hit = InputHitTest(PointFromScreen(screen)) as Visual;
-        return hit != null && (hit == panel.Card || panel.Card.IsAncestorOf(hit))
-            ? panel.Thumbnail?.MapClick(screen) : null;
-    }
-
-    private async void ForwardProjectedInput(WindowPanels.Panel panel, System.Windows.Point target, nint? wheel = null)
-    {
-        if (forwardingClick) return;
-        forwardingClick = true;
-        try
-        {
-            var source = (nint)panel.Window.Handle;
-            await ProjectedPointer.DispatchAsync(windowHandle, source, target, wheel, () =>
-                !closed && windowPanels.ProjectActive && windowPanels.ActivePanel == panel &&
-                NativePanelInput.IsForeground(source) && WindowCatalog.IsLive(panel.Window.Identity, panel.Instance));
-        }
-        finally { forwardingClick = false; }
-    }
+    private async void ActivatePanel(WindowPanels.Panel panel) => await ActivatePanelAsync(panel, fromMinimap: false);
 
     private bool CanUsePanel(WindowPanels.Panel panel) =>
         !closed && !activationPending && !panel.WaitingForRemoval && panel.CloseRequest?.Accepted != true &&
@@ -554,6 +489,7 @@ public sealed class MainWindow : Window
 
         panel.IsFolded = !panel.IsFolded;
         windowPanels.Render();
+        StackNativeWindows();
     }
 
     private async void MaximizePanel(WindowPanels.Panel panel) =>
@@ -561,7 +497,6 @@ public sealed class MainWindow : Window
         {
             placement.Maximize(panel.Window.Identity, panel.Instance);
             SetPanelPresentation((nint)panel.Window.Handle, projected: false);
-            windowPanels.ProjectActive = false;
             UpdateMapPriority();
             windowPanels.Render();
             if (!NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle))
@@ -708,34 +643,27 @@ public sealed class MainWindow : Window
             mapCamera = previous;
             panel.LastNativeSize = null;
             windowPanels.ActivePanel = panel;
-            windowPanels.ProjectActive = NeedsProjection(panel, ActiveCamera);
             UpdateMapPriority();
-
+            placement.EnsureNormal(identity, panel.Instance);
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
-            if (windowPanels.ProjectActive)
-            {
-                placement.PrepareProjection(identity, panel.Instance, windowHandle);
-            }
-            else
-            {
-                placement.Reposition(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
-            }
+            placement.Reposition(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
+            panel.Presented = true;
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
-            SetPanelPresentation(application, windowPanels.ProjectActive);
+            SetPanelPresentation(application, false);
             if (!NativePanelInput.SetForegroundWindow(application))
             {
                 throw new InvalidOperationException("Windows denied foreground activation.");
             }
 
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
-            if (!windowPanels.ProjectActive && !NativePanelInput.KeepCanvasBehind(windowHandle, application))
+            if (!NativePanelInput.KeepCanvasBehind(windowHandle, application))
             {
                 throw new Win32Exception();
             }
 
             panel.IsFolded = false;
-            if (!windowPanels.ProjectActive) windowPanels.SuspendPreview(panel);
+            
             UpdateMapPriority();
             UpdateActivePanelBounds(syncPosition: false);
             windowPanels.Render();
@@ -743,16 +671,15 @@ public sealed class MainWindow : Window
             minimap.Hide();
             hotkeyRegistered = NativePanelInput.RegisterReturn(windowHandle);
             returnShortcutStatus.Visibility = hotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
-            ListenForPanelZoom(panel, application);
+            ListenForPanelZoom();
             edgeTimer.Start();
         }
         catch (Exception error) when (IsPanelError(error))
         {
             Trace.TraceWarning(error.ToString());
             ReleaseReturnShortcut();
-            ReleasePanelWheel();
-            windowPanels.ProjectActive = false;
             windowPanels.ActivePanel = null;
+            panel.Presented = false;
             var restored = !saved || RestorePanel(panel);
             UpdateMapPriority();
             ApplyNavigation(new SetCamera(previous));
@@ -802,11 +729,8 @@ public sealed class MainWindow : Window
         }
 
         ReleaseReturnShortcut();
-        ReleasePanelWheel();
         UpdateActivePanelBounds(syncPosition: activateCanvas);
         FinishGesture();
-        projectedPress = null;
-        windowPanels.ProjectActive = false;
         windowPanels.ActivePanel = null;
         edgeTimer.Stop();
 
@@ -828,10 +752,9 @@ public sealed class MainWindow : Window
             restoreFailed = true;
         }
 
-        // The source stays available to DWM. Its original placement stays in the recovery journal.
+        // Original placements stay in the recovery journal until the windows are released.
         if (activateCanvas)
         {
-            mapReturnSource = panel;
             NativePanelInput.RaiseWindow(windowHandle);
             Activate();
             if (WindowState == WindowState.Maximized && NativePanelInput.IsForeground(windowHandle))
@@ -863,25 +786,9 @@ public sealed class MainWindow : Window
 
     private void UpdateMapPriority()
     {
-        // Release the map's z-order priority as soon as another application takes focus.
-        var returningFromTopmostSource = mapReturnSource is { } source &&
-            NativePanelInput.IsForeground((nint)source.Window.Handle) &&
-            NativePanelInput.IsTopmost((nint)source.Window.Handle) &&
-            WindowCatalog.IsLive(source.Window.Identity, source.Instance);
-        if (!returningFromTopmostSource || windowPanels.ActivePanel is not null)
-        {
-            mapReturnSource = null;
-        }
-
-        var fullscreenMapInFront = WindowState == WindowState.Maximized && windowHandle != 0 &&
-            NativePanelInput.IsForeground(windowHandle);
-        if (windowHandle != 0) NativePanelInput.SetProjectedInput(windowHandle, windowPanels.ProjectActive);
-        var foreground = NativePanelInput.ForegroundWindow;
-        var projectedInFront = windowPanels.ProjectActive && windowPanels.ActivePanel is { } projected &&
-            (foreground == windowHandle || foreground == (nint)projected.Window.Handle || (foreground == 0 && Topmost)) &&
-            !NativeCanvasFrame.HasFullscreenClient((nint)projected.Window.Handle);
-        Topmost = WindowState != WindowState.Minimized && (projectedInFront || windowPanels.ActivePanel is null &&
-            (fullscreenMapInFront || ((IsActive || returningFromTopmostSource) && windowPanels.HasTopmostSource())));
+        var hasNativeWindows = windowPanels.Panels.Any(p => p.Presented && p.Space == session.ActiveSpaceId && !p.IsFolded);
+        Topmost = !hasNativeWindows && WindowState == WindowState.Maximized && NativePanelInput.IsForeground(windowHandle);
+        StackNativeWindows();
         UpdateMinimapVisibility();
     }
 
@@ -1093,7 +1000,7 @@ public sealed class MainWindow : Window
         }
 
         spaceView.Focus();
-        if (kind == GestureKind.Pan && !windowPanels.ProjectActive && windowPanels.ActivePanel is { } panel &&
+        if (kind == GestureKind.Pan && windowPanels.ActivePanel is { } panel &&
             WindowCatalog.IsLive(panel.Window.Identity, panel.Instance))
         {
             NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle);
@@ -1213,14 +1120,8 @@ public sealed class MainWindow : Window
 
     private void AlignDraggedWindow(WindowPanels.Panel panel)
     {
-        if (windowPanels.ActivePanel != panel || !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)) return;
-        if (windowPanels.ProjectActive)
-        {
-            UpdateMapPriority();
-            if (Topmost) NativePanelInput.RaiseWindow(windowHandle, topmost: true);
-            return;
-        }
-
+        if (!panel.Presented || WindowCatalog.IsMinimized(panel.Window.Handle) || placement.IsMaximized(panel.Window.Handle) ||
+            !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance)) return;
         try
         {
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
@@ -1238,27 +1139,6 @@ public sealed class MainWindow : Window
         if (camera == ActiveCamera)
         {
             return;
-        }
-
-        if (!windowPanels.ProjectActive && windowPanels.ActivePanel is { } panel)
-        {
-            if (placement.IsMaximized(panel.Window.Handle))
-            {
-                return;
-            }
-
-            try
-            {
-                var position = windowPanels.GetWindowOrigin(panel, camera);
-                placement.Reposition(panel.Window.Identity, panel.Instance,
-                    (int)Math.Round(position.X), (int)Math.Round(position.Y));
-            }
-            catch (Exception error) when (IsPanelError(error))
-            {
-                Trace.TraceWarning(error.ToString());
-                ReturnToMap();
-                return;
-            }
         }
 
         ApplyNavigation(new SetCamera(camera));
@@ -1297,67 +1177,35 @@ public sealed class MainWindow : Window
         panelWheel = null;
     }
 
-    private void ListenForPanelZoom(WindowPanels.Panel panel, nint window)
+    private void ListenForPanelZoom()
     {
-        var delta = 0;
-        var scheduled = false;
-        panelWheel = new PanelWheel(window, windowHandle, () => windowPanels.ProjectActive, (point, increment) =>
-        {
-            delta += increment;
-            if (scheduled) return;
-            scheduled = true;
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+        panelWheel ??= new PanelWheel(
+            window => windowPanels.Panels.Any(p => p.Presented && !p.IsFolded && !p.WaitingForRemoval &&
+                p.Space == session.ActiveSpaceId && p.Window.Handle == (long)window && p.Instance.IsCurrent()),
+            (window, point, delta) => Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
             {
-                scheduled = false;
-                var accumulated = delta;
-                delta = 0;
-                if (closed || activationPending || windowPanels.ActivePanel != panel ||
-                    !NativePanelInput.IsForeground(window) || !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
-                    NativeCanvasFrame.HasFullscreenClient(window)) return;
+                if (closed || activationPending || !NativePanelInput.IsForeground(window)) return;
                 var cursor = spaceView.PointFromScreen(point);
-                ZoomFromPanel(new DomainPoint(cursor.X, cursor.Y), accumulated);
-            }));
-        });
-    }
-
-    private bool NeedsProjection(WindowPanels.Panel panel, Camera camera)
-    {
-        if (Math.Abs(camera.Zoom - 1) > 0.000001 ||
-            placement.ReadNormalScreenBounds(panel.Window.Handle) is not { } native) return true;
-        var logical = windowPanels.GetUnscaledPixelSize(panel);
-        return logical.Width != native.Right - native.Left || logical.Height != native.Bottom - native.Top;
+                ZoomFromPanel(new DomainPoint(cursor.X, cursor.Y), delta);
+            })));
     }
 
     private void ZoomFromPanel(DomainPoint cursor, int delta)
     {
-        if (windowPanels.ActivePanel is not { } panel ||
-            !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
-            !NativePanelInput.IsForeground((nint)panel.Window.Handle))
+        ApplyNavigation(new SetCamera(CameraGestures.ZoomAt(ActiveCamera, cursor, delta / 120.0)));
+    }
+
+    private void StackNativeWindows()
+    {
+        var foreground = NativePanelInput.ForegroundWindow;
+        if (windowHandle == 0 || WindowState == WindowState.Minimized ||
+            (foreground != windowHandle && !windowPanels.Panels.Any(p => p.Presented && p.Window.Handle == (long)foreground && p.Space == session.ActiveSpaceId))) return;
+        foreach (var panel in windowPanels.Panels)
         {
-            return;
-        }
-        var camera = ActiveCamera;
-        var next = CameraGestures.ZoomAt(camera, cursor, delta / 120.0);
-        var project = NeedsProjection(panel, next);
-        try
-        {
-            if (!project && windowPanels.ProjectActive)
-            {
-                var origin = windowPanels.GetWindowOrigin(panel, next);
-                placement.Reposition(panel.Window.Identity, panel.Instance, (int)Math.Round(origin.X),
-                    (int)Math.Round(origin.Y));
-            }
-            if (project != windowPanels.ProjectActive)
-                SetPanelPresentation((nint)panel.Window.Handle, project);
-            windowPanels.ProjectActive = project;
-            ApplyNavigation(new SetCamera(next));
-            UpdateMapPriority();
-            if (!project && !NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle))
-                throw new Win32Exception();
-        }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
-        {
-            ReturnToMap();
+            if (!panel.Presented || !WindowCatalog.IsLive(panel.Window.Identity, panel.Instance) ||
+                WindowCatalog.IsMinimized(panel.Window.Handle)) continue;
+            NativePanelInput.StackAtCanvas((nint)panel.Window.Handle, windowHandle,
+                panel.Space == session.ActiveSpaceId && !panel.IsFolded);
         }
     }
 
@@ -1377,7 +1225,7 @@ public sealed class MainWindow : Window
         {
             var source = (nint)(windowPanels.ActivePanel?.Window.Handle ?? 0);
             var camera = ActiveCamera;
-            var state = FormattableString.Invariant($"{camera.Position.X:R},{camera.Position.Y:R},{camera.Zoom:R},{windowPanels.ProjectActive},{NativePanelInput.DescribeStack(windowHandle, source)}");
+            var state = FormattableString.Invariant($"{camera.Position.X:R},{camera.Position.Y:R},{camera.Zoom:R},False,{NativePanelInput.DescribeStack(windowHandle, source)}");
             if (reason == "frame" && state == last) return;
             last = state;
             try { log.WriteLine($"{clock.ElapsedMilliseconds},{reason},{state}"); }
@@ -1469,6 +1317,7 @@ public sealed class MainWindow : Window
         var switchingSpace = command is SwitchSpace change && change.Target != session.ActiveSpaceId;
         if (switchingSpace)
         {
+            ReturnToMap(restoreCamera: false);
             cancelActivation = true;
         }
 
@@ -1486,6 +1335,9 @@ public sealed class MainWindow : Window
 
         session = result.State;
         RefreshSpace();
+        foreach (var panel in windowPanels.Panels.Where(p => p.Space == session.ActiveSpaceId && !p.IsFolded).ToArray())
+            AlignDraggedWindow(panel);
+        StackNativeWindows();
     }
 
     private enum GestureKind { Pan, Marquee, Icons }
