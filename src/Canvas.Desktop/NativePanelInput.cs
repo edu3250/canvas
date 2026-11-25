@@ -47,6 +47,8 @@ internal static class NativePanelInput
     [DllImport("user32.dll")] private static extern nint GetAncestor(nint window, uint flags);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint window, out NativeRect rect);
 
+    public static nint ForegroundWindow => GetForegroundWindow();
+
     public static bool IsForeground(nint window) => GetForegroundWindow() == window;
 
     public static bool TryReturnForeground(nint canvas, nint panel)
@@ -96,6 +98,13 @@ internal static class NativePanelInput
     {
         const uint NoSize = 0x0001, NoMove = 0x0002, NoActivate = 0x0010, NoOwnerZOrder = 0x0200;
         SetWindowPos(window, topmost ? -1 : 0, 0, 0, 0, 0, NoSize | NoMove | NoActivate | NoOwnerZOrder);
+    }
+
+    public static void SetProjectedInput(nint canvas, bool enabled)
+    {
+        var style = GetWindowLong(canvas, ExtendedStyle);
+        var next = enabled ? style | NoActivateStyle : style & ~NoActivateStyle;
+        if (next != style) SetWindowLong(canvas, ExtendedStyle, next);
     }
 
     public static void PreventActivation(nint window) =>

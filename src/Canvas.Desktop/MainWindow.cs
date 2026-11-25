@@ -472,6 +472,12 @@ public sealed class MainWindow : Window
                 }
             }
         }
+        // Canvas controls outside the projection can take focus normally.
+        if (message == MouseActivate && windowPanels.ProjectActive)
+        {
+            handled = true;
+            return 1; // MA_ACTIVATE
+        }
         if (message == NativeCanvasFrame.GetMinMaxInfo)
         {
             handled = NativeCanvasFrame.MaximizeToMonitor(hwnd, lParam);
@@ -869,8 +875,10 @@ public sealed class MainWindow : Window
 
         var fullscreenMapInFront = WindowState == WindowState.Maximized && windowHandle != 0 &&
             NativePanelInput.IsForeground(windowHandle);
+        if (windowHandle != 0) NativePanelInput.SetProjectedInput(windowHandle, windowPanels.ProjectActive);
+        var foreground = NativePanelInput.ForegroundWindow;
         var projectedInFront = windowPanels.ProjectActive && windowPanels.ActivePanel is { } projected &&
-            (NativePanelInput.IsForeground(windowHandle) || NativePanelInput.IsForeground((nint)projected.Window.Handle)) &&
+            (foreground == windowHandle || foreground == (nint)projected.Window.Handle || (foreground == 0 && Topmost)) &&
             !NativeCanvasFrame.HasFullscreenClient((nint)projected.Window.Handle);
         Topmost = WindowState != WindowState.Minimized && (projectedInFront || windowPanels.ActivePanel is null &&
             (fullscreenMapInFront || ((IsActive || returningFromTopmostSource) && windowPanels.HasTopmostSource())));
