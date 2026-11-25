@@ -187,7 +187,11 @@ public sealed class MainWindow : Window
         Activated += (_, _) => UpdateMapPriority();
         Deactivated += (_, _) =>
         {
-            UpdateMapPriority();
+            // Read the new foreground after Windows completes the focus handoff.
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                if (!closed) UpdateMapPriority();
+            }));
             cancelActivation = true;
             windowPanels.CancelDrag();
             CancelGesture();
@@ -546,6 +550,7 @@ public sealed class MainWindow : Window
         await UseActivePanelAsync(panel, () =>
         {
             placement.Maximize(panel.Window.Identity, panel.Instance);
+            SetPanelPresentation((nint)panel.Window.Handle, projected: false);
             windowPanels.ProjectActive = false;
             UpdateMapPriority();
             windowPanels.Render();
@@ -707,10 +712,7 @@ public sealed class MainWindow : Window
             }
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
-            if (WindowState == WindowState.Maximized)
-            {
-                NativeWindowPlacement.MarkPanelFullscreen(application);
-            }
+            SetPanelPresentation(application, windowPanels.ProjectActive);
             if (!NativePanelInput.SetForegroundWindow(application))
             {
                 throw new InvalidOperationException("Windows denied foreground activation.");
@@ -1333,6 +1335,8 @@ public sealed class MainWindow : Window
                 placement.Reposition(panel.Window.Identity, panel.Instance, (int)Math.Round(origin.X),
                     (int)Math.Round(origin.Y));
             }
+            if (project != windowPanels.ProjectActive)
+                SetPanelPresentation((nint)panel.Window.Handle, project);
             windowPanels.ProjectActive = project;
             ApplyNavigation(new SetCamera(next));
             UpdateMapPriority();
@@ -1343,6 +1347,16 @@ public sealed class MainWindow : Window
         {
             ReturnToMap();
         }
+    }
+
+    private void SetPanelPresentation(nint source, bool projected)
+    {
+        // Mark only the directly displayed native window as fullscreen for the shell.
+        // The projected source can receive keyboard focus while Canvas covers it.
+        if (!projected && WindowState == WindowState.Maximized)
+            NativeWindowPlacement.MarkPanelFullscreen(source);
+        else
+            NativeWindowPlacement.ClearPanelFullscreen(source);
     }
 
     private void UpdateShellFullscreen()
