@@ -70,11 +70,11 @@ internal sealed class WindowPanels : System.Windows.Controls.Canvas, IDisposable
         return PointToScreen(new WpfPoint(point.X, point.Y));
     }
 
-    public (int Width, int Height) GetVisiblePixelSize(Panel panel, Camera targetCamera)
+    public (int Width, int Height) GetUnscaledPixelSize(Panel panel)
     {
         var dpi = VisualTreeHelper.GetDpi(this);
-        return (Math.Max(1, (int)Math.Round((panel.Bounds.Width - 2) * targetCamera.Zoom * dpi.DpiScaleX)),
-            Math.Max(1, (int)Math.Round((panel.Bounds.Height - TitleHeight - 2) * targetCamera.Zoom * dpi.DpiScaleY)));
+        return (Math.Max(1, (int)Math.Round((panel.Bounds.Width - 2) * dpi.DpiScaleX)),
+            Math.Max(1, (int)Math.Round((panel.Bounds.Height - TitleHeight - 2) * dpi.DpiScaleY)));
     }
 
     public void SyncActiveBounds(Panel panel, WindowRectangle screenBounds, bool syncPosition)

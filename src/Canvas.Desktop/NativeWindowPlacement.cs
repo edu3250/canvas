@@ -167,14 +167,10 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(nint window, int command);
 
-    public void MoveTo(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size)
-    {
-        EnsureNormal(identity, instance);
-        Reposition(identity, instance, x, y, size);
-    }
-
     public void PrepareProjection(WindowIdentity identity, WindowInstance instance, nint canvas)
     {
+        EnsureCurrent(instance);
+        if (IsMaximized(identity.Handle)) return;
         EnsureNormal(identity, instance);
         if (ReadNormalScreenBounds(identity.Handle) is not { } rect ||
             !NativeCanvasFrame.TryGetMonitorArea(canvas, out var area))
@@ -195,7 +191,7 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
         }
     }
 
-    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y, (int Width, int Height)? size = null)
+    public void Reposition(WindowIdentity identity, WindowInstance instance, int x, int y)
     {
         EnsureCurrent(instance);
         var window = (nint)identity.Handle;
@@ -206,15 +202,8 @@ internal sealed class NativeWindowPlacement : IWindowPlacementAccess
 
         var visible = VisibleFrame(window, full);
         const uint NoSize = 0x0001, NoZOrder = 0x0004, NoActivate = 0x0010;
-        var flags = NoZOrder | NoActivate;
-        if (size is null)
-        {
-            flags |= NoSize;
-        }
-
         if (!SetWindowPos(window, 0, x - (visible.Left - full.Left), y - (visible.Top - full.Top),
-            size is { } w ? w.Width + (full.Right - visible.Right) + (visible.Left - full.Left) : 0,
-            size is { } h ? h.Height + (full.Bottom - visible.Bottom) + (visible.Top - full.Top) : 0, flags))
+            0, 0, NoSize | NoZOrder | NoActivate))
         {
             throw new Win32Exception();
         }

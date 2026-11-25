@@ -543,8 +543,15 @@ public sealed class MainWindow : Window
     }
 
     private async void MaximizePanel(WindowPanels.Panel panel) =>
-        await UseActivePanelAsync(panel, () => placement.Maximize(panel.Window.Identity, panel.Instance),
-            "No se pudo maximizar la ventana.");
+        await UseActivePanelAsync(panel, () =>
+        {
+            placement.Maximize(panel.Window.Identity, panel.Instance);
+            windowPanels.ProjectActive = false;
+            UpdateMapPriority();
+            windowPanels.Render();
+            if (!NativePanelInput.KeepCanvasBehind(windowHandle, (nint)panel.Window.Handle))
+                throw new Win32Exception();
+        }, "No se pudo maximizar la ventana.");
 
     private async void ClosePanel(WindowPanels.Panel panel) =>
         await UseActivePanelAsync(panel, () =>
@@ -686,7 +693,7 @@ public sealed class MainWindow : Window
             mapCamera = previous;
             panel.LastNativeSize = null;
             windowPanels.ActivePanel = panel;
-            windowPanels.ProjectActive = Math.Abs(ActiveCamera.Zoom - 1) > 0.000001;
+            windowPanels.ProjectActive = NeedsProjection(panel, ActiveCamera);
             UpdateMapPriority();
 
             var origin = windowPanels.GetWindowOrigin(panel, ActiveCamera);
@@ -696,8 +703,7 @@ public sealed class MainWindow : Window
             }
             else
             {
-                placement.MoveTo(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y),
-                    windowPanels.GetVisiblePixelSize(panel, ActiveCamera));
+                placement.Reposition(identity, panel.Instance, (int)Math.Round(origin.X), (int)Math.Round(origin.Y));
             }
             NativeWindowPlacement.EnsureCurrent(panel.Instance);
             var application = (nint)identity.Handle;
@@ -1300,6 +1306,14 @@ public sealed class MainWindow : Window
         });
     }
 
+    private bool NeedsProjection(WindowPanels.Panel panel, Camera camera)
+    {
+        if (Math.Abs(camera.Zoom - 1) > 0.000001 ||
+            placement.ReadNormalScreenBounds(panel.Window.Handle) is not { } native) return true;
+        var logical = windowPanels.GetUnscaledPixelSize(panel);
+        return logical.Width != native.Right - native.Left || logical.Height != native.Bottom - native.Top;
+    }
+
     private void ZoomFromPanel(DomainPoint cursor, int delta)
     {
         if (windowPanels.ActivePanel is not { } panel ||
@@ -1310,16 +1324,14 @@ public sealed class MainWindow : Window
         }
         var camera = ActiveCamera;
         var next = CameraGestures.ZoomAt(camera, cursor, delta / 120.0);
-        var project = Math.Abs(next.Zoom - 1) > 0.000001;
+        var project = NeedsProjection(panel, next);
         try
         {
-            if (project && !windowPanels.ProjectActive)
-                placement.PrepareProjection(panel.Window.Identity, panel.Instance, windowHandle);
-            else if (!project && windowPanels.ProjectActive)
+            if (!project && windowPanels.ProjectActive)
             {
                 var origin = windowPanels.GetWindowOrigin(panel, next);
-                placement.MoveTo(panel.Window.Identity, panel.Instance, (int)Math.Round(origin.X),
-                    (int)Math.Round(origin.Y), windowPanels.GetVisiblePixelSize(panel, next));
+                placement.Reposition(panel.Window.Identity, panel.Instance, (int)Math.Round(origin.X),
+                    (int)Math.Round(origin.Y));
             }
             windowPanels.ProjectActive = project;
             ApplyNavigation(new SetCamera(next));
